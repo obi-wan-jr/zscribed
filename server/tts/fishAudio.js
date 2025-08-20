@@ -19,7 +19,9 @@ function generateFileName({ user, voiceModelId, type = 'tts', index = null, form
 	const userPrefix = user ? `${user}-` : '';
 	
 	// Get a short voice model name (last 8 characters if it's a long ID)
-	const shortVoiceId = voiceModelId.length > 8 ? voiceModelId.slice(-8) : voiceModelId;
+	// Handle cases where voiceModelId might be undefined
+	const safeVoiceId = voiceModelId || 'unknown';
+	const shortVoiceId = safeVoiceId.length > 8 ? safeVoiceId.slice(-8) : safeVoiceId;
 	
 	if (index !== null) {
 		// For segment files
@@ -82,7 +84,7 @@ export class FishAudioTTS {
 		}
 	}
 
-	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user }) {
+	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId }) {
 		try {
 			console.log(`[FishAudio] Stitching ${segmentFiles.length} segments`);
 			
@@ -92,7 +94,7 @@ export class FishAudioTTS {
 			
 			if (ffmpegAvailable) {
 				// Use proper audio stitching with ffmpeg
-				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format, user });
+				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format, user, voiceModelId });
 			} else {
 				// Fallback to simple concatenation for non-MP3 formats
 				const outputFilename = generateFileName({ user, voiceModelId, type: 'tts', format });

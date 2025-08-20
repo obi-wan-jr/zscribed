@@ -11,7 +11,9 @@ function generateFileName({ user, voiceModelId, type = 'tts', format = 'mp3' }) 
 	const userPrefix = user ? `${user}-` : '';
 	
 	// Get a short voice model name (last 8 characters if it's a long ID)
-	const shortVoiceId = voiceModelId.length > 8 ? voiceModelId.slice(-8) : voiceModelId;
+	// Handle cases where voiceModelId might be undefined
+	const safeVoiceId = voiceModelId || 'unknown';
+	const shortVoiceId = safeVoiceId.length > 8 ? safeVoiceId.slice(-8) : safeVoiceId;
 	
 	return `${userPrefix}${shortVoiceId}-${time}-${date}.${format}`;
 }
