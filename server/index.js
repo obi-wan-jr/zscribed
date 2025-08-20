@@ -61,7 +61,17 @@ function ensureDir(dirPath) {
 
 let config = loadConfig(ROOT);
 const logger = new UserLogger(LOGS_DIR);
-const ttsService = createTTSService(config);
+
+// Initialize TTS service with error handling
+let ttsService = null;
+try {
+	ttsService = createTTSService(config);
+	console.log('[Server] TTS service initialized successfully');
+} catch (error) {
+	console.error('[Server] TTS service initialization failed:', error.message);
+	// Continue without TTS service - will show errors in UI
+}
+
 logger.prune();
 setInterval(() => logger.prune(), 24 * 60 * 60 * 1000);
 
@@ -134,11 +144,29 @@ app.use(requireAuth);
 // Voice models management (no API key exposure)
 app.get('/api/models', async (_req, res) => {
 	try {
+		if (!ttsService) {
+			return res.status(503).json({ 
+				error: 'TTS service not available',
+				troubleshooting: [
+					'Add "fishAudioApiKey" to your config.json file',
+					'Get your API key from https://fish.audio',
+					'Restart the server after adding the API key'
+				]
+			});
+		}
+		
 		const voices = await ttsService.getAvailableVoices();
 		res.json({ voiceModels: voices.map(v => ({ id: v.id, name: v.name })) });
 	} catch (error) {
 		console.error('[API] Error fetching voices:', error);
-		res.status(500).json({ error: 'Failed to fetch voices' });
+		res.status(500).json({ 
+			error: error.message,
+			troubleshooting: error.troubleshooting || [
+				'Check your internet connection',
+				'Verify your API key is correct',
+				'Ensure your Fish.Audio account is active'
+			]
+		});
 	}
 });
 app.post('/api/models', (req, res) => {
@@ -266,33 +294,60 @@ app.get('/api/queue/status', (_req, res) => {
 });
 
 async function processTTSJob(job) {
-	const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.data;
-	const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
-	const segmentFiles = [];
-	
-	emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
-	
-	for (let i = 0; i < chunks.length; i++) {
-		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: i + 1, total: chunks.length });
-		const file = await ttsService.synthesizeChunkToFile({ 
-			chunkText: chunks[i], 
-			voiceModelId, 
-			format, 
-			outputsDir: OUTPUTS_DIR, 
-			jobId: job.id, 
-			index: i 
+	if (!ttsService) {
+		const error = 'TTS service not available. Please check your Fish.Audio API key configuration.';
+		emitProgress(job.id, { 
+			status: 'error', 
+			error,
+			troubleshooting: [
+				'Add "fishAudioApiKey" to your config.json file',
+				'Get your API key from https://fish.audio',
+				'Restart the server after adding the API key'
+			]
 		});
-		segmentFiles.push(file);
+		return;
 	}
 	
-	const stitched = await ttsService.stitchSegments({ 
-		segmentFiles, 
-		outputsDir: OUTPUTS_DIR, 
-		jobId: job.id, 
-		format 
-	});
-	
-	emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
+	try {
+		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.data;
+		const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
+		const segmentFiles = [];
+		
+		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
+		
+		for (let i = 0; i < chunks.length; i++) {
+			emitProgress(job.id, { status: 'progress', step: 'tts', chunk: i + 1, total: chunks.length });
+			const file = await ttsService.synthesizeChunkToFile({ 
+				chunkText: chunks[i], 
+				voiceModelId, 
+				format, 
+				outputsDir: OUTPUTS_DIR, 
+				jobId: job.id, 
+				index: i 
+			});
+			segmentFiles.push(file);
+		}
+		
+		const stitched = await ttsService.stitchSegments({ 
+			segmentFiles, 
+			outputsDir: OUTPUTS_DIR, 
+			jobId: job.id, 
+			format 
+		});
+		
+		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
+	} catch (error) {
+		console.error('[TTS Job] Error processing TTS job:', error);
+		emitProgress(job.id, { 
+			status: 'error', 
+			error: error.message,
+			troubleshooting: error.troubleshooting || [
+				'Check your internet connection',
+				'Verify your API key is correct',
+				'Ensure your Fish.Audio account is active'
+			]
+		});
+	}
 }
 
 async function handleBibleTtsJob(job) {
@@ -377,12 +432,48 @@ app.use('/outputs', express.static(OUTPUTS_DIR));
 // Add TTS connection test endpoint
 app.get('/api/tts/test', async (_req, res) => {
 	try {
+		if (!ttsService) {
+			return res.json({
+				provider: 'fish-audio',
+				success: false,
+				error: 'TTS service not available',
+				troubleshooting: [
+					'Add "fishAudioApiKey" to your config.json file',
+					'Get your API key from https://fish.audio',
+					'Restart the server after adding the API key'
+				]
+			});
+		}
+		
 		const result = await ttsService.testConnection();
 		res.json(result);
 	} catch (error) {
 		console.error('[API] TTS test error:', error);
-		res.status(500).json({ error: 'TTS test failed' });
+		res.status(500).json({ 
+			error: error.message,
+			troubleshooting: error.troubleshooting || [
+				'Check your internet connection',
+				'Verify your API key is correct',
+				'Ensure your Fish.Audio account is active'
+			]
+		});
 	}
+});
+
+// Add TTS status endpoint
+app.get('/api/tts/status', (_req, res) => {
+	if (!ttsService) {
+		return res.json({
+			configured: false,
+			initialized: false,
+			available: false,
+			apiKeyPresent: false,
+			apiKeyMasked: 'Not configured',
+			error: 'TTS service not available'
+		});
+	}
+	
+	res.json(ttsService.getStatus());
 });
 
 process.on('SIGINT', () => { saveQueue(); process.exit(0); });

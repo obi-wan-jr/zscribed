@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, listenToProgress, updateAuthLink, requireAuth } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -34,8 +34,40 @@ async function init() {
 		const opt = document.createElement('option');
 		opt.value = m.id; opt.textContent = m.name || m.id; voiceModel.appendChild(opt);
 	}
-	
-	addLogoutButton();
+}
+
+function listenToProgress(jobId) {
+	const ev = new EventSource(`/api/progress/${jobId}`);
+	ev.onmessage = (e) => {
+		const data = JSON.parse(e.data);
+		if (data.status === 'progress') {
+			ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
+		} else if (data.status === 'completed') {
+			ttsProgress.innerHTML = `✅ Complete! <a href="${data.output}" class="text-indigo-300 hover:underline">Download</a>`;
+			convertBtn.disabled = false;
+			convertBtn.textContent = 'Convert';
+		} else if (data.status === 'error') {
+			let troubleshootingHtml = '';
+			if (data.troubleshooting && data.troubleshooting.length > 0) {
+				troubleshootingHtml = `
+					<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
+						<strong class="text-yellow-400">Troubleshooting Steps:</strong>
+						<ul class="mt-2 list-disc list-inside text-sm">
+							${data.troubleshooting.map(step => `<li>${step}</li>`).join('')}
+						</ul>
+					</div>
+				`;
+			}
+			
+			ttsProgress.innerHTML = `
+				<div class="text-red-400">❌ Error: ${data.error}</div>
+				${troubleshootingHtml}
+			`;
+			convertBtn.disabled = false;
+			convertBtn.textContent = 'Convert';
+		}
+	};
+	return ev;
 }
 
 convertBtn?.addEventListener('click', async () => {
@@ -44,13 +76,43 @@ convertBtn?.addEventListener('click', async () => {
 	const voiceModelId = voiceModel.value;
 	const format = audioFormat.value;
 	const sentencesPerChunk = Number(sentencesPerChunkTts.value || 3);
-	const res = await fetch('/api/jobs/tts', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ user, text, voiceModelId, format, sentencesPerChunk })
-	});
-	const { id } = await res.json();
-	listenToProgress(id, (data) => {
-		ttsProgress.textContent = JSON.stringify(data);
-	});
+	
+	if (!text.trim()) {
+		ttsProgress.textContent = 'Please enter some text to convert';
+		return;
+	}
+	
+	convertBtn.disabled = true;
+	convertBtn.textContent = 'Converting...';
+	ttsProgress.textContent = 'Starting conversion...';
+	
+	try {
+		const res = await fetch('/api/jobs/tts', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ user, text, voiceModelId, format, sentencesPerChunk })
+		});
+		
+		if (!res.ok) {
+			const errorData = await res.json();
+			throw new Error(errorData.error || 'Failed to start conversion');
+		}
+		
+		const { id } = await res.json();
+		listenToProgress(id);
+	} catch (error) {
+		ttsProgress.innerHTML = `
+			<div class="text-red-400">❌ Error: ${error.message}</div>
+			<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
+				<strong class="text-yellow-400">Troubleshooting Steps:</strong>
+				<ul class="mt-2 list-disc list-inside text-sm">
+					<li>Check your Fish.Audio API key configuration</li>
+					<li>Ensure your voice model is valid</li>
+					<li>Try again in a few moments</li>
+				</ul>
+			</div>
+		`;
+		convertBtn.disabled = false;
+		convertBtn.textContent = 'Convert';
+	}
 });

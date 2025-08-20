@@ -111,18 +111,40 @@ function addTTSTestSection() {
 					</div>
 				`;
 			} else {
+				let troubleshootingHtml = '';
+				if (result.troubleshooting && result.troubleshooting.length > 0) {
+					troubleshootingHtml = `
+						<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
+							<strong class="text-yellow-400">Troubleshooting Steps:</strong>
+							<ul class="mt-2 list-disc list-inside text-sm">
+								${result.troubleshooting.map(step => `<li>${step}</li>`).join('')}
+							</ul>
+						</div>
+					`;
+				}
+				
 				resultDiv.innerHTML = `
 					<div class="text-red-400">❌ Connection failed</div>
 					<div class="mt-2">
 						<strong>Provider:</strong> ${result.provider}<br>
 						<strong>Error:</strong> ${result.error}
 					</div>
+					${troubleshootingHtml}
 				`;
 			}
 		} catch (error) {
 			resultDiv.innerHTML = `
 				<div class="text-red-400">❌ Test failed</div>
 				<div class="mt-2">Error: ${error.message}</div>
+				<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
+					<strong class="text-yellow-400">Troubleshooting Steps:</strong>
+					<ul class="mt-2 list-disc list-inside text-sm">
+						<li>Check your internet connection</li>
+						<li>Verify your API key is correct</li>
+						<li>Ensure your Fish.Audio account is active</li>
+						<li>Check Fish.Audio service status</li>
+					</ul>
+				</div>
 			`;
 		} finally {
 			testBtn.disabled = false;
