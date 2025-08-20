@@ -34,6 +34,9 @@ Open `http://<pi-host>:3005`.
 - `config/` Configuration (API keys, model IDs)
 - `memory-bank/` Project docs per Memory Bank spec
 
+## Deployment
+See `docs/DEV_DEPLOYMENT.md` for Raspberry Pi deployment and update instructions.
+
 ## Next Steps
 - Implement Bible API adapter and text cleanup
 - Implement Fish.audio integration and segmentation pipeline
