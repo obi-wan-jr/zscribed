@@ -1,0 +1,78 @@
+import { fetchMeta, getActiveUser, setActiveUser, listenToProgress } from './common.js';
+
+const userSelect = document.getElementById('userSelect');
+const voiceModel = document.getElementById('voiceModel');
+const translation = document.getElementById('translation');
+const book = document.getElementById('book');
+const chapter = document.getElementById('chapter');
+const verses = document.getElementById('verses');
+const excludeNumbers = document.getElementById('excludeNumbers');
+const excludeFootnotes = document.getElementById('excludeFootnotes');
+const sentencesPerChunkBible = document.getElementById('sentencesPerChunkBible');
+const bibleFetchBtn = document.getElementById('bibleFetchBtn');
+const bibleTtsBtn = document.getElementById('bibleTtsBtn');
+const bibleProgress = document.getElementById('bibleProgress');
+
+init();
+
+async function init() {
+	const meta = await fetchMeta();
+	userSelect.innerHTML = '';
+	for (const u of meta.allowedUsers || []) {
+		const opt = document.createElement('option');
+		opt.value = u; opt.textContent = u; userSelect.appendChild(opt);
+	}
+	userSelect.value = getActiveUser();
+	userSelect.addEventListener('change', () => setActiveUser(userSelect.value));
+
+	voiceModel.innerHTML = '';
+	for (const m of meta.voiceModels || []) {
+		const opt = document.createElement('option');
+		opt.value = m.id; opt.textContent = m.name || m.id; voiceModel.appendChild(opt);
+	}
+}
+
+bibleFetchBtn?.addEventListener('click', async () => {
+	bibleProgress.textContent = 'Fetching...';
+	try {
+		const res = await fetch('/api/bible/fetch', {
+			method: 'POST', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				translation: translation.value,
+				book: book.value,
+				chapter: Number(chapter.value || 1),
+				verseRanges: verses.value,
+				excludeNumbers: excludeNumbers.checked,
+				excludeFootnotes: excludeFootnotes.checked
+			})
+		});
+		const data = await res.json();
+		if (data.error) throw new Error(data.error);
+		bibleProgress.textContent = data.text || '';
+	} catch (e) {
+		bibleProgress.textContent = 'Error: ' + e.message;
+	}
+});
+
+bibleTtsBtn?.addEventListener('click', async () => {
+	const user = userSelect.value || 'Inggo';
+	const voiceModelId = voiceModel.value;
+	const format = 'mp3';
+	const sentencesPerChunk = Number(sentencesPerChunkBible.value || 3);
+	const res = await fetch('/api/jobs/bible', {
+		method: 'POST', headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			user, voiceModelId, format, sentencesPerChunk,
+			translation: translation.value,
+			book: book.value,
+			chapter: Number(chapter.value || 1),
+			verseRanges: verses.value,
+			excludeNumbers: excludeNumbers.checked,
+			excludeFootnotes: excludeFootnotes.checked
+		})
+	});
+	const { id } = await res.json();
+	listenToProgress(id, (data) => {
+		bibleProgress.textContent = JSON.stringify(data);
+	});
+});
