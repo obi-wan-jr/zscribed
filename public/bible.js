@@ -8,31 +8,47 @@ requireAuth().then(isAuthenticated => {
 	init();
 });
 
-const voiceModel = document.getElementById('voiceModel');
-const translation = document.getElementById('translation');
-const book = document.getElementById('book');
-const chapter = document.getElementById('chapter');
-const verses = document.getElementById('verses');
-const excludeNumbers = document.getElementById('excludeNumbers');
-const excludeFootnotes = document.getElementById('excludeFootnotes');
-const sentencesPerChunkBible = document.getElementById('sentencesPerChunkBible');
-const bibleFetchBtn = document.getElementById('bibleFetchBtn');
-const bibleTtsBtn = document.getElementById('bibleTtsBtn');
-const bibleProgress = document.getElementById('bibleProgress');
-const userWelcome = document.getElementById('userWelcome');
-const outputsList = document.getElementById('outputsList');
-const refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
-const queueStatus = document.getElementById('queueStatus');
+// DOM elements - will be initialized in init()
+let voiceModel, translation, book, chapter, verses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
+let bibleFetchBtn, bibleTtsBtn, bibleProgress, userWelcome, outputsList, refreshOutputsBtn, queueStatus;
 
 async function init() {
+	console.log('[Bible] Initializing Bible page...');
+	
+	// Initialize DOM elements
+	voiceModel = document.getElementById('voiceModel');
+	translation = document.getElementById('translation');
+	book = document.getElementById('book');
+	chapter = document.getElementById('chapter');
+	verses = document.getElementById('verses');
+	excludeNumbers = document.getElementById('excludeNumbers');
+	excludeFootnotes = document.getElementById('excludeFootnotes');
+	sentencesPerChunkBible = document.getElementById('sentencesPerChunkBible');
+	bibleFetchBtn = document.getElementById('bibleFetchBtn');
+	bibleTtsBtn = document.getElementById('bibleTtsBtn');
+	bibleProgress = document.getElementById('bibleProgress');
+	userWelcome = document.getElementById('userWelcome');
+	outputsList = document.getElementById('outputsList');
+	refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
+	queueStatus = document.getElementById('queueStatus');
+	
+	console.log('[Bible] DOM elements initialized:', {
+		book: !!book,
+		voiceModel: !!voiceModel,
+		userWelcome: !!userWelcome
+	});
+	
 	// Update the login/logout link
 	await updateAuthLink();
 	
 	// Set welcome message
 	const currentUser = getActiveUser();
-	userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
+	if (userWelcome) {
+		userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
+	}
 	
 	// Load Bible books (public endpoint)
+	console.log('[Bible] About to load Bible books...');
 	await loadBibleBooks();
 	
 	// Load voice models
@@ -43,6 +59,9 @@ async function init() {
 	
 	// Start polling queue status
 	setInterval(pollQueueStatus, 2000);
+	
+	// Set up event listeners
+	setupEventListeners();
 }
 
 async function loadVoiceModels() {
@@ -68,6 +87,9 @@ async function loadVoiceModels() {
 
 async function loadBibleBooks() {
 	try {
+		console.log('[Bible] Starting to load Bible books...');
+		console.log('[Bible] Book element:', book);
+		
 		const res = await fetch('/api/bible/books');
 		if (!res.ok) {
 			throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -75,6 +97,12 @@ async function loadBibleBooks() {
 		
 		const data = await res.json();
 		const books = data.books || [];
+		console.log('[Bible] Received books:', books.length);
+		
+		if (!book) {
+			console.error('[Bible] Book element is null!');
+			return;
+		}
 		
 		book.innerHTML = '';
 		
@@ -122,12 +150,16 @@ async function loadBibleBooks() {
 		
 	} catch (error) {
 		console.error('Failed to load Bible books:', error);
-		book.innerHTML = '<option value="">Failed to load books</option>';
+		if (book) {
+			book.innerHTML = '<option value="">Failed to load books</option>';
+		}
 	}
 }
 
 // Update chapter input max value based on selected book
 function updateChapterMax() {
+	if (!book || !chapter || !verses) return;
+	
 	const selectedOption = book.options[book.selectedIndex];
 	if (selectedOption && selectedOption.dataset.chapters) {
 		const maxChapters = parseInt(selectedOption.dataset.chapters);
@@ -285,10 +317,11 @@ function listenToProgress(jobId) {
 	return ev;
 }
 
-// Event listeners
-book?.addEventListener('change', updateChapterMax);
+function setupEventListeners() {
+	// Event listeners
+	book?.addEventListener('change', updateChapterMax);
 
-bibleFetchBtn?.addEventListener('click', async () => {
+	bibleFetchBtn?.addEventListener('click', async () => {
 	// Validate before fetching
 	if (!(await validateBibleReference())) {
 		return;
@@ -381,4 +414,5 @@ bibleTtsBtn?.addEventListener('click', async () => {
 	}
 });
 
-refreshOutputsBtn?.addEventListener('click', refreshOutputs);
+	refreshOutputsBtn?.addEventListener('click', refreshOutputs);
+}
