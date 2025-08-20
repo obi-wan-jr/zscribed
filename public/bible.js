@@ -71,17 +71,13 @@ async function loadVoiceModels() {
 }
 
 function setupEventListeners() {
-	// Mode selection buttons
-	document.getElementById('entireBookOption').querySelector('button').addEventListener('click', () => {
-		selectMode('book');
-	});
-	
-	document.getElementById('chaptersOption').querySelector('button').addEventListener('click', () => {
-		selectMode('chapters');
-	});
-	
-	document.getElementById('versesOption').querySelector('button').addEventListener('click', () => {
-		selectMode('verses');
+	// Radio button listeners for mode selection
+	document.querySelectorAll('input[name="transcribeMode"]').forEach(radio => {
+		radio.addEventListener('change', (e) => {
+			if (e.target.checked) {
+				selectMode(e.target.value);
+			}
+		});
 	});
 	
 	// Quick action buttons
@@ -93,12 +89,13 @@ function setupEventListeners() {
 		}
 	});
 	
-	document.getElementById('allVersesBtn').addEventListener('click', () => {
-		document.getElementById('verses').value = '1-999';
+	// Verse loading and selection
+	document.getElementById('loadVersesBtn').addEventListener('click', loadVerses);
+	document.getElementById('selectAllVersesBtn').addEventListener('click', () => {
+		document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = true);
 	});
-	
-	document.getElementById('wholeChapterBtn').addEventListener('click', () => {
-		document.getElementById('verses').value = '1-999';
+	document.getElementById('deselectAllVersesBtn').addEventListener('click', () => {
+		document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
 	});
 	
 	// Action buttons
@@ -110,27 +107,10 @@ function setupEventListeners() {
 function selectMode(mode) {
 	currentMode = mode;
 	
-	// Reset all visual states
-	document.querySelectorAll('[id$="Option"]').forEach(option => {
-		option.classList.remove('border-indigo-500');
-		option.classList.add('border-slate-600');
-		option.querySelector('button').textContent = 'Select';
-		option.querySelector('button').classList.remove('bg-green-600');
-		option.querySelector('button').classList.add('bg-indigo-600');
-	});
-	
 	// Hide all input sections
 	document.getElementById('chaptersInput').classList.add('hidden');
 	document.getElementById('versesInput').classList.add('hidden');
-	
-	// Update selected option
-	const selectedOption = document.getElementById(mode === 'book' ? 'entireBookOption' : 
-		mode === 'chapters' ? 'chaptersOption' : 'versesOption');
-	selectedOption.classList.add('border-indigo-500');
-	selectedOption.classList.remove('border-slate-600');
-	selectedOption.querySelector('button').textContent = 'Selected';
-	selectedOption.querySelector('button').classList.add('bg-green-600');
-	selectedOption.querySelector('button').classList.remove('bg-indigo-600');
+	document.getElementById('versesCheckboxContainer').classList.add('hidden');
 	
 	// Show relevant input section
 	if (mode === 'chapters') {
@@ -144,6 +124,68 @@ function selectMode(mode) {
 
 function updateStatus(message) {
 	document.getElementById('status').textContent = message;
+}
+
+async function loadVerses() {
+	const book = document.getElementById('book').value;
+	const chapter = parseInt(document.getElementById('chapter').value);
+	
+	if (!book || !chapter) {
+		updateStatus('Please select a book and chapter first');
+		return;
+	}
+	
+	updateStatus('Loading verses...');
+	
+	try {
+		// Fetch the chapter data to get verse count
+		const res = await authenticatedFetch('/api/bible/fetch', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				translation: 'web',
+				book: book,
+				type: 'verses',
+				chapter: chapter,
+				verseRanges: '1-999' // Get all verses to count them
+			})
+		});
+		
+		if (!res) return;
+		
+		const result = await res.json();
+		if (result.error) throw new Error(result.error);
+		
+		// Parse the text to count verses (verses are numbered)
+		const verseMatches = result.text.match(/\d+/g);
+		let maxVerse = 1;
+		if (verseMatches) {
+			// Find the highest verse number
+			maxVerse = Math.max(...verseMatches.map(v => parseInt(v)).filter(n => !isNaN(n)));
+		}
+		
+		// Generate checkboxes
+		const container = document.getElementById('versesCheckboxList');
+		container.innerHTML = '';
+		
+		for (let i = 1; i <= maxVerse; i++) {
+			const label = document.createElement('label');
+			label.className = 'flex items-center text-sm cursor-pointer';
+			label.innerHTML = `
+				<input type="checkbox" value="${i}" class="mr-1 text-indigo-600 bg-transparent border-slate-400 rounded">
+				<span>${i}</span>
+			`;
+			container.appendChild(label);
+		}
+		
+		// Show the checkbox container
+		document.getElementById('versesCheckboxContainer').classList.remove('hidden');
+		updateStatus(`Loaded ${maxVerse} verses for ${book} ${chapter}`);
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return;
+		updateStatus(`Error loading verses: ${error.message}`);
+	}
 }
 
 function validateSelection() {
@@ -186,15 +228,16 @@ function validateSelection() {
 		}
 	} else if (currentMode === 'verses') {
 		const chapter = parseInt(document.getElementById('chapter').value);
-		const verses = document.getElementById('verses').value.trim();
 		
 		if (isNaN(chapter) || chapter < 1 || chapter > maxChapters) {
 			updateStatus(`Invalid chapter: ${chapter}. Valid range: 1-${maxChapters}`);
 			return false;
 		}
 		
-		if (!verses) {
-			updateStatus('Please enter verse numbers');
+		// Check if any verses are selected
+		const selectedVerses = document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked');
+		if (selectedVerses.length === 0) {
+			updateStatus('Please select at least one verse');
 			return false;
 		}
 	}
@@ -223,13 +266,53 @@ function buildRequestData() {
 			chapters: document.getElementById('chapters').value.trim()
 		};
 	} else if (currentMode === 'verses') {
+		// Get selected verses from checkboxes
+		const selectedVerses = Array.from(document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked'))
+			.map(cb => parseInt(cb.value))
+			.sort((a, b) => a - b);
+		
+		// Convert to ranges format
+		const verseRanges = convertToRanges(selectedVerses);
+		
 		return {
 			...baseData,
 			type: 'verses',
 			chapter: parseInt(document.getElementById('chapter').value),
-			verseRanges: document.getElementById('verses').value.trim()
+			verseRanges: verseRanges
 		};
 	}
+}
+
+function convertToRanges(numbers) {
+	if (numbers.length === 0) return '';
+	
+	const ranges = [];
+	let start = numbers[0];
+	let end = numbers[0];
+	
+	for (let i = 1; i < numbers.length; i++) {
+		if (numbers[i] === end + 1) {
+			end = numbers[i];
+		} else {
+			// Add the current range to the list
+			if (start === end) {
+				ranges.push(start.toString());
+			} else {
+				ranges.push(`${start}-${end}`);
+			}
+			start = numbers[i];
+			end = numbers[i];
+		}
+	}
+	
+	// Add the final range
+	if (start === end) {
+		ranges.push(start.toString());
+	} else {
+		ranges.push(`${start}-${end}`);
+	}
+	
+	return ranges.join(', ');
 }
 
 async function previewText() {

@@ -114,61 +114,61 @@
 					<div class="border border-slate-600 rounded-lg p-6 bg-[#0a0f1a]">
 						<h3 class="text-lg font-medium text-indigo-300 mb-4">What to transcribe?</h3>
 						
-						<div class="space-y-4">
+						<div class="space-y-3">
 							<!-- Option 1: Entire Book -->
-							<div class="border border-slate-600 rounded p-4 bg-[#121733] hover:border-indigo-500 cursor-pointer" id="entireBookOption">
-								<div class="flex items-center justify-between">
-									<div>
-										<h4 class="font-medium text-white">Entire Book</h4>
-										<p class="text-sm text-slate-400">Create audio for the complete book</p>
-									</div>
-									<button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium">Select</button>
+							<label class="flex items-start space-x-3 p-4 border border-slate-600 rounded-lg bg-[#121733] hover:bg-[#1a1f3a] cursor-pointer transition-colors">
+								<input type="radio" name="transcribeMode" value="book" class="mt-1 text-indigo-600 bg-transparent border-slate-400 focus:ring-indigo-500 focus:ring-offset-0">
+								<div class="flex-1">
+									<h4 class="font-medium text-white">Entire Book</h4>
+									<p class="text-sm text-slate-400">Create audio for the complete book</p>
 								</div>
-							</div>
+							</label>
 
 							<!-- Option 2: Specific Chapters -->
-							<div class="border border-slate-600 rounded p-4 bg-[#121733] hover:border-indigo-500 cursor-pointer" id="chaptersOption">
-								<div class="flex items-center justify-between">
-									<div>
-										<h4 class="font-medium text-white">Specific Chapters</h4>
-										<p class="text-sm text-slate-400">Choose one or more chapters (e.g., 1-3, 5, 10-12)</p>
-									</div>
-									<button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium">Select</button>
-								</div>
-								<div class="mt-4 hidden" id="chaptersInput">
-									<input type="text" id="chapters" placeholder="e.g., 1-3, 5, 10-12" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
-									<div class="mt-2">
-										<button id="allChaptersBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">All Chapters</button>
+							<label class="flex items-start space-x-3 p-4 border border-slate-600 rounded-lg bg-[#121733] hover:bg-[#1a1f3a] cursor-pointer transition-colors">
+								<input type="radio" name="transcribeMode" value="chapters" class="mt-1 text-indigo-600 bg-transparent border-slate-400 focus:ring-indigo-500 focus:ring-offset-0">
+								<div class="flex-1">
+									<h4 class="font-medium text-white">Specific Chapters</h4>
+									<p class="text-sm text-slate-400">Choose one or more chapters (e.g., 1-3, 5, 10-12)</p>
+									<div class="mt-3 hidden" id="chaptersInput">
+										<input type="text" id="chapters" placeholder="e.g., 1-3, 5, 10-12" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+										<div class="mt-2">
+											<button id="allChaptersBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">All Chapters</button>
+										</div>
 									</div>
 								</div>
-							</div>
+							</label>
 
 							<!-- Option 3: Specific Verses -->
-							<div class="border border-slate-600 rounded p-4 bg-[#121733] hover:border-indigo-500 cursor-pointer" id="versesOption">
-								<div class="flex items-center justify-between">
-									<div>
-										<h4 class="font-medium text-white">Specific Verses</h4>
-										<p class="text-sm text-slate-400">Choose a chapter and specific verses</p>
-									</div>
-									<button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium">Select</button>
-								</div>
-								<div class="mt-4 hidden" id="versesInput">
-									<div class="grid grid-cols-2 gap-4">
-										<div>
-											<label class="block text-xs text-slate-400 mb-1">Chapter</label>
-											<input type="number" id="chapter" min="1" value="1" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+							<label class="flex items-start space-x-3 p-4 border border-slate-600 rounded-lg bg-[#121733] hover:bg-[#1a1f3a] cursor-pointer transition-colors">
+								<input type="radio" name="transcribeMode" value="verses" class="mt-1 text-indigo-600 bg-transparent border-slate-400 focus:ring-indigo-500 focus:ring-offset-0">
+								<div class="flex-1">
+									<h4 class="font-medium text-white">Specific Verse(s)</h4>
+									<p class="text-sm text-slate-400">Choose a chapter and specific verses</p>
+									<div class="mt-3 hidden" id="versesInput">
+										<div class="grid grid-cols-2 gap-4 mb-3">
+											<div>
+												<label class="block text-xs text-slate-400 mb-1">Chapter</label>
+												<input type="number" id="chapter" min="1" value="1" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+											</div>
+											<div>
+												<label class="block text-xs text-slate-400 mb-1">Load Verses</label>
+												<button id="loadVersesBtn" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm">Load Chapter</button>
+											</div>
 										</div>
-										<div>
-											<label class="block text-xs text-slate-400 mb-1">Verses</label>
-											<input type="text" id="verses" placeholder="e.g., 1-10, 15" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+										<div id="versesCheckboxContainer" class="hidden">
+											<p class="text-xs text-slate-400 mb-2">Select verses to include:</p>
+											<div id="versesCheckboxList" class="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+												<!-- Verse checkboxes will be populated here -->
+											</div>
+											<div class="mt-3 flex gap-2">
+												<button id="selectAllVersesBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">Select All</button>
+												<button id="deselectAllVersesBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">Deselect All</button>
+											</div>
 										</div>
 									</div>
-									<div class="mt-2">
-										<button id="allVersesBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs mr-2">All Verses</button>
-										<button id="wholeChapterBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">Whole Chapter</button>
-									</div>
 								</div>
-							</div>
+							</label>
 						</div>
 					</div>
 
