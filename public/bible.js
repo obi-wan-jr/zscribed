@@ -72,9 +72,12 @@ async function loadVoiceModels() {
 
 function setupEventListeners() {
 	// Radio button listeners for mode selection
-	document.querySelectorAll('input[name="transcribeMode"]').forEach(radio => {
+	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+	console.log('Found radio buttons:', radioButtons.length);
+	radioButtons.forEach(radio => {
 		radio.addEventListener('change', (e) => {
 			if (e.target.checked) {
+				console.log('Radio changed to:', e.target.value);
 				selectMode(e.target.value);
 			}
 		});
@@ -158,7 +161,13 @@ function selectMode(mode) {
 	
 	// Show relevant input section
 	if (mode === 'chapters') {
-		document.getElementById('chaptersInput').classList.remove('hidden');
+		const chaptersInput = document.getElementById('chaptersInput');
+		if (chaptersInput) {
+			chaptersInput.classList.remove('hidden');
+			console.log('Chapters input shown');
+		} else {
+			console.error('chaptersInput element not found');
+		}
 	}
 	
 	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : mode === 'chapters' ? 'Specific Chapters' : 'Specific Verses'}`);
