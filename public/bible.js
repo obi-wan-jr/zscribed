@@ -8,13 +8,9 @@ requireAuth().then(isAuthenticated => {
 	init();
 });
 
-// DOM elements - will be initialized in init()
-let voiceModel, translation, book, bookSearch, bookSelectBtn, chapter, verses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
+// DOM elements
+let voiceModel, translation, book, chapter, verses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
 let bibleFetchBtn, bibleTtsBtn, bibleProgress, userWelcome, outputsList, refreshOutputsBtn, queueStatus;
-let bookModal, bookSearchInput, bookGrid, closeBookModal;
-
-// Store all books data
-let allBooks = [];
 
 async function init() {
 	console.log('[Bible] Initializing Bible page...');
@@ -23,8 +19,6 @@ async function init() {
 	voiceModel = document.getElementById('voiceModel');
 	translation = document.getElementById('translation');
 	book = document.getElementById('book');
-	bookSearch = document.getElementById('bookSearch');
-	bookSelectBtn = document.getElementById('bookSelectBtn');
 	chapter = document.getElementById('chapter');
 	verses = document.getElementById('verses');
 	excludeNumbers = document.getElementById('excludeNumbers');
@@ -37,15 +31,9 @@ async function init() {
 	outputsList = document.getElementById('outputsList');
 	refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 	queueStatus = document.getElementById('queueStatus');
-	bookModal = document.getElementById('bookModal');
-	bookSearchInput = document.getElementById('bookSearchInput');
-	bookGrid = document.getElementById('bookGrid');
-	closeBookModal = document.getElementById('closeBookModal');
 	
 	console.log('[Bible] DOM elements initialized:', {
 		book: !!book,
-		bookSearch: !!bookSearch,
-		bookModal: !!bookModal,
 		voiceModel: !!voiceModel,
 		userWelcome: !!userWelcome
 	});
@@ -59,8 +47,7 @@ async function init() {
 		userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
 	}
 	
-	// Load Bible books (public endpoint)
-	console.log('[Bible] About to load Bible books...');
+	// Load Bible books
 	await loadBibleBooks();
 	
 	// Load voice models
@@ -99,7 +86,7 @@ async function loadVoiceModels() {
 
 async function loadBibleBooks() {
 	try {
-		console.log('[Bible] Starting to load Bible books...');
+		console.log('[Bible] Loading Bible books...');
 		
 		const res = await fetch('/api/bible/books');
 		if (!res.ok) {
@@ -107,151 +94,79 @@ async function loadBibleBooks() {
 		}
 		
 		const data = await res.json();
-		allBooks = data.books || [];
-		console.log('[Bible] Received books:', allBooks.length);
+		const books = data.books || [];
+		console.log('[Bible] Received books:', books.length);
 		
-		if (!bookGrid) {
-			console.error('[Bible] Book grid element is null!');
+		if (!book) {
+			console.error('[Bible] Book element not found!');
 			return;
 		}
 		
-		// Populate the book grid
-		populateBookGrid(allBooks);
+		// Clear existing options
+		book.innerHTML = '';
 		
-		// Set default book to John
-		selectBook('John');
+		// Group books by testament
+		const oldTestament = books.filter(b => b.testament === 'old');
+		const newTestament = books.filter(b => b.testament === 'new');
+		
+		// Add Old Testament optgroup
+		if (oldTestament.length > 0) {
+			const oldGroup = document.createElement('optgroup');
+			oldGroup.label = 'Old Testament';
+			
+			for (const bookInfo of oldTestament) {
+				const opt = document.createElement('option');
+				opt.value = bookInfo.name;
+				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
+				opt.dataset.chapters = bookInfo.chapters;
+				oldGroup.appendChild(opt);
+			}
+			
+			book.appendChild(oldGroup);
+		}
+		
+		// Add New Testament optgroup
+		if (newTestament.length > 0) {
+			const newGroup = document.createElement('optgroup');
+			newGroup.label = 'New Testament';
+			
+			for (const bookInfo of newTestament) {
+				const opt = document.createElement('option');
+				opt.value = bookInfo.name;
+				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
+				opt.dataset.chapters = bookInfo.chapters;
+				newGroup.appendChild(opt);
+			}
+			
+			book.appendChild(newGroup);
+		}
+		
+		// Set default to John
+		book.value = 'John';
+		
+		// Update chapter max value
+		updateChapterMax();
+		
+		console.log('[Bible] Books loaded successfully');
 		
 	} catch (error) {
 		console.error('Failed to load Bible books:', error);
-		if (bookSearch) {
-			bookSearch.placeholder = 'Failed to load books';
+		if (book) {
+			book.innerHTML = '<option value="">Failed to load books</option>';
 		}
 	}
-}
-
-function populateBookGrid(books) {
-	console.log('[Bible] Populating book grid with', books.length, 'books');
-	if (!bookGrid) {
-		console.error('[Bible] Book grid element not found!');
-		return;
-	}
-	
-	bookGrid.innerHTML = '';
-	
-	// Group books by testament
-	const oldTestament = books.filter(b => b.testament === 'old');
-	const newTestament = books.filter(b => b.testament === 'new');
-	
-	// Add Old Testament section
-	if (oldTestament.length > 0) {
-		const oldHeader = document.createElement('div');
-		oldHeader.className = 'col-span-full text-sm font-medium text-indigo-300 mt-4 mb-2';
-		oldHeader.textContent = 'Old Testament';
-		bookGrid.appendChild(oldHeader);
-		
-		oldTestament.forEach(bookInfo => {
-			const bookBtn = createBookButton(bookInfo);
-			bookGrid.appendChild(bookBtn);
-		});
-	}
-	
-	// Add New Testament section
-	if (newTestament.length > 0) {
-		const newHeader = document.createElement('div');
-		newHeader.className = 'col-span-full text-sm font-medium text-indigo-300 mt-4 mb-2';
-		newHeader.textContent = 'New Testament';
-		bookGrid.appendChild(newHeader);
-		
-		newTestament.forEach(bookInfo => {
-			const bookBtn = createBookButton(bookInfo);
-			bookGrid.appendChild(bookBtn);
-		});
-	}
-}
-
-function createBookButton(bookInfo) {
-	const btn = document.createElement('button');
-	btn.className = 'text-left p-3 bg-[#0b1020] border border-slate-600 rounded hover:bg-slate-700 hover:border-slate-500 transition-colors';
-	btn.innerHTML = `
-		<div class="font-medium text-slate-200">${bookInfo.name}</div>
-		<div class="text-xs text-slate-400">${bookInfo.chapters} chapters</div>
-	`;
-	btn.onclick = () => {
-		selectBook(bookInfo.name);
-		closeBookModalFunc();
-	};
-	return btn;
-}
-
-function selectBook(bookName) {
-	if (!book || !bookSearch) return;
-	
-	book.value = bookName;
-	bookSearch.value = bookName;
-	
-	// Clear the modal search input
-	if (bookSearchInput) {
-		bookSearchInput.value = '';
-	}
-	
-	// Find the book info to update chapter max
-	const bookInfo = allBooks.find(b => b.name === bookName);
-	if (bookInfo && chapter) {
-		chapter.max = bookInfo.chapters;
-		chapter.placeholder = `1-${bookInfo.chapters}`;
-		if (verses) {
-			verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${bookInfo.chapters})`;
-		}
-	}
-}
-
-function openBookModal() {
-	console.log('[Bible] Opening book modal...');
-	if (!bookModal) {
-		console.error('[Bible] Book modal element not found!');
-		return;
-	}
-	bookModal.classList.remove('hidden');
-	console.log('[Bible] Modal opened');
-	
-	// Sync search terms between main field and modal
-	if (bookSearchInput && bookSearch) {
-		bookSearchInput.value = bookSearch.value;
-		bookSearchInput.focus();
-		// Filter books based on current search term
-		filterBooks(bookSearch.value);
-	}
-}
-
-function closeBookModalFunc() {
-	if (!bookModal) return;
-	bookModal.classList.add('hidden');
-}
-
-function filterBooks(searchTerm) {
-	console.log('[Bible] Filtering books with term:', searchTerm);
-	if (!bookGrid) {
-		console.error('[Bible] Book grid element not found!');
-		return;
-	}
-	
-	const filteredBooks = allBooks.filter(book => 
-		book.name.toLowerCase().includes(searchTerm.toLowerCase())
-	);
-	
-	console.log('[Bible] Filtered books:', filteredBooks.length);
-	populateBookGrid(filteredBooks);
 }
 
 // Update chapter input max value based on selected book
 function updateChapterMax() {
 	if (!book || !chapter || !verses) return;
 	
-	const bookInfo = allBooks.find(b => b.name === book.value);
-	if (bookInfo) {
-		chapter.max = bookInfo.chapters;
-		chapter.placeholder = `1-${bookInfo.chapters}`;
-		verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${bookInfo.chapters})`;
+	const selectedOption = book.options[book.selectedIndex];
+	if (selectedOption && selectedOption.dataset.chapters) {
+		const maxChapters = parseInt(selectedOption.dataset.chapters);
+		chapter.max = maxChapters;
+		chapter.placeholder = `1-${maxChapters}`;
+		verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${maxChapters})`;
 	}
 }
 
@@ -402,58 +317,8 @@ function listenToProgress(jobId) {
 }
 
 function setupEventListeners() {
-	console.log('[Bible] Setting up event listeners...');
-	console.log('[Bible] Elements found:', {
-		bookSelectBtn: !!bookSelectBtn,
-		closeBookModal: !!closeBookModal,
-		bookModal: !!bookModal,
-		bookSearch: !!bookSearch,
-		bookSearchInput: !!bookSearchInput
-	});
-	
-	// Book selection modal
-	bookSelectBtn?.addEventListener('click', () => {
-		console.log('[Bible] Book select button clicked');
-		openBookModal();
-	});
-	closeBookModal?.addEventListener('click', closeBookModalFunc);
-	
-	// Close modal when clicking outside
-	bookModal?.addEventListener('click', (e) => {
-		if (e.target === bookModal) {
-			closeBookModalFunc();
-		}
-	});
-	
-	// Book search functionality - both in modal and main field
-	bookSearchInput?.addEventListener('input', (e) => {
-		filterBooks(e.target.value);
-	});
-	
-	// Main book search field - typing opens modal and filters
-	bookSearch?.addEventListener('input', (e) => {
-		console.log('[Bible] Book search input:', e.target.value);
-		const searchTerm = e.target.value;
-		
-		// If modal is not open, open it
-		if (bookModal && bookModal.classList.contains('hidden')) {
-			console.log('[Bible] Opening modal from search input');
-			openBookModal();
-		}
-		
-		// Filter books in modal
-		filterBooks(searchTerm);
-	});
-	
-	// Focus on main book search field opens modal
-	bookSearch?.addEventListener('focus', () => {
-		if (bookModal && bookModal.classList.contains('hidden')) {
-			openBookModal();
-		}
-	});
-	
-	// Chapter input change
-	chapter?.addEventListener('change', updateChapterMax);
+	// Book selection change
+	book?.addEventListener('change', updateChapterMax);
 
 	bibleFetchBtn?.addEventListener('click', async () => {
 		// Validate before fetching
