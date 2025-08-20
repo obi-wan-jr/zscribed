@@ -1,0 +1,10 @@
+{
+  "fishAudioApiKey": "YOUR_FISH_AUDIO_API_KEY",
+  "voiceModels": [
+    {
+      "id": "model-id-1",
+      "name": "Default Voice"
+    }
+  ],
+  "allowedUsers": ["Inggo", "Gelo", "JM"]
+}

@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+storage/
+config/config.json
+public/styles.build.css
+pm2.log
