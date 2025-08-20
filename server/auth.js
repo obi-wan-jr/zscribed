@@ -3,6 +3,11 @@ import { loadConfig } from './config.js';
 const sessions = new Map(); // sessionId -> { user, expires }
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+// Rate limiting
+const loginAttempts = new Map(); // ip -> { count, resetTime }
+const MAX_LOGIN_ATTEMPTS = 5;
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+
 export function generateSessionId() {
 	return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
@@ -26,6 +31,23 @@ export function getSession(sessionId) {
 
 export function deleteSession(sessionId) {
 	sessions.delete(sessionId);
+}
+
+export function checkRateLimit(ip) {
+	const now = Date.now();
+	const attempts = loginAttempts.get(ip);
+	
+	if (!attempts || now > attempts.resetTime) {
+		loginAttempts.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+		return true;
+	}
+	
+	if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+		return false;
+	}
+	
+	attempts.count++;
+	return true;
 }
 
 export function requireAuth(req, res, next) {
@@ -52,12 +74,21 @@ export function getAuthMiddleware() {
 	};
 }
 
-// Clean up expired sessions periodically
+// Clean up expired sessions and rate limit data periodically
 setInterval(() => {
 	const now = Date.now();
+	
+	// Clean sessions
 	for (const [sessionId, session] of sessions.entries()) {
 		if (now > session.expires) {
 			sessions.delete(sessionId);
+		}
+	}
+	
+	// Clean rate limit data
+	for (const [ip, attempts] of loginAttempts.entries()) {
+		if (now > attempts.resetTime) {
+			loginAttempts.delete(ip);
 		}
 	}
 }, 60 * 60 * 1000); // Every hour

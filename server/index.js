@@ -12,7 +12,7 @@ import { fetchBibleText, cleanupBibleText } from './bible/dummyProvider.js';
 import { splitIntoSentences, groupSentences } from './text/segment.js';
 import { synthesizeChunkToFile, stitchSegments } from './tts/dummyTts.js';
 import { loadPreferences, savePreferences } from './memory.js';
-import { requireAuth, getAuthMiddleware, createSession, deleteSession } from './auth.js';
+import { requireAuth, getAuthMiddleware, createSession, deleteSession, checkRateLimit } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +35,10 @@ app.use((req, res, next) => {
 		});
 	}
 	req.cookies = cookies;
+	
+	// Get client IP
+	req.clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress || req.socket.remoteAddress || req.ip || 'unknown';
+	
 	next();
 });
 
@@ -68,6 +72,11 @@ app.use('/', express.static(PUBLIC_DIR));
 
 // Auth endpoints (no auth required)
 app.post('/api/auth/login', (req, res) => {
+	// Check rate limit
+	if (!checkRateLimit(req.clientIP)) {
+		return res.status(429).json({ error: 'Too many login attempts. Please try again in 15 minutes.' });
+	}
+	
 	const { user } = req.body || {};
 	if (!user) {
 		return res.status(400).json({ error: 'Please enter your name' });
@@ -114,7 +123,6 @@ app.get('/api/health', (_req, res) => {
 // Public config meta (no auth required)
 app.get('/api/config/meta', (_req, res) => {
 	res.json({
-		allowedUsers: config.allowedUsers || ['Inggo', 'Gelo', 'JM'],
 		voiceModels: (config.voiceModels || []).map(v => ({ id: v.id, name: v.name })),
 	});
 });

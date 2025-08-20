@@ -4,17 +4,11 @@ const loginForm = document.getElementById('loginForm');
 const userName = document.getElementById('userName');
 const loginError = document.getElementById('loginError');
 
-let allowedUsers = [];
-
 init();
 
 async function init() {
-	try {
-		const meta = await fetchMeta();
-		allowedUsers = meta.allowedUsers || [];
-	} catch (e) {
-		showError('Failed to load user list');
-	}
+	// No longer need to fetch allowedUsers - they're not exposed via API
+	// This prevents username enumeration
 }
 
 function showError(message) {
@@ -24,18 +18,6 @@ function showError(message) {
 
 function hideError() {
 	loginError.classList.add('hidden');
-}
-
-function isValidUser(name) {
-	if (!name || !allowedUsers.length) return false;
-	const normalizedName = name.trim().toLowerCase();
-	return allowedUsers.some(user => user.toLowerCase() === normalizedName);
-}
-
-function getNormalizedUserName(name) {
-	const normalizedName = name.trim().toLowerCase();
-	const user = allowedUsers.find(user => user.toLowerCase() === normalizedName);
-	return user || name.trim(); // Return original case from config, or trimmed input
 }
 
 loginForm?.addEventListener('submit', async (e) => {
@@ -48,22 +30,18 @@ loginForm?.addEventListener('submit', async (e) => {
 		return;
 	}
 	
-	if (!isValidUser(inputName)) {
-		showError('Invalid user name. Please try again.');
-		return;
-	}
-	
-	const normalizedUser = getNormalizedUserName(inputName);
-	
 	try {
 		const res = await fetch('/api/auth/login', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ user: normalizedUser })
+			body: JSON.stringify({ user: inputName.trim() })
 		});
 		
 		if (!res.ok) {
 			const data = await res.json();
+			if (res.status === 429) {
+				throw new Error('Too many login attempts. Please try again in 15 minutes.');
+			}
 			throw new Error(data.error || 'Login failed');
 		}
 		
