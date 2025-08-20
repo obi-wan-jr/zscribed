@@ -138,20 +138,21 @@ app.get('/api/config/meta', (_req, res) => {
 	});
 });
 
-// Protected routes (require auth)
-app.use(requireAuth);
-
-// Voice models management (no API key exposure)
+// Voice models endpoint (no auth required for reading)
 app.get('/api/models', async (_req, res) => {
 	try {
 		if (!ttsService) {
-			return res.status(503).json({ 
-				error: 'TTS service not available',
-				troubleshooting: [
-					'Add "fishAudioApiKey" to your config.json file',
-					'Get your API key from https://fish.audio',
-					'Restart the server after adding the API key'
-				]
+			// If TTS service is not available, return config voice models as fallback
+			const configVoices = config.voiceModels || [];
+			const defaultVoices = [
+				{ id: 'default-voice-1', name: 'Default Voice 1' },
+				{ id: 'default-voice-2', name: 'Default Voice 2' }
+			];
+			const voices = configVoices.length > 0 ? configVoices : defaultVoices;
+			
+			return res.json({ 
+				voiceModels: voices.map(v => ({ id: v.id, name: v.name })),
+				note: configVoices.length > 0 ? 'Using config voice models' : 'Using default voice models (no config found)'
 			});
 		}
 		
@@ -159,16 +160,25 @@ app.get('/api/models', async (_req, res) => {
 		res.json({ voiceModels: voices.map(v => ({ id: v.id, name: v.name })) });
 	} catch (error) {
 		console.error('[API] Error fetching voices:', error);
-		res.status(500).json({ 
-			error: error.message,
-			troubleshooting: error.troubleshooting || [
-				'Check your internet connection',
-				'Verify your API key is correct',
-				'Ensure your Fish.Audio account is active'
-			]
+		// Fallback to config voice models or defaults
+		const configVoices = config.voiceModels || [];
+		const defaultVoices = [
+			{ id: 'default-voice-1', name: 'Default Voice 1' },
+			{ id: 'default-voice-2', name: 'Default Voice 2' }
+		];
+		const voices = configVoices.length > 0 ? configVoices : defaultVoices;
+		
+		res.json({ 
+			voiceModels: voices.map(v => ({ id: v.id, name: v.name })),
+			note: configVoices.length > 0 ? 'Using config voice models (API error)' : 'Using default voice models (API error)'
 		});
 	}
 });
+
+// Protected routes (require auth)
+app.use(requireAuth);
+
+// Voice model management (protected)
 app.post('/api/models', (req, res) => {
 	const { id, name } = req.body || {};
 	if (!id) return res.status(400).json({ error: 'Missing id' });
@@ -178,6 +188,7 @@ app.post('/api/models', (req, res) => {
 	config = saveConfig(ROOT, { ...config, voiceModels: list });
 	res.json({ ok: true });
 });
+
 app.post('/api/models/delete', (req, res) => {
 	const { id } = req.body || {};
 	const list = Array.isArray(config.voiceModels) ? config.voiceModels.filter(v => v.id !== id) : [];
