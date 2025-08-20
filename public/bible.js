@@ -20,17 +20,31 @@ let bibleBooks = {
 };
 
 // Initialize when page loads
+console.log('Bible.js: Starting authentication check...');
 requireAuth().then(isAuthenticated => {
-	if (!isAuthenticated) return;
+	console.log('Bible.js: Authentication result:', isAuthenticated);
+	if (!isAuthenticated) {
+		console.log('Bible.js: Not authenticated, returning early');
+		return;
+	}
+	console.log('Bible.js: Authenticated, calling init()');
 	init();
+}).catch(error => {
+	console.error('Bible.js: Authentication error:', error);
 });
 
 async function init() {
+	console.log('Bible.js: init() called');
+	
 	// Set welcome message
 	const userWelcome = document.getElementById('userWelcome');
 	const currentUser = getActiveUser();
+	console.log('Bible.js: Current user:', currentUser);
 	if (userWelcome) {
 		userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
+		console.log('Bible.js: Welcome message set');
+	} else {
+		console.error('Bible.js: userWelcome element not found');
 	}
 	
 	// Update auth link
@@ -71,9 +85,11 @@ async function loadVoiceModels() {
 }
 
 function setupEventListeners() {
+	console.log('Bible.js: setupEventListeners() called');
+	
 	// Radio button listeners for mode selection
 	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
-	console.log('Found radio buttons:', radioButtons.length);
+	console.log('Bible.js: Found radio buttons:', radioButtons.length);
 	radioButtons.forEach(radio => {
 		radio.addEventListener('change', (e) => {
 			if (e.target.checked) {
