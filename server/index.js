@@ -10,7 +10,7 @@ import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
 import { fetchBibleText, cleanupBibleText } from './bible/dummyProvider.js';
 import { splitIntoSentences, groupSentences } from './text/segment.js';
-import { synthesizeChunkToFile, stitchSegments } from './tts/dummyTts.js';
+import { createTTSService } from './tts/service.js';
 import { loadPreferences, savePreferences } from './memory.js';
 import { requireAuth, getAuthMiddleware, createSession, deleteSession, checkRateLimit } from './auth.js';
 
@@ -61,6 +61,7 @@ function ensureDir(dirPath) {
 
 let config = loadConfig(ROOT);
 const logger = new UserLogger(LOGS_DIR);
+const ttsService = createTTSService(config);
 logger.prune();
 setInterval(() => logger.prune(), 24 * 60 * 60 * 1000);
 
@@ -131,8 +132,14 @@ app.get('/api/config/meta', (_req, res) => {
 app.use(requireAuth);
 
 // Voice models management (no API key exposure)
-app.get('/api/models', (_req, res) => {
-	res.json({ voiceModels: (config.voiceModels || []).map(v => ({ id: v.id, name: v.name })) });
+app.get('/api/models', async (_req, res) => {
+	try {
+		const voices = await ttsService.getAvailableVoices();
+		res.json({ voiceModels: voices.map(v => ({ id: v.id, name: v.name })) });
+	} catch (error) {
+		console.error('[API] Error fetching voices:', error);
+		res.status(500).json({ error: 'Failed to fetch voices' });
+	}
 });
 app.post('/api/models', (req, res) => {
 	const { id, name } = req.body || {};
@@ -228,7 +235,7 @@ async function processQueue() {
 			emitProgress(job.id, { status: 'started', step: 'init' });
 
 			if (job.type === 'tts') {
-				await handleTtsJob(job);
+				await processTTSJob(job);
 			} else if (job.type === 'bible-tts') {
 				await handleBibleTtsJob(job);
 			} else {
@@ -258,17 +265,33 @@ app.get('/api/queue/status', (_req, res) => {
 	res.json({ pending: jobQueue.length, processing: isProcessing });
 });
 
-async function handleTtsJob(job) {
-	const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.payload;
-	const sentences = splitIntoSentences(text);
-	const chunks = groupSentences(sentences, sentencesPerChunk);
+async function processTTSJob(job) {
+	const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.data;
+	const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
 	const segmentFiles = [];
+	
+	emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
+	
 	for (let i = 0; i < chunks.length; i++) {
 		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: i + 1, total: chunks.length });
-		const file = await synthesizeChunkToFile({ chunkText: chunks[i], voiceModelId, format, outputsDir: OUTPUTS_DIR, jobId: job.id, index: i });
+		const file = await ttsService.synthesizeChunkToFile({ 
+			chunkText: chunks[i], 
+			voiceModelId, 
+			format, 
+			outputsDir: OUTPUTS_DIR, 
+			jobId: job.id, 
+			index: i 
+		});
 		segmentFiles.push(file);
 	}
-	const stitched = await stitchSegments({ segmentFiles, outputsDir: OUTPUTS_DIR, jobId: job.id, format });
+	
+	const stitched = await ttsService.stitchSegments({ 
+		segmentFiles, 
+		outputsDir: OUTPUTS_DIR, 
+		jobId: job.id, 
+		format 
+	});
+	
 	emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
 }
 
@@ -277,7 +300,7 @@ async function handleBibleTtsJob(job) {
 	const verses = parseVerseRanges(String(verseRanges || ''));
 	const raw = await fetchBibleText({ translation, book, chapter, verses });
 	const text = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
-	await handleTtsJob({ id: job.id, payload: { text, voiceModelId, format, sentencesPerChunk } });
+	await processTTSJob({ id: job.id, data: { text, voiceModelId, format, sentencesPerChunk } });
 }
 
 // Start TTS job
@@ -290,7 +313,7 @@ app.post('/api/jobs/tts', (req, res) => {
 		format: req.body?.format || 'mp3',
 		sentencesPerChunk: Number(req.body?.sentencesPerChunk || 3)
 	};
-	const job = { id, type: 'tts', user, createdAt: Date.now(), payload };
+	const job = { id, type: 'tts', user, createdAt: Date.now(), data: payload };
 	jobQueue.push(job);
 	saveQueue();
 	processQueue();
@@ -350,6 +373,17 @@ app.post('/api/outputs/delete', (req, res) => {
 
 // Serve stored outputs
 app.use('/outputs', express.static(OUTPUTS_DIR));
+
+// Add TTS connection test endpoint
+app.get('/api/tts/test', async (_req, res) => {
+	try {
+		const result = await ttsService.testConnection();
+		res.json(result);
+	} catch (error) {
+		console.error('[API] TTS test error:', error);
+		res.status(500).json({ error: 'TTS test failed' });
+	}
+});
 
 process.on('SIGINT', () => { saveQueue(); process.exit(0); });
 process.on('SIGTERM', () => { saveQueue(); process.exit(0); });
