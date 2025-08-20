@@ -143,23 +143,28 @@ function selectMode(mode) {
 	currentMode = mode;
 	
 	// Reset all visual states
-	document.querySelectorAll('[id$="Option"]').forEach(option => {
-		// Reset border and background
-		option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
-		option.classList.add('border-slate-600');
-		
-		// Reset radio indicator
-		const radioIndicator = option.querySelector('.w-3.h-3');
-		if (radioIndicator) {
-			radioIndicator.classList.remove('bg-indigo-500');
-			radioIndicator.classList.add('bg-transparent');
-		}
-		
-		// Reset border color of radio circle
-		const radioCircle = option.querySelector('.w-8.h-8');
-		if (radioCircle) {
-			radioCircle.classList.remove('border-indigo-500');
-			radioCircle.classList.add('border-slate-400');
+	const optionElements = document.querySelectorAll('[id$="Option"]');
+	console.log('Found option elements:', optionElements.length);
+	optionElements.forEach((option, index) => {
+		console.log(`Option ${index}:`, option.id, option);
+		if (option && option.classList) {
+			// Reset border and background
+			option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
+			option.classList.add('border-slate-600');
+			
+			// Reset radio indicator
+			const radioIndicator = option.querySelector('.w-3.h-3');
+			if (radioIndicator) {
+				radioIndicator.classList.remove('bg-indigo-500');
+				radioIndicator.classList.add('bg-transparent');
+			}
+			
+			// Reset border color of radio circle
+			const radioCircle = option.querySelector('.w-8.h-8');
+			if (radioCircle) {
+				radioCircle.classList.remove('border-indigo-500');
+				radioCircle.classList.add('border-slate-400');
+			}
 		}
 	});
 	
