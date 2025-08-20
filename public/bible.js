@@ -89,6 +89,16 @@ function setupEventListeners() {
 		}
 	});
 	
+	// Include verses checkbox
+	document.getElementById('includeVerses').addEventListener('change', (e) => {
+		if (e.target.checked) {
+			document.getElementById('versesSubInput').classList.remove('hidden');
+		} else {
+			document.getElementById('versesSubInput').classList.add('hidden');
+			document.getElementById('versesCheckboxContainer').classList.add('hidden');
+		}
+	});
+	
 	// Verse loading and selection
 	document.getElementById('loadVersesBtn').addEventListener('click', loadVerses);
 	document.getElementById('selectAllVersesBtn').addEventListener('click', () => {
@@ -125,8 +135,7 @@ function selectMode(mode) {
 	});
 	
 	// Update selected option
-	const selectedOption = document.getElementById(mode === 'book' ? 'bookOption' : 
-		mode === 'chapters' ? 'chaptersOption' : 'versesOption');
+	const selectedOption = document.getElementById(mode === 'book' ? 'bookOption' : 'chaptersOption');
 	
 	// Set selected visual state
 	selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
@@ -144,14 +153,12 @@ function selectMode(mode) {
 	
 	// Hide all input sections
 	document.getElementById('chaptersInput').classList.add('hidden');
-	document.getElementById('versesInput').classList.add('hidden');
+	document.getElementById('versesSubInput').classList.add('hidden');
 	document.getElementById('versesCheckboxContainer').classList.add('hidden');
 	
 	// Show relevant input section
 	if (mode === 'chapters') {
 		document.getElementById('chaptersInput').classList.remove('hidden');
-	} else if (mode === 'verses') {
-		document.getElementById('versesInput').classList.remove('hidden');
 	}
 	
 	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : mode === 'chapters' ? 'Specific Chapters' : 'Specific Verses'}`);
@@ -261,19 +268,23 @@ function validateSelection() {
 				}
 			}
 		}
-	} else if (currentMode === 'verses') {
-		const chapter = parseInt(document.getElementById('chapter').value);
-		
-		if (isNaN(chapter) || chapter < 1 || chapter > maxChapters) {
-			updateStatus(`Invalid chapter: ${chapter}. Valid range: 1-${maxChapters}`);
-			return false;
-		}
-		
-		// Check if any verses are selected
-		const selectedVerses = document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked');
-		if (selectedVerses.length === 0) {
-			updateStatus('Please select at least one verse');
-			return false;
+	} else if (currentMode === 'chapters') {
+		// Check if verses are enabled and validate them
+		const includeVerses = document.getElementById('includeVerses').checked;
+		if (includeVerses) {
+			const chapter = parseInt(document.getElementById('chapter').value);
+			
+			if (isNaN(chapter) || chapter < 1 || chapter > maxChapters) {
+				updateStatus(`Invalid chapter: ${chapter}. Valid range: 1-${maxChapters}`);
+				return false;
+			}
+			
+			// Check if any verses are selected
+			const selectedVerses = document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked');
+			if (selectedVerses.length === 0) {
+				updateStatus('Please select at least one verse');
+				return false;
+			}
 		}
 	}
 	
@@ -295,26 +306,30 @@ function buildRequestData() {
 	if (currentMode === 'book') {
 		return { ...baseData, type: 'book' };
 	} else if (currentMode === 'chapters') {
-		return {
-			...baseData,
-			type: 'chapters',
-			chapters: document.getElementById('chapters').value.trim()
-		};
-	} else if (currentMode === 'verses') {
-		// Get selected verses from checkboxes
-		const selectedVerses = Array.from(document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked'))
-			.map(cb => parseInt(cb.value))
-			.sort((a, b) => a - b);
+		const includeVerses = document.getElementById('includeVerses').checked;
 		
-		// Convert to ranges format
-		const verseRanges = convertToRanges(selectedVerses);
-		
-		return {
-			...baseData,
-			type: 'verses',
-			chapter: parseInt(document.getElementById('chapter').value),
-			verseRanges: verseRanges
-		};
+		if (includeVerses) {
+			// Get selected verses from checkboxes
+			const selectedVerses = Array.from(document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked'))
+				.map(cb => parseInt(cb.value))
+				.sort((a, b) => a - b);
+			
+			// Convert to ranges format
+			const verseRanges = convertToRanges(selectedVerses);
+			
+			return {
+				...baseData,
+				type: 'verses',
+				chapter: parseInt(document.getElementById('chapter').value),
+				verseRanges: verseRanges
+			};
+		} else {
+			return {
+				...baseData,
+				type: 'chapters',
+				chapters: document.getElementById('chapters').value.trim()
+			};
+		}
 	}
 }
 
