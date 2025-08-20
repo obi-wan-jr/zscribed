@@ -150,36 +150,51 @@ function selectMode(mode) {
 		
 		// Reset radio indicator
 		const radioIndicator = option.querySelector('.w-3.h-3');
-		radioIndicator.classList.remove('bg-indigo-500');
-		radioIndicator.classList.add('bg-transparent');
+		if (radioIndicator) {
+			radioIndicator.classList.remove('bg-indigo-500');
+			radioIndicator.classList.add('bg-transparent');
+		}
 		
 		// Reset border color of radio circle
 		const radioCircle = option.querySelector('.w-8.h-8');
-		radioCircle.classList.remove('border-indigo-500');
-		radioCircle.classList.add('border-slate-400');
+		if (radioCircle) {
+			radioCircle.classList.remove('border-indigo-500');
+			radioCircle.classList.add('border-slate-400');
+		}
 	});
 	
 	// Update selected option
 	const selectedOption = document.getElementById(mode === 'book' ? 'bookOption' : 'chaptersOption');
 	
-	// Set selected visual state
-	selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
-	selectedOption.classList.remove('border-slate-600');
-	
-	// Update radio indicator
-	const selectedRadioIndicator = selectedOption.querySelector('.w-3.h-3');
-	selectedRadioIndicator.classList.add('bg-indigo-500');
-	selectedRadioIndicator.classList.remove('bg-transparent');
-	
-	// Update border color of radio circle
-	const selectedRadioCircle = selectedOption.querySelector('.w-8.h-8');
-	selectedRadioCircle.classList.add('border-indigo-500');
-	selectedRadioCircle.classList.remove('border-slate-400');
+	if (selectedOption) {
+		// Set selected visual state
+		selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
+		selectedOption.classList.remove('border-slate-600');
+		
+		// Update radio indicator
+		const selectedRadioIndicator = selectedOption.querySelector('.w-3.h-3');
+		if (selectedRadioIndicator) {
+			selectedRadioIndicator.classList.add('bg-indigo-500');
+			selectedRadioIndicator.classList.remove('bg-transparent');
+		}
+		
+		// Update border color of radio circle
+		const selectedRadioCircle = selectedOption.querySelector('.w-8.h-8');
+		if (selectedRadioCircle) {
+			selectedRadioCircle.classList.add('border-indigo-500');
+			selectedRadioCircle.classList.remove('border-slate-400');
+		}
+	}
 	
 	// Hide all input sections
-	document.getElementById('chaptersInput').classList.add('hidden');
-	document.getElementById('versesSubInput').classList.add('hidden');
-	document.getElementById('versesCheckboxContainer').classList.add('hidden');
+	const chaptersInput = document.getElementById('chaptersInput');
+	if (chaptersInput) chaptersInput.classList.add('hidden');
+	
+	const versesSubInput = document.getElementById('versesSubInput');
+	if (versesSubInput) versesSubInput.classList.add('hidden');
+	
+	const versesCheckboxContainer = document.getElementById('versesCheckboxContainer');
+	if (versesCheckboxContainer) versesCheckboxContainer.classList.add('hidden');
 	
 	// Show relevant input section
 	if (mode === 'chapters') {
