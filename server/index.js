@@ -319,10 +319,11 @@ async function processTTSJob(job) {
 		return;
 	}
 	
+	const segmentFiles = [];
+	
 	try {
 		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.data;
 		const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
-		const segmentFiles = [];
 		
 		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
 		
@@ -349,6 +350,12 @@ async function processTTSJob(job) {
 		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
 	} catch (error) {
 		console.error('[TTS Job] Error processing TTS job:', error);
+		
+		// Clean up segment files even if stitching failed
+		if (segmentFiles.length > 0) {
+			await cleanupSegmentFiles(segmentFiles);
+		}
+		
 		emitProgress(job.id, { 
 			status: 'error', 
 			error: error.message,
@@ -358,6 +365,29 @@ async function processTTSJob(job) {
 				'Ensure your Fish.Audio account is active'
 			]
 		});
+	}
+}
+
+async function cleanupSegmentFiles(segmentFiles) {
+	try {
+		console.log(`[TTS Job] Cleaning up ${segmentFiles.length} segment files after error`);
+		
+		for (const file of segmentFiles) {
+			try {
+				if (fs.existsSync(file)) {
+					fs.unlinkSync(file);
+					console.log(`[TTS Job] Deleted segment file: ${path.basename(file)}`);
+				}
+			} catch (deleteError) {
+				console.warn(`[TTS Job] Failed to delete segment file ${file}:`, deleteError.message);
+				// Don't throw error for cleanup failures - continue with other files
+			}
+		}
+		
+		console.log(`[TTS Job] Segment cleanup completed`);
+	} catch (error) {
+		console.error(`[TTS Job] Error during segment cleanup:`, error);
+		// Don't throw error for cleanup failures
 	}
 }
 

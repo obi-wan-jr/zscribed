@@ -68,14 +68,15 @@ export class FishAudioTTS {
 			
 			// Check if ffmpeg is available
 			const ffmpegAvailable = await audioStitcher.checkFFmpegAvailable();
+			let outputPath;
 			
 			if (ffmpegAvailable) {
 				// Use proper audio stitching with ffmpeg
-				return await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format });
+				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format });
 			} else {
 				// Fallback to simple concatenation for non-MP3 formats
 				const outputFilename = `${jobId}-complete.${format}`;
-				const outputPath = path.join(outputsDir, outputFilename);
+				outputPath = path.join(outputsDir, outputFilename);
 				
 				if (format === 'mp3') {
 					// For MP3 without ffmpeg, just copy the first segment
@@ -89,12 +90,39 @@ export class FishAudioTTS {
 				}
 				
 				console.log(`[FishAudio] Stitched audio saved to ${outputPath}`);
-				return outputPath;
 			}
+			
+			// Clean up segment files after successful stitching
+			await this.cleanupSegmentFiles(segmentFiles);
+			
+			return outputPath;
 			
 		} catch (error) {
 			console.error(`[FishAudio] Error stitching segments:`, error);
 			throw error;
+		}
+	}
+
+	async cleanupSegmentFiles(segmentFiles) {
+		try {
+			console.log(`[FishAudio] Cleaning up ${segmentFiles.length} segment files`);
+			
+			for (const file of segmentFiles) {
+				try {
+					if (fs.existsSync(file)) {
+						fs.unlinkSync(file);
+						console.log(`[FishAudio] Deleted segment file: ${path.basename(file)}`);
+					}
+				} catch (deleteError) {
+					console.warn(`[FishAudio] Failed to delete segment file ${file}:`, deleteError.message);
+					// Don't throw error for cleanup failures - continue with other files
+				}
+			}
+			
+			console.log(`[FishAudio] Segment cleanup completed`);
+		} catch (error) {
+			console.error(`[FishAudio] Error during segment cleanup:`, error);
+			// Don't throw error for cleanup failures - the main operation succeeded
 		}
 	}
 
