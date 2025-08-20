@@ -1,4 +1,12 @@
-import { fetchMeta, getActiveUser, setActiveUser, listenToProgress, addLogoutButton } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, listenToProgress, updateAuthLink, requireAuth } from './common.js';
+
+// Check authentication first
+requireAuth().then(isAuthenticated => {
+	if (!isAuthenticated) return; // Will redirect to login
+	
+	// Initialize the page
+	init();
+});
 
 const userSelect = document.getElementById('userSelect');
 const voiceModel = document.getElementById('voiceModel');
@@ -8,9 +16,10 @@ const ttsProgress = document.getElementById('ttsProgress');
 const audioFormat = document.getElementById('audioFormat');
 const sentencesPerChunkTts = document.getElementById('sentencesPerChunkTts');
 
-init();
-
 async function init() {
+	// Update the login/logout link
+	await updateAuthLink();
+	
 	const meta = await fetchMeta();
 	userSelect.innerHTML = '';
 	for (const u of meta.allowedUsers || []) {

@@ -16,20 +16,22 @@
 					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
 					<a href="/outputs.html" class="text-white">Outputs</a>
 					<a href="/settings.html" class="hover:text-white">Settings</a>
+					<a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
 				</div>
 			</div>
 		</nav>
 		<main class="max-w-6xl mx-auto p-4 space-y-6">
 			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
-				<h2 class="text-lg font-medium text-indigo-200 mb-2">Outputs</h2>
-				<div class="flex items-center gap-3 text-sm text-slate-300 mb-2">
-					<span id="queueStatus"></span>
-					<button id="refreshOutputsBtn" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600">Refresh</button>
+				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-lg font-medium text-indigo-200">Generated Outputs</h2>
+					<button id="refreshOutputsBtn" class="px-3 py-2 rounded bg-slate-600 hover:bg-slate-500">Refresh</button>
 				</div>
-				<div id="outputsList" class="space-y-2 text-sm text-slate-200"></div>
+				<div id="outputsList" class="space-y-2"></div>
+				<div id="queueStatus" class="mt-4 text-sm text-slate-400"></div>
 			</section>
 		</main>
 	</div>
+	<script type="module" src="/common.js"></script>
 	<script type="module" src="/outputs.js"></script>
 </body>
 </html>

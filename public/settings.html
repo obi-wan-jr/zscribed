@@ -16,47 +16,41 @@
 					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
 					<a href="/outputs.html" class="hover:text-white">Outputs</a>
 					<a href="/settings.html" class="text-white">Settings</a>
+					<a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
 				</div>
 			</div>
 		</nav>
 		<main class="max-w-6xl mx-auto p-4 space-y-6">
 			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
-				<h2 class="text-lg font-medium text-indigo-200 mb-2">Preferences</h2>
-				<div class="flex flex-wrap items-center gap-3 mb-3">
-					<label class="text-sm">User
+				<h2 class="text-lg font-medium text-indigo-200 mb-4">User Preferences</h2>
+				<div class="flex items-center gap-3 mb-4">
+					<label class="text-sm">Default User
 						<select id="userSelect" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2"></select>
 					</label>
-					<label class="text-sm">Default voice
-						<select id="voiceModel" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2"></select>
-					</label>
-					<label class="text-sm">Audio format
-						<select id="audioFormat" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2"><option>mp3</option><option>wav</option><option>opus</option></select>
-					</label>
-					<label class="text-sm">TTS sentences/chunk
-						<input id="sentencesPerChunkTts" type="number" min="1" value="3" class="w-16 ml-2 bg-[#0b1020] border border-slate-600 rounded px-2 py-1"/>
-					</label>
-					<label class="text-sm">Bible sentences/chunk
-						<input id="sentencesPerChunkBible" type="number" min="1" value="3" class="w-16 ml-2 bg-[#0b1020] border border-slate-600 rounded px-2 py-1"/>
-					</label>
-					<label class="text-sm">Default translation
-						<select id="translation" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2"><option>WEB</option><option>KJV</option></select>
-					</label>
-					<button id="savePrefsBtn" class="px-3 py-2 rounded bg-slate-700 hover:bg-slate-600">Save</button>
-					<span id="prefsStatus" class="text-sm text-slate-400"></span>
 				</div>
+				<div class="space-y-3">
+					<label class="flex items-center gap-2 text-sm">
+						<input id="autoRefresh" type="checkbox" />
+						Auto-refresh outputs
+					</label>
+					<label class="flex items-center gap-2 text-sm">
+						<input id="showNotifications" type="checkbox" />
+						Show notifications
+					</label>
+				</div>
+				<button id="savePrefsBtn" class="mt-4 px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500">Save Preferences</button>
 			</section>
-
+			
 			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
-				<h2 class="text-lg font-medium text-indigo-200 mb-2">Voice Models</h2>
-				<div class="flex flex-wrap gap-2 items-center mb-3">
-					<input id="newModelId" placeholder="Model ID" class="bg-[#0b1020] border border-slate-600 rounded px-3 py-2" />
-					<input id="newModelName" placeholder="Name (optional)" class="bg-[#0b1020] border border-slate-600 rounded px-3 py-2" />
-					<button id="addModelBtn" class="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500">Add</button>
+				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-lg font-medium text-indigo-200">Voice Models</h2>
+					<button id="addModelBtn" class="px-3 py-2 rounded bg-slate-600 hover:bg-slate-500">Add Model</button>
 				</div>
-				<div id="modelsList" class="space-y-2 text-sm text-slate-200"></div>
+				<div id="modelsList" class="space-y-2"></div>
 			</section>
 		</main>
 	</div>
+	<script type="module" src="/common.js"></script>
 	<script type="module" src="/settings.js"></script>
 </body>
 </html>

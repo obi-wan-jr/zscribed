@@ -1,21 +1,17 @@
-import { fetchMeta, getActiveUser, setActiveUser, listenToProgress, addLogoutButton } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, listenToProgress, updateAuthLink, requireAuth } from './common.js';
 
-const userSelect = document.getElementById('userSelect');
-const voiceModel = document.getElementById('voiceModel');
-const translation = document.getElementById('translation');
-const book = document.getElementById('book');
-const chapter = document.getElementById('chapter');
-const verses = document.getElementById('verses');
-const excludeNumbers = document.getElementById('excludeNumbers');
-const excludeFootnotes = document.getElementById('excludeFootnotes');
-const sentencesPerChunkBible = document.getElementById('sentencesPerChunkBible');
-const bibleFetchBtn = document.getElementById('bibleFetchBtn');
-const bibleTtsBtn = document.getElementById('bibleTtsBtn');
-const bibleProgress = document.getElementById('bibleProgress');
-
-init();
+// Check authentication first
+requireAuth().then(isAuthenticated => {
+	if (!isAuthenticated) return; // Will redirect to login
+	
+	// Initialize the page
+	init();
+});
 
 async function init() {
+	// Update the login/logout link
+	await updateAuthLink();
+	
 	const meta = await fetchMeta();
 	userSelect.innerHTML = '';
 	for (const u of meta.allowedUsers || []) {

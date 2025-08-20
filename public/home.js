@@ -1,3 +1,4 @@
-import { addLogoutButton } from './common.js';
+import { updateAuthLink } from './common.js';
 
-addLogoutButton();
+// Update the login/logout link based on authentication status
+updateAuthLink();

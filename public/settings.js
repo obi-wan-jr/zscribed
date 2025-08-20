@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, addLogoutButton } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth } from './common.js';
 
 const userSelect = document.getElementById('userSelect');
 const voiceModel = document.getElementById('voiceModel');
@@ -14,9 +14,18 @@ const newModelName = document.getElementById('newModelName');
 const addModelBtn = document.getElementById('addModelBtn');
 const modelsList = document.getElementById('modelsList');
 
-init();
+// Check authentication first
+requireAuth().then(isAuthenticated => {
+	if (!isAuthenticated) return; // Will redirect to login
+	
+	// Initialize the page
+	init();
+});
 
 async function init() {
+	// Update the login/logout link
+	await updateAuthLink();
+	
 	const meta = await fetchMeta();
 	userSelect.innerHTML = '';
 	for (const u of meta.allowedUsers || []) { const opt = document.createElement('option'); opt.value = u; opt.textContent = u; userSelect.appendChild(opt); }
