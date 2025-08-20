@@ -1,7 +1,13 @@
 import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
-// Check authentication first
+// Load Bible books immediately (public endpoint, no auth required)
+console.log('[Bible] Loading Bible books immediately...');
+loadBibleBooks();
+
+// Check authentication for protected features
+console.log('[Bible] Checking authentication...');
 requireAuth().then(isAuthenticated => {
+	console.log('[Bible] Authentication result:', isAuthenticated);
 	if (!isAuthenticated) return; // Will redirect to login
 	
 	// Initialize the page
@@ -47,8 +53,7 @@ async function init() {
 		userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
 	}
 	
-	// Load Bible books
-	await loadBibleBooks();
+	// Bible books are already loaded (public endpoint)
 	
 	// Load voice models
 	await loadVoiceModels();
@@ -85,6 +90,7 @@ async function loadVoiceModels() {
 }
 
 async function loadBibleBooks() {
+	console.log('[Bible] loadBibleBooks function called');
 	try {
 		console.log('[Bible] Loading Bible books...');
 		
