@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -44,7 +44,9 @@ async function init() {
 
 async function loadVoiceModels() {
 	try {
-		const res = await fetch('/api/models');
+		const res = await authenticatedFetch('/api/models');
+		if (!res) return; // Redirect happened
+		
 		const data = await res.json();
 		voiceModel.innerHTML = '';
 		for (const m of data.voiceModels || []) {
@@ -54,6 +56,8 @@ async function loadVoiceModels() {
 			voiceModel.appendChild(opt);
 		}
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
 		console.error('Failed to load voice models:', error);
 		voiceModel.innerHTML = '<option value="">No voice models available</option>';
 	}
@@ -61,7 +65,9 @@ async function loadVoiceModels() {
 
 async function refreshOutputs() {
 	try {
-		const res = await fetch('/api/outputs');
+		const res = await authenticatedFetch('/api/outputs');
+		if (!res) return; // Redirect happened
+		
 		const data = await res.json();
 		outputsList.innerHTML = '';
 		for (const f of data.files || []) {
@@ -77,7 +83,12 @@ async function refreshOutputs() {
 			renameBtn.onclick = async () => {
 				const newName = prompt('New name:', f.name);
 				if (!newName || newName === f.name) return;
-				await fetch('/api/outputs/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldName: f.name, newName }) });
+				const renameRes = await authenticatedFetch('/api/outputs/rename', { 
+					method: 'POST', 
+					headers: { 'Content-Type': 'application/json' }, 
+					body: JSON.stringify({ oldName: f.name, newName }) 
+				});
+				if (!renameRes) return; // Redirect happened
 				refreshOutputs();
 			};
 			const delBtn = document.createElement('button');
@@ -85,23 +96,34 @@ async function refreshOutputs() {
 			delBtn.className = 'px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600';
 			delBtn.onclick = async () => {
 				if (!confirm('Delete ' + f.name + '?')) return;
-				await fetch('/api/outputs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: f.name }) });
+				const deleteRes = await authenticatedFetch('/api/outputs/delete', { 
+					method: 'POST', 
+					headers: { 'Content-Type': 'application/json' }, 
+					body: JSON.stringify({ name: f.name }) 
+				});
+				if (!deleteRes) return; // Redirect happened
 				refreshOutputs();
 			};
 			row.append(a, renameBtn, delBtn);
 			outputsList.appendChild(row);
 		}
 	} catch (e) {
+		if (handleUnauthorizedError(e)) return; // Redirect happened
 		outputsList.textContent = 'Failed to load outputs';
 	}
 }
 
 async function pollQueueStatus() {
 	try {
-		const res = await fetch('/api/queue/status');
+		const res = await authenticatedFetch('/api/queue/status');
+		if (!res) return; // Redirect happened
+		
 		const data = await res.json();
 		queueStatus.textContent = `Queue: ${data.pending} pending${data.processing ? ' (processing)' : ''}`;
-	} catch {}
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		// Silently ignore other errors for queue status
+	}
 }
 
 function listenToProgress(jobId) {
@@ -143,7 +165,7 @@ function listenToProgress(jobId) {
 bibleFetchBtn?.addEventListener('click', async () => {
 	bibleProgress.textContent = 'Fetching...';
 	try {
-		const res = await fetch('/api/bible/fetch', {
+		const res = await authenticatedFetch('/api/bible/fetch', {
 			method: 'POST', headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				translation: translation.value,
@@ -154,10 +176,13 @@ bibleFetchBtn?.addEventListener('click', async () => {
 				excludeFootnotes: excludeFootnotes.checked
 			})
 		});
+		if (!res) return; // Redirect happened
+		
 		const data = await res.json();
 		if (data.error) throw new Error(data.error);
 		bibleProgress.textContent = data.text || '';
 	} catch (e) {
+		if (handleUnauthorizedError(e)) return; // Redirect happened
 		bibleProgress.textContent = 'Error: ' + e.message;
 	}
 });
@@ -183,7 +208,7 @@ bibleTtsBtn?.addEventListener('click', async () => {
 	bibleProgress.textContent = 'Starting Bible audio creation...';
 	
 	try {
-		const res = await fetch('/api/jobs/bible', {
+		const res = await authenticatedFetch('/api/jobs/bible', {
 			method: 'POST', headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				user, voiceModelId, format, sentencesPerChunk,
@@ -196,6 +221,8 @@ bibleTtsBtn?.addEventListener('click', async () => {
 			})
 		});
 		
+		if (!res) return; // Redirect happened
+		
 		if (!res.ok) {
 			const errorData = await res.json();
 			throw new Error(errorData.error || 'Failed to start Bible audio creation');
@@ -204,6 +231,8 @@ bibleTtsBtn?.addEventListener('click', async () => {
 		const { id } = await res.json();
 		listenToProgress(id);
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
 		bibleProgress.innerHTML = `
 			<div class="text-red-400">❌ Error: ${error.message}</div>
 			<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">

@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -35,20 +35,25 @@ async function init() {
 
 async function loadPreferencesIntoUI() {
 	try {
-		const res = await fetch('/api/memory/preferences');
+		const res = await authenticatedFetch('/api/memory/preferences');
+		if (!res) return; // Redirect happened
+		
 		const prefs = await res.json();
 		const user = getActiveUser();
 		const p = (prefs.users && prefs.users[user]) || {};
 		autoRefresh.checked = p.autoRefresh || false;
 		showNotifications.checked = p.showNotifications || false;
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to load preferences:', error);
 	}
 }
 
 async function refreshModels() {
 	try {
-		const res = await fetch('/api/models');
+		const res = await authenticatedFetch('/api/models');
+		if (!res) return; // Redirect happened
+		
 		const data = await res.json();
 		modelsList.innerHTML = '';
 		for (const model of data.voiceModels || []) {
@@ -61,6 +66,7 @@ async function refreshModels() {
 			modelsList.appendChild(row);
 		}
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
 		modelsList.innerHTML = '<div class="text-red-400">Failed to load models</div>';
 	}
 }
@@ -93,7 +99,9 @@ function addTTSTestSection() {
 		resultDiv.textContent = 'Testing TTS connection...';
 		
 		try {
-			const response = await fetch('/api/tts/test');
+			const response = await authenticatedFetch('/api/tts/test');
+			if (!response) return; // Redirect happened
+			
 			const result = await response.json();
 			
 			if (result.success) {
@@ -128,6 +136,8 @@ function addTTSTestSection() {
 				`;
 			}
 		} catch (error) {
+			if (handleUnauthorizedError(error)) return; // Redirect happened
+			
 			resultDiv.innerHTML = `
 				<div class="text-red-400">❌ Test failed</div>
 				<div class="mt-2">Error: ${error.message}</div>
@@ -158,11 +168,12 @@ savePrefsBtn?.addEventListener('click', async () => {
 	};
 	
 	try {
-		await fetch('/api/memory/preferences', { 
+		const res = await authenticatedFetch('/api/memory/preferences', { 
 			method: 'POST', 
 			headers: { 'Content-Type': 'application/json' }, 
 			body: JSON.stringify(body) 
 		});
+		if (!res) return; // Redirect happened
 		
 		// Show success message
 		const originalText = savePrefsBtn.textContent;
@@ -171,6 +182,7 @@ savePrefsBtn?.addEventListener('click', async () => {
 			savePrefsBtn.textContent = originalText;
 		}, 1500);
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to save preferences:', error);
 	}
 });
@@ -182,13 +194,15 @@ addModelBtn?.addEventListener('click', async () => {
 	if (!id) return;
 	
 	try {
-		await fetch('/api/models', { 
+		const res = await authenticatedFetch('/api/models', { 
 			method: 'POST', 
 			headers: { 'Content-Type': 'application/json' }, 
 			body: JSON.stringify({ id, name }) 
 		});
+		if (!res) return; // Redirect happened
 		await refreshModels();
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to add model:', error);
 	}
 });
@@ -198,13 +212,15 @@ window.deleteModel = async function(modelId) {
 	if (!confirm('Delete this voice model?')) return;
 	
 	try {
-		await fetch('/api/models/delete', { 
+		const res = await authenticatedFetch('/api/models/delete', { 
 			method: 'POST', 
 			headers: { 'Content-Type': 'application/json' }, 
 			body: JSON.stringify({ id: modelId }) 
 		});
+		if (!res) return; // Redirect happened
 		await refreshModels();
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to delete model:', error);
 	}
 };
