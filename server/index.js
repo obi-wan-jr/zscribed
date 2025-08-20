@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { loadConfig, saveConfig } from './config.js';
 import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
-import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testLocalBibleConnection } from './bible/localBibleProvider.js';
+import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testLocalBibleConnection, BIBLE_BOOKS, validateChapter, validateVerseRanges } from './bible/localBibleProvider.js';
 import { groupSentences, splitIntoSentences } from './text/segment.js';
 import { createTTSService } from './tts/service.js';
 import { loadPreferences, savePreferences } from './memory.js';
@@ -211,21 +211,36 @@ app.post('/api/memory/preferences', (req, res) => {
 // Bible fetch endpoint
 app.post('/api/bible/fetch', async (req, res) => {
 	try {
-		const { translation = 'web', book = 'John', chapter = 1, verseRanges = '', excludeNumbers = true, excludeFootnotes = true } = req.body || {};
-		const verses = parseVerseRanges(String(verseRanges || ''));
+		const { translation = 'web', book = 'John', chapter = 1, verseRanges = '', excludeNumbers = true, excludeFootnotes = true } = req.body;
 		
-		console.log(`[API] Bible fetch request: ${book} ${chapter} verses ${verses.join(',')} (${translation})`);
+		// Validate the Bible reference first
+		const chapterNum = parseInt(chapter);
+		if (isNaN(chapterNum)) {
+			return res.status(400).json({ error: 'Chapter must be a number' });
+		}
 		
-		const raw = await fetchBibleText({ translation, book, chapter, verses });
-		const cleaned = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		const chapterValidation = validateChapter(book, chapterNum);
+		if (!chapterValidation.valid) {
+			return res.status(400).json({ error: chapterValidation.error });
+		}
 		
-		res.json({
-			text: cleaned,
-			reference: `${book} ${chapter}:${verses.join(',')}`,
-			translation: translation,
-			originalLength: raw.length,
-			cleanedLength: cleaned.length
-		});
+		// Validate verse ranges if provided
+		if (verseRanges && verseRanges.trim()) {
+			const verseValidation = validateVerseRanges(book, chapterNum, verseRanges);
+			if (!verseValidation.valid) {
+				return res.status(400).json({ error: verseValidation.error });
+			}
+		}
+		
+		// Parse verse ranges
+		const verses = verseRanges ? parseVerseRanges(verseRanges) : null;
+		
+		// Fetch Bible text
+		const rawText = await fetchBibleText({ translation, book, chapter: chapterNum, verses });
+		const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+		
+		res.json({ text: cleanedText });
+		
 	} catch (error) {
 		console.error('[API] Bible fetch error:', error.message);
 		res.status(500).json({ 
@@ -242,6 +257,55 @@ app.post('/api/bible/fetch', async (req, res) => {
 // Get available Bible translations
 app.get('/api/bible/translations', (_req, res) => {
 	res.json({ translations: AVAILABLE_TRANSLATIONS });
+});
+
+// Get Bible books information
+app.get('/api/bible/books', (_req, res) => {
+	res.json({ books: BIBLE_BOOKS });
+});
+
+// Validate Bible reference
+app.post('/api/bible/validate', (req, res) => {
+	try {
+		const { book, chapter, verses } = req.body;
+		
+		if (!book) {
+			return res.status(400).json({ error: 'Book is required' });
+		}
+		
+		if (!chapter) {
+			return res.status(400).json({ error: 'Chapter is required' });
+		}
+		
+		const chapterNum = parseInt(chapter);
+		if (isNaN(chapterNum)) {
+			return res.status(400).json({ error: 'Chapter must be a number' });
+		}
+		
+		// Validate chapter
+		const chapterValidation = validateChapter(book, chapterNum);
+		if (!chapterValidation.valid) {
+			return res.status(400).json({ error: chapterValidation.error });
+		}
+		
+		// Validate verses if provided
+		if (verses && verses.trim()) {
+			const verseValidation = validateVerseRanges(book, chapterNum, verses);
+			if (!verseValidation.valid) {
+				return res.status(400).json({ error: verseValidation.error });
+			}
+		}
+		
+		res.json({ 
+			valid: true, 
+			bookInfo: chapterValidation.bookInfo,
+			message: 'Bible reference is valid'
+		});
+		
+	} catch (error) {
+		console.error('[API] Bible validation error:', error.message);
+		res.status(500).json({ error: 'Validation failed' });
+	}
 });
 
 // Test Bible API connection

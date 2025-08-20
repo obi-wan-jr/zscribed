@@ -16,6 +16,76 @@ export const AVAILABLE_TRANSLATIONS = [
 	{ id: 'web', name: 'World English Bible', language: 'English' }
 ];
 
+// Bible books with their chapter counts for validation
+export const BIBLE_BOOKS = [
+	{ name: 'Genesis', chapters: 50, testament: 'old' },
+	{ name: 'Exodus', chapters: 40, testament: 'old' },
+	{ name: 'Leviticus', chapters: 27, testament: 'old' },
+	{ name: 'Numbers', chapters: 36, testament: 'old' },
+	{ name: 'Deuteronomy', chapters: 34, testament: 'old' },
+	{ name: 'Joshua', chapters: 24, testament: 'old' },
+	{ name: 'Judges', chapters: 21, testament: 'old' },
+	{ name: 'Ruth', chapters: 4, testament: 'old' },
+	{ name: '1 Samuel', chapters: 31, testament: 'old' },
+	{ name: '2 Samuel', chapters: 24, testament: 'old' },
+	{ name: '1 Kings', chapters: 22, testament: 'old' },
+	{ name: '2 Kings', chapters: 25, testament: 'old' },
+	{ name: '1 Chronicles', chapters: 29, testament: 'old' },
+	{ name: '2 Chronicles', chapters: 36, testament: 'old' },
+	{ name: 'Ezra', chapters: 10, testament: 'old' },
+	{ name: 'Nehemiah', chapters: 13, testament: 'old' },
+	{ name: 'Esther', chapters: 10, testament: 'old' },
+	{ name: 'Job', chapters: 42, testament: 'old' },
+	{ name: 'Psalms', chapters: 150, testament: 'old' },
+	{ name: 'Proverbs', chapters: 31, testament: 'old' },
+	{ name: 'Ecclesiastes', chapters: 12, testament: 'old' },
+	{ name: 'Song of Solomon', chapters: 8, testament: 'old' },
+	{ name: 'Isaiah', chapters: 66, testament: 'old' },
+	{ name: 'Jeremiah', chapters: 52, testament: 'old' },
+	{ name: 'Lamentations', chapters: 5, testament: 'old' },
+	{ name: 'Ezekiel', chapters: 48, testament: 'old' },
+	{ name: 'Daniel', chapters: 12, testament: 'old' },
+	{ name: 'Hosea', chapters: 14, testament: 'old' },
+	{ name: 'Joel', chapters: 3, testament: 'old' },
+	{ name: 'Amos', chapters: 9, testament: 'old' },
+	{ name: 'Obadiah', chapters: 1, testament: 'old' },
+	{ name: 'Jonah', chapters: 4, testament: 'old' },
+	{ name: 'Micah', chapters: 7, testament: 'old' },
+	{ name: 'Nahum', chapters: 3, testament: 'old' },
+	{ name: 'Habakkuk', chapters: 3, testament: 'old' },
+	{ name: 'Zephaniah', chapters: 3, testament: 'old' },
+	{ name: 'Haggai', chapters: 2, testament: 'old' },
+	{ name: 'Zechariah', chapters: 14, testament: 'old' },
+	{ name: 'Malachi', chapters: 4, testament: 'old' },
+	{ name: 'Matthew', chapters: 28, testament: 'new' },
+	{ name: 'Mark', chapters: 16, testament: 'new' },
+	{ name: 'Luke', chapters: 24, testament: 'new' },
+	{ name: 'John', chapters: 21, testament: 'new' },
+	{ name: 'Acts', chapters: 28, testament: 'new' },
+	{ name: 'Romans', chapters: 16, testament: 'new' },
+	{ name: '1 Corinthians', chapters: 16, testament: 'new' },
+	{ name: '2 Corinthians', chapters: 13, testament: 'new' },
+	{ name: 'Galatians', chapters: 6, testament: 'new' },
+	{ name: 'Ephesians', chapters: 6, testament: 'new' },
+	{ name: 'Philippians', chapters: 4, testament: 'new' },
+	{ name: 'Colossians', chapters: 4, testament: 'new' },
+	{ name: '1 Thessalonians', chapters: 5, testament: 'new' },
+	{ name: '2 Thessalonians', chapters: 3, testament: 'new' },
+	{ name: '1 Timothy', chapters: 6, testament: 'new' },
+	{ name: '2 Timothy', chapters: 4, testament: 'new' },
+	{ name: 'Titus', chapters: 3, testament: 'new' },
+	{ name: 'Philemon', chapters: 1, testament: 'new' },
+	{ name: 'Hebrews', chapters: 13, testament: 'new' },
+	{ name: 'James', chapters: 5, testament: 'new' },
+	{ name: '1 Peter', chapters: 5, testament: 'new' },
+	{ name: '2 Peter', chapters: 3, testament: 'new' },
+	{ name: '1 John', chapters: 5, testament: 'new' },
+	{ name: '2 John', chapters: 1, testament: 'new' },
+	{ name: '3 John', chapters: 1, testament: 'new' },
+	{ name: 'Jude', chapters: 1, testament: 'new' },
+	{ name: 'Revelation', chapters: 22, testament: 'new' }
+];
+
 // Book name mappings for common variations
 const BOOK_NAME_MAPPINGS = {
 	'genesis': 'genesis',
@@ -314,4 +384,70 @@ export async function testLocalBibleConnection() {
 			]
 		};
 	}
+}
+
+// Function to get book information by name
+export function getBookInfo(bookName) {
+	return BIBLE_BOOKS.find(book => book.name === bookName);
+}
+
+// Function to validate chapter number for a book
+export function validateChapter(bookName, chapterNumber) {
+	const bookInfo = getBookInfo(bookName);
+	if (!bookInfo) {
+		return { valid: false, error: `Book "${bookName}" not found` };
+	}
+	
+	if (chapterNumber < 1 || chapterNumber > bookInfo.chapters) {
+		return { 
+			valid: false, 
+			error: `Chapter ${chapterNumber} is invalid for ${bookName}. Valid range: 1-${bookInfo.chapters}` 
+		};
+	}
+	
+	return { valid: true, bookInfo };
+}
+
+// Function to validate verse ranges for a chapter
+export function validateVerseRanges(bookName, chapterNumber, verseRanges) {
+	const chapterValidation = validateChapter(bookName, chapterNumber);
+	if (!chapterValidation.valid) {
+		return chapterValidation;
+	}
+	
+	const bookInfo = chapterValidation.bookInfo;
+	
+	// Parse verse ranges (e.g., "1-10, 15, 20-25")
+	const ranges = verseRanges.split(',').map(range => range.trim());
+	const validRanges = [];
+	const invalidRanges = [];
+	
+	for (const range of ranges) {
+		if (range.includes('-')) {
+			// Range like "1-10"
+			const [start, end] = range.split('-').map(v => parseInt(v.trim()));
+			if (isNaN(start) || isNaN(end) || start < 1 || end > bookInfo.chapters || start > end) {
+				invalidRanges.push(range);
+			} else {
+				validRanges.push({ start, end, type: 'range' });
+			}
+		} else {
+			// Single verse like "15"
+			const verse = parseInt(range);
+			if (isNaN(verse) || verse < 1 || verse > bookInfo.chapters) {
+				invalidRanges.push(range);
+			} else {
+				validRanges.push({ start: verse, end: verse, type: 'single' });
+			}
+		}
+	}
+	
+	if (invalidRanges.length > 0) {
+		return {
+			valid: false,
+			error: `Invalid verse ranges: ${invalidRanges.join(', ')}. Valid range: 1-${bookInfo.chapters}`
+		};
+	}
+	
+	return { valid: true, validRanges };
 }

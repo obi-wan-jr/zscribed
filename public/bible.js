@@ -36,7 +36,7 @@ async function init() {
 	await loadVoiceModels();
 	
 	// Load Bible books
-	loadBibleBooks();
+	await loadBibleBooks();
 	
 	// Load outputs
 	refreshOutputs();
@@ -66,37 +66,124 @@ async function loadVoiceModels() {
 	}
 }
 
-function loadBibleBooks() {
-	const books = [
-		// Old Testament
-		'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
-		'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel',
-		'1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles',
-		'Ezra', 'Nehemiah', 'Esther', 'Job', 'Psalms',
-		'Proverbs', 'Ecclesiastes', 'Song of Solomon', 'Isaiah',
-		'Jeremiah', 'Lamentations', 'Ezekiel', 'Daniel',
-		'Hosea', 'Joel', 'Amos', 'Obadiah', 'Jonah',
-		'Micah', 'Nahum', 'Habakkuk', 'Zephaniah', 'Haggai',
-		'Zechariah', 'Malachi',
-		// New Testament
-		'Matthew', 'Mark', 'Luke', 'John', 'Acts',
-		'Romans', '1 Corinthians', '2 Corinthians', 'Galatians',
-		'Ephesians', 'Philippians', 'Colossians', '1 Thessalonians',
-		'2 Thessalonians', '1 Timothy', '2 Timothy', 'Titus',
-		'Philemon', 'Hebrews', 'James', '1 Peter', '2 Peter',
-		'1 John', '2 John', '3 John', 'Jude', 'Revelation'
-	];
+async function loadBibleBooks() {
+	try {
+		const res = await authenticatedFetch('/api/bible/books');
+		if (!res) return; // Redirect happened
+		
+		const data = await res.json();
+		const books = data.books || [];
+		
+		book.innerHTML = '';
+		
+		// Group books by testament
+		const oldTestament = books.filter(b => b.testament === 'old');
+		const newTestament = books.filter(b => b.testament === 'new');
+		
+		// Add Old Testament optgroup
+		if (oldTestament.length > 0) {
+			const oldGroup = document.createElement('optgroup');
+			oldGroup.label = 'Old Testament';
+			
+			for (const bookInfo of oldTestament) {
+				const opt = document.createElement('option');
+				opt.value = bookInfo.name;
+				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
+				opt.dataset.chapters = bookInfo.chapters;
+				oldGroup.appendChild(opt);
+			}
+			
+			book.appendChild(oldGroup);
+		}
+		
+		// Add New Testament optgroup
+		if (newTestament.length > 0) {
+			const newGroup = document.createElement('optgroup');
+			newGroup.label = 'New Testament';
+			
+			for (const bookInfo of newTestament) {
+				const opt = document.createElement('option');
+				opt.value = bookInfo.name;
+				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
+				opt.dataset.chapters = bookInfo.chapters;
+				newGroup.appendChild(opt);
+			}
+			
+			book.appendChild(newGroup);
+		}
+		
+		// Set default to John
+		book.value = 'John';
+		
+		// Update chapter max value
+		updateChapterMax();
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
+		console.error('Failed to load Bible books:', error);
+		book.innerHTML = '<option value="">Failed to load books</option>';
+	}
+}
+
+// Update chapter input max value based on selected book
+function updateChapterMax() {
+	const selectedOption = book.options[book.selectedIndex];
+	if (selectedOption && selectedOption.dataset.chapters) {
+		const maxChapters = parseInt(selectedOption.dataset.chapters);
+		chapter.max = maxChapters;
+		chapter.placeholder = `1-${maxChapters}`;
+		
+		// Update verses placeholder
+		verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${maxChapters})`;
+	}
+}
+
+// Validate Bible reference before submitting
+async function validateBibleReference() {
+	const selectedBook = book.value;
+	const chapterNum = parseInt(chapter.value);
+	const verseRanges = verses.value.trim();
 	
-	book.innerHTML = '';
-	for (const bookName of books) {
-		const opt = document.createElement('option');
-		opt.value = bookName;
-		opt.textContent = bookName;
-		book.appendChild(opt);
+	if (!selectedBook) {
+		alert('Please select a book');
+		return false;
 	}
 	
-	// Set default to John
-	book.value = 'John';
+	if (isNaN(chapterNum) || chapterNum < 1) {
+		alert('Please enter a valid chapter number');
+		return false;
+	}
+	
+	try {
+		const res = await authenticatedFetch('/api/bible/validate', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				book: selectedBook,
+				chapter: chapterNum,
+				verses: verseRanges
+			})
+		});
+		
+		if (!res) return false; // Redirect happened
+		
+		const data = await res.json();
+		
+		if (!data.valid) {
+			alert(`Validation Error: ${data.error}`);
+			return false;
+		}
+		
+		return true;
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return false; // Redirect happened
+		
+		console.error('Validation error:', error);
+		alert('Failed to validate Bible reference');
+		return false;
+	}
 }
 
 async function refreshOutputs() {
@@ -198,7 +285,15 @@ function listenToProgress(jobId) {
 	return ev;
 }
 
+// Event listeners
+book?.addEventListener('change', updateChapterMax);
+
 bibleFetchBtn?.addEventListener('click', async () => {
+	// Validate before fetching
+	if (!(await validateBibleReference())) {
+		return;
+	}
+	
 	bibleProgress.textContent = 'Fetching...';
 	try {
 		const res = await authenticatedFetch('/api/bible/fetch', {
@@ -224,15 +319,15 @@ bibleFetchBtn?.addEventListener('click', async () => {
 });
 
 bibleTtsBtn?.addEventListener('click', async () => {
+	// Validate before creating audio
+	if (!(await validateBibleReference())) {
+		return;
+	}
+	
 	const user = getActiveUser();
 	const voiceModelId = voiceModel.value;
 	const format = 'mp3';
 	const sentencesPerChunk = Number(sentencesPerChunkBible.value || 3);
-	
-	if (!book.value || !chapter.value || !verses.value) {
-		bibleProgress.textContent = 'Please fill in all Bible reference fields';
-		return;
-	}
 	
 	if (!voiceModelId) {
 		bibleProgress.textContent = 'Please select a voice model';
