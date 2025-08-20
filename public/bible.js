@@ -24,9 +24,6 @@ const outputsList = document.getElementById('outputsList');
 const refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 const queueStatus = document.getElementById('queueStatus');
 
-// Load Bible books immediately after DOM elements are available (public endpoint)
-loadBibleBooks();
-
 async function init() {
 	// Update the login/logout link
 	await updateAuthLink();
@@ -34,6 +31,9 @@ async function init() {
 	// Set welcome message
 	const currentUser = getActiveUser();
 	userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
+	
+	// Load Bible books (public endpoint)
+	await loadBibleBooks();
 	
 	// Load voice models
 	await loadVoiceModels();
