@@ -116,8 +116,11 @@
 						</label>
 					</div>
 					<div>
-						<label class="text-sm">Verses (e.g. 1-10, 15, 20-25)
-							<input id="verses" type="text" value="1-10" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2"/>
+						<label class="text-sm">Verses
+							<div class="flex items-center gap-2 mt-1">
+								<input id="verses" type="text" value="1-10" placeholder="e.g. 1-10, 15, 20-25" class="bg-[#0b1020] border border-slate-600 rounded px-3 py-2 flex-1"/>
+								<button id="selectAllVerses" class="px-3 py-2 bg-slate-600 hover:bg-slate-500 rounded text-sm">All Verses</button>
+							</div>
 						</label>
 					</div>
 				</div>

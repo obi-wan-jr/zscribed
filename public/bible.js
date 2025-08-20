@@ -11,7 +11,7 @@ requireAuth().then(isAuthenticated => {
 });
 
 // DOM elements
-let voiceModel, translation, book, chapter, verses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
+let voiceModel, translation, book, chapter, verses, selectAllVerses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
 let bibleFetchBtn, bibleTtsBtn, bibleProgress, userWelcome, outputsList, refreshOutputsBtn, queueStatus;
 
 async function init() {
@@ -23,6 +23,7 @@ async function init() {
 	book = document.getElementById('book');
 	chapter = document.getElementById('chapter');
 	verses = document.getElementById('verses');
+	selectAllVerses = document.getElementById('selectAllVerses');
 	excludeNumbers = document.getElementById('excludeNumbers');
 	excludeFootnotes = document.getElementById('excludeFootnotes');
 	sentencesPerChunkBible = document.getElementById('sentencesPerChunkBible');
@@ -126,6 +127,68 @@ function updateChapterMax() {
 	}
 }
 
+// Validate verse ranges
+function validateVerseRanges(verseRanges, maxChapters) {
+	if (!verseRanges || !verseRanges.trim()) {
+		return { valid: false, error: 'Please enter verse ranges' };
+	}
+	
+	const ranges = verseRanges.split(',').map(range => range.trim()).filter(Boolean);
+	const validRanges = [];
+	const invalidRanges = [];
+	
+	for (const range of ranges) {
+		if (range.includes('-')) {
+			// Range like "1-10"
+			const [start, end] = range.split('-').map(v => parseInt(v.trim()));
+			if (isNaN(start) || isNaN(end) || start < 1 || end > maxChapters || start > end) {
+				invalidRanges.push(range);
+			} else {
+				validRanges.push({ start, end, type: 'range' });
+			}
+		} else {
+			// Single verse like "15"
+			const verse = parseInt(range);
+			if (isNaN(verse) || verse < 1 || verse > maxChapters) {
+				invalidRanges.push(range);
+			} else {
+				validRanges.push({ start: verse, end: verse, type: 'single' });
+			}
+		}
+	}
+	
+	if (invalidRanges.length > 0) {
+		return {
+			valid: false,
+			error: `Invalid verse ranges: ${invalidRanges.join(', ')}. Valid range: 1-${maxChapters}`
+		};
+	}
+	
+	return { valid: true, validRanges };
+}
+
+// Select all verses for the current chapter
+function selectAllVersesForChapter() {
+	if (!book || !chapter || !verses) return;
+	
+	const selectedBook = book.value;
+	const chapterNum = parseInt(chapter.value);
+	const maxChapters = window.bibleBooks[selectedBook];
+	
+	if (!maxChapters) {
+		alert('Please select a valid book');
+		return;
+	}
+	
+	if (isNaN(chapterNum) || chapterNum < 1 || chapterNum > maxChapters) {
+		alert('Please enter a valid chapter number');
+		return;
+	}
+	
+	// Set verses to "1-[maxChapters]" for the selected chapter
+	verses.value = `1-${maxChapters}`;
+}
+
 // Validate Bible reference before submitting
 async function validateBibleReference() {
 	const selectedBook = book.value;
@@ -142,35 +205,27 @@ async function validateBibleReference() {
 		return false;
 	}
 	
-	try {
-		const res = await authenticatedFetch('/api/bible/validate', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				book: selectedBook,
-				chapter: chapterNum,
-				verses: verseRanges
-			})
-		});
-		
-		if (!res) return false; // Redirect happened
-		
-		const data = await res.json();
-		
-		if (!data.valid) {
-			alert(`Validation Error: ${data.error}`);
-			return false;
-		}
-		
-		return true;
-		
-	} catch (error) {
-		if (handleUnauthorizedError(error)) return false; // Redirect happened
-		
-		console.error('Validation error:', error);
-		alert('Failed to validate Bible reference');
+	// Get max chapters for the selected book
+	const maxChapters = window.bibleBooks[selectedBook];
+	if (!maxChapters) {
+		alert('Please select a valid book');
 		return false;
 	}
+	
+	// Validate chapter number
+	if (chapterNum > maxChapters) {
+		alert(`Chapter ${chapterNum} is invalid for ${selectedBook}. Valid range: 1-${maxChapters}`);
+		return false;
+	}
+	
+	// Validate verse ranges
+	const verseValidation = validateVerseRanges(verseRanges, maxChapters);
+	if (!verseValidation.valid) {
+		alert(`Verse Validation Error: ${verseValidation.error}`);
+		return false;
+	}
+	
+	return true;
 }
 
 async function refreshOutputs() {
@@ -275,6 +330,12 @@ function listenToProgress(jobId) {
 function setupEventListeners() {
 	// Book selection change
 	book?.addEventListener('change', updateChapterMax);
+	
+	// Chapter selection change
+	chapter?.addEventListener('change', updateChapterMax);
+	
+	// Select all verses button
+	selectAllVerses?.addEventListener('click', selectAllVersesForChapter);
 
 	bibleFetchBtn?.addEventListener('click', async () => {
 		// Validate before fetching
