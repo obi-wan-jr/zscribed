@@ -22,3 +22,27 @@ export function listenToProgress(jobId, onMessage) {
 	};
 	return ev;
 }
+
+export async function logout() {
+	try {
+		await fetch('/api/auth/logout', { method: 'POST' });
+	} catch (e) {
+		console.warn('Logout request failed:', e);
+	}
+	window.location.href = '/login.html';
+}
+
+export function addLogoutButton() {
+	const nav = document.querySelector('nav div:last-child');
+	if (nav) {
+		const logoutBtn = document.createElement('a');
+		logoutBtn.href = '#';
+		logoutBtn.textContent = 'Logout';
+		logoutBtn.className = 'hover:text-white text-red-400';
+		logoutBtn.onclick = (e) => {
+			e.preventDefault();
+			logout();
+		};
+		nav.appendChild(logoutBtn);
+	}
+}

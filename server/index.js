@@ -12,6 +12,7 @@ import { fetchBibleText, cleanupBibleText } from './bible/dummyProvider.js';
 import { splitIntoSentences, groupSentences } from './text/segment.js';
 import { synthesizeChunkToFile, stitchSegments } from './tts/dummyTts.js';
 import { loadPreferences, savePreferences } from './memory.js';
+import { requireAuth, getAuthMiddleware, createSession, deleteSession } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +24,19 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+
+// Cookie parsing for sessions
+app.use((req, res, next) => {
+	const cookies = {};
+	if (req.headers.cookie) {
+		req.headers.cookie.split(';').forEach(cookie => {
+			const [name, value] = cookie.trim().split('=');
+			cookies[name] = value;
+		});
+	}
+	req.cookies = cookies;
+	next();
+});
 
 const ROOT = path.resolve(__dirname, '..');
 const STORAGE_DIR = path.join(ROOT, 'storage');
@@ -46,21 +60,52 @@ const logger = new UserLogger(LOGS_DIR);
 logger.prune();
 setInterval(() => logger.prune(), 24 * 60 * 60 * 1000);
 
-// Static assets
+// Auth middleware for all routes
+app.use(getAuthMiddleware());
+
+// Static assets (no auth required)
 app.use('/', express.static(PUBLIC_DIR));
 
-// Basic health
+// Auth endpoints (no auth required)
+app.post('/api/auth/login', (req, res) => {
+	const { user } = req.body || {};
+	if (!user || !(config.allowedUsers || []).includes(user)) {
+		return res.status(400).json({ error: 'Invalid user' });
+	}
+	
+	const sessionId = createSession(user);
+	res.cookie('sessionId', sessionId, { 
+		httpOnly: true, 
+		secure: false, // set to true in production with HTTPS
+		maxAge: 24 * 60 * 60 * 1000 // 24 hours
+	});
+	res.json({ ok: true });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+	const sessionId = req.cookies?.sessionId;
+	if (sessionId) {
+		deleteSession(sessionId);
+	}
+	res.clearCookie('sessionId');
+	res.json({ ok: true });
+});
+
+// Basic health (no auth required)
 app.get('/api/health', (_req, res) => {
 	res.json({ ok: true, uptime: process.uptime() });
 });
 
-// Public config meta (no secrets)
+// Public config meta (no auth required)
 app.get('/api/config/meta', (_req, res) => {
 	res.json({
 		allowedUsers: config.allowedUsers || ['Inggo', 'Gelo', 'JM'],
 		voiceModels: (config.voiceModels || []).map(v => ({ id: v.id, name: v.name })),
 	});
 });
+
+// Protected routes (require auth)
+app.use(requireAuth);
 
 // Voice models management (no API key exposure)
 app.get('/api/models', (_req, res) => {
@@ -215,7 +260,7 @@ async function handleBibleTtsJob(job) {
 // Start TTS job
 app.post('/api/jobs/tts', (req, res) => {
 	const id = uuidv4();
-	const user = req.body?.user || 'Unknown';
+	const user = req.user; // from auth middleware
 	const payload = {
 		text: String(req.body?.text || ''),
 		voiceModelId: req.body?.voiceModelId || (config.voiceModels?.[0]?.id || 'default'),
@@ -232,7 +277,7 @@ app.post('/api/jobs/tts', (req, res) => {
 // Start Bible TTS job
 app.post('/api/jobs/bible', (req, res) => {
 	const id = uuidv4();
-	const user = req.body?.user || 'Unknown';
+	const user = req.user; // from auth middleware
 	const payload = {
 		translation: req.body?.translation || 'WEB',
 		book: req.body?.book || 'John',

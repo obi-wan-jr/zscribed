@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, addLogoutButton } from './common.js';
 
 const userSelect = document.getElementById('userSelect');
 const voiceModel = document.getElementById('voiceModel');
@@ -28,6 +28,8 @@ async function init() {
 
 	await loadPreferencesIntoUI();
 	await refreshModels();
+	
+	addLogoutButton();
 }
 
 async function loadPreferencesIntoUI() {

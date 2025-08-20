@@ -1,3 +1,5 @@
+import { addLogoutButton } from './common.js';
+
 const outputsList = document.getElementById('outputsList');
 const refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 const queueStatus = document.getElementById('queueStatus');
@@ -50,3 +52,5 @@ async function pollQueueStatus() {
 refreshOutputs();
 refreshOutputsBtn?.addEventListener('click', refreshOutputs);
 setInterval(pollQueueStatus, 2000);
+
+addLogoutButton();

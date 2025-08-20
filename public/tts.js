@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, listenToProgress } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, listenToProgress, addLogoutButton } from './common.js';
 
 const userSelect = document.getElementById('userSelect');
 const voiceModel = document.getElementById('voiceModel');
@@ -25,6 +25,8 @@ async function init() {
 		const opt = document.createElement('option');
 		opt.value = m.id; opt.textContent = m.name || m.id; voiceModel.appendChild(opt);
 	}
+	
+	addLogoutButton();
 }
 
 convertBtn?.addEventListener('click', async () => {
