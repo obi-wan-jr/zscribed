@@ -11,8 +11,8 @@ function generateFileName({ user, voiceModelId, type = 'tts', format = 'mp3', bi
 	const userPrefix = user ? `${user}-` : '';
 	
 	// Get a short voice model name (last 8 characters if it's a long ID)
-	// Handle cases where voiceModelId might be undefined
-	const safeVoiceId = voiceModelId || 'unknown';
+	// Handle cases where voiceModelId might be undefined or null
+	const safeVoiceId = (voiceModelId && typeof voiceModelId === 'string') ? voiceModelId : 'unknown';
 	const shortVoiceId = safeVoiceId.length > 8 ? safeVoiceId.slice(-8) : safeVoiceId;
 	
 	// For Bible files, include the reference
@@ -28,10 +28,27 @@ export class AudioStitcher {
 
 	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId, bibleReference }) {
 		try {
+			// Validate required parameters
+			if (!segmentFiles || !Array.isArray(segmentFiles) || segmentFiles.length === 0) {
+				throw new Error('segmentFiles must be a non-empty array');
+			}
+			
+			if (!outputsDir || typeof outputsDir !== 'string') {
+				throw new Error('outputsDir must be a valid string');
+			}
+			
+			if (!jobId || typeof jobId !== 'string') {
+				throw new Error('jobId must be a valid string');
+			}
+			
+			// Ensure user and voiceModelId are strings or undefined
+			const safeUser = (user && typeof user === 'string') ? user : 'unknown';
+			const safeVoiceModelId = (voiceModelId && typeof voiceModelId === 'string') ? voiceModelId : 'unknown';
+			
 			console.log(`[AudioStitcher] Stitching ${segmentFiles.length} segments to ${format}`);
 			
 			const type = bibleReference ? 'bible' : 'tts';
-			const outputFilename = generateFileName({ user, voiceModelId, type, format, bibleReference });
+			const outputFilename = generateFileName({ user: safeUser, voiceModelId: safeVoiceModelId, type, format, bibleReference });
 			const outputPath = path.join(outputsDir, outputFilename);
 			
 			// Create a file list for ffmpeg
