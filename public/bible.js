@@ -83,38 +83,60 @@ function setupEventListeners() {
 		});
 	});
 	
+	// Action buttons (always visible)
+	const previewBtn = document.getElementById('previewBtn');
+	if (previewBtn) previewBtn.addEventListener('click', previewText);
+	
+	const createAudioBtn = document.getElementById('createAudioBtn');
+	if (createAudioBtn) createAudioBtn.addEventListener('click', createAudio);
+	
+	const refreshBtn = document.getElementById('refreshBtn');
+	if (refreshBtn) refreshBtn.addEventListener('click', refreshOutputs);
+}
+
+function setupChaptersEventListeners() {
 	// Quick action buttons
-	document.getElementById('allChaptersBtn').addEventListener('click', () => {
-		const book = document.getElementById('book').value;
-		const maxChapters = bibleBooks[book];
-		if (maxChapters) {
-			document.getElementById('chapters').value = `1-${maxChapters}`;
-		}
-	});
+	const allChaptersBtn = document.getElementById('allChaptersBtn');
+	if (allChaptersBtn) {
+		allChaptersBtn.addEventListener('click', () => {
+			const book = document.getElementById('book').value;
+			const maxChapters = bibleBooks[book];
+			if (maxChapters) {
+				document.getElementById('chapters').value = `1-${maxChapters}`;
+			}
+		});
+	}
 	
 	// Include verses checkbox
-	document.getElementById('includeVerses').addEventListener('change', (e) => {
-		if (e.target.checked) {
-			document.getElementById('versesSubInput').classList.remove('hidden');
-		} else {
-			document.getElementById('versesSubInput').classList.add('hidden');
-			document.getElementById('versesCheckboxContainer').classList.add('hidden');
-		}
-	});
+	const includeVerses = document.getElementById('includeVerses');
+	if (includeVerses) {
+		includeVerses.addEventListener('change', (e) => {
+			if (e.target.checked) {
+				document.getElementById('versesSubInput').classList.remove('hidden');
+			} else {
+				document.getElementById('versesSubInput').classList.add('hidden');
+				document.getElementById('versesCheckboxContainer').classList.add('hidden');
+			}
+		});
+	}
 	
 	// Verse loading and selection
-	document.getElementById('loadVersesBtn').addEventListener('click', loadVerses);
-	document.getElementById('selectAllVersesBtn').addEventListener('click', () => {
-		document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = true);
-	});
-	document.getElementById('deselectAllVersesBtn').addEventListener('click', () => {
-		document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
-	});
+	const loadVersesBtn = document.getElementById('loadVersesBtn');
+	if (loadVersesBtn) loadVersesBtn.addEventListener('click', loadVerses);
 	
-	// Action buttons
-	document.getElementById('previewBtn').addEventListener('click', previewText);
-	document.getElementById('createAudioBtn').addEventListener('click', createAudio);
-	document.getElementById('refreshBtn').addEventListener('click', refreshOutputs);
+	const selectAllVersesBtn = document.getElementById('selectAllVersesBtn');
+	if (selectAllVersesBtn) {
+		selectAllVersesBtn.addEventListener('click', () => {
+			document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = true);
+		});
+	}
+	
+	const deselectAllVersesBtn = document.getElementById('deselectAllVersesBtn');
+	if (deselectAllVersesBtn) {
+		deselectAllVersesBtn.addEventListener('click', () => {
+			document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
+		});
+	}
 }
 
 function selectMode(mode) {
@@ -165,6 +187,8 @@ function selectMode(mode) {
 		if (chaptersInput) {
 			chaptersInput.classList.remove('hidden');
 			console.log('Chapters input shown');
+			// Set up event listeners for chapters-specific elements
+			setupChaptersEventListeners();
 		} else {
 			console.error('chaptersInput element not found');
 		}
