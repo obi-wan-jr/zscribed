@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { loadConfig, saveConfig } from './config.js';
 import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
-import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testBibleApiConnection } from './bible/bibleApiProvider.js';
+import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testLocalBibleConnection } from './bible/localBibleProvider.js';
 import { groupSentences, splitIntoSentences } from './text/segment.js';
 import { createTTSService } from './tts/service.js';
 import { loadPreferences, savePreferences } from './memory.js';
@@ -247,7 +247,7 @@ app.get('/api/bible/translations', (_req, res) => {
 // Test Bible API connection
 app.get('/api/bible/test', async (_req, res) => {
 	try {
-		const result = await testBibleApiConnection();
+		const result = await testLocalBibleConnection();
 		res.json(result);
 	} catch (error) {
 		console.error('[API] Bible test error:', error);

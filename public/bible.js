@@ -35,9 +35,6 @@ async function init() {
 	// Load voice models
 	await loadVoiceModels();
 	
-	// Load Bible translations
-	await loadBibleTranslations();
-	
 	// Load Bible books
 	loadBibleBooks();
 	
@@ -66,50 +63,6 @@ async function loadVoiceModels() {
 		
 		console.error('Failed to load voice models:', error);
 		voiceModel.innerHTML = '<option value="">No voice models available</option>';
-	}
-}
-
-async function loadBibleTranslations() {
-	try {
-		const res = await authenticatedFetch('/api/bible/translations');
-		if (!res) return; // Redirect happened
-		
-		const data = await res.json();
-		translation.innerHTML = '';
-		
-		// Group translations by language
-		const translationsByLanguage = {};
-		for (const t of data.translations || []) {
-			if (!translationsByLanguage[t.language]) {
-				translationsByLanguage[t.language] = [];
-			}
-			translationsByLanguage[t.language].push(t);
-		}
-		
-		// Add options grouped by language
-		for (const [language, translations] of Object.entries(translationsByLanguage)) {
-			// Add language header
-			const optgroup = document.createElement('optgroup');
-			optgroup.label = language;
-			
-			for (const t of translations) {
-				const opt = document.createElement('option');
-				opt.value = t.id;
-				opt.textContent = t.name;
-				optgroup.appendChild(opt);
-			}
-			
-			translation.appendChild(optgroup);
-		}
-		
-		// Set default to World English Bible
-		translation.value = 'web';
-		
-	} catch (error) {
-		if (handleUnauthorizedError(error)) return; // Redirect happened
-		
-		console.error('Failed to load Bible translations:', error);
-		translation.innerHTML = '<option value="web">World English Bible</option>';
 	}
 }
 

@@ -1,0 +1,30 @@
+{
+  "reference": "Esther 10",
+  "verses": [
+    {
+      "book_id": "EST",
+      "book_name": "Esther",
+      "chapter": 10,
+      "verse": 1,
+      "text": "King Ahasuerus laid a tribute on the land, and on the islands of the sea.\n"
+    },
+    {
+      "book_id": "EST",
+      "book_name": "Esther",
+      "chapter": 10,
+      "verse": 2,
+      "text": "All the acts of his power and of his might, and the full account of the greatness of Mordecai, to which the king advanced him, aren’t they written in the book of the chronicles of the kings of Media and Persia?\n"
+    },
+    {
+      "book_id": "EST",
+      "book_name": "Esther",
+      "chapter": 10,
+      "verse": 3,
+      "text": "For Mordecai the Jew was next to King Ahasuerus, and great among the Jews, and accepted by the multitude of his brothers, seeking the good of his people, and speaking peace to all his descendants.\n"
+    }
+  ],
+  "text": "King Ahasuerus laid a tribute on the land, and on the islands of the sea.\nAll the acts of his power and of his might, and the full account of the greatness of Mordecai, to which the king advanced him, aren’t they written in the book of the chronicles of the kings of Media and Persia?\nFor Mordecai the Jew was next to King Ahasuerus, and great among the Jews, and accepted by the multitude of his brothers, seeking the good of his people, and speaking peace to all his descendants.\n",
+  "translation_id": "web",
+  "translation_name": "World English Bible",
+  "translation_note": "Public Domain"
+}
