@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { loadConfig, saveConfig } from './config.js';
 import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
-import { fetchBibleText, cleanupBibleText } from './bible/dummyProvider.js';
+import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testBibleApiConnection } from './bible/bibleApiProvider.js';
 import { splitIntoSentences, groupSentences } from './text/segment.js';
 import { createTTSService } from './tts/service.js';
 import { loadPreferences, savePreferences } from './memory.js';
@@ -208,16 +208,57 @@ app.post('/api/memory/preferences', (req, res) => {
 	res.json(saved);
 });
 
-// Bible fetch (dummy provider)
+// Bible fetch endpoint
 app.post('/api/bible/fetch', async (req, res) => {
 	try {
-		const { translation = 'WEB', book = 'John', chapter = 1, verseRanges = '', excludeNumbers = true, excludeFootnotes = true } = req.body || {};
+		const { translation = 'web', book = 'John', chapter = 1, verseRanges = '', excludeNumbers = true, excludeFootnotes = true } = req.body || {};
 		const verses = parseVerseRanges(String(verseRanges || ''));
+		
+		console.log(`[API] Bible fetch request: ${book} ${chapter} verses ${verses.join(',')} (${translation})`);
+		
 		const raw = await fetchBibleText({ translation, book, chapter, verses });
 		const cleaned = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
-		res.json({ text: cleaned });
-	} catch (e) {
-		res.status(500).json({ error: String(e) });
+		
+		res.json({
+			text: cleaned,
+			reference: `${book} ${chapter}:${verses.join(',')}`,
+			translation: translation,
+			originalLength: raw.length,
+			cleanedLength: cleaned.length
+		});
+	} catch (error) {
+		console.error('[API] Bible fetch error:', error.message);
+		res.status(500).json({ 
+			error: error.message,
+			troubleshooting: error.troubleshooting || [
+				'Check the book name and chapter number',
+				'Verify the translation is available',
+				'Ensure verse ranges are valid'
+			]
+		});
+	}
+});
+
+// Get available Bible translations
+app.get('/api/bible/translations', (_req, res) => {
+	res.json({ translations: AVAILABLE_TRANSLATIONS });
+});
+
+// Test Bible API connection
+app.get('/api/bible/test', async (_req, res) => {
+	try {
+		const result = await testBibleApiConnection();
+		res.json(result);
+	} catch (error) {
+		console.error('[API] Bible test error:', error);
+		res.status(500).json({ 
+			error: error.message,
+			troubleshooting: [
+				'Check your internet connection',
+				'Verify bible-api.com is accessible',
+				'Try again in a few moments'
+			]
+		});
 	}
 });
 
@@ -322,7 +363,7 @@ async function processTTSJob(job) {
 	const segmentFiles = [];
 	
 	try {
-		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.data;
+		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3, bibleReference = null } = job.data;
 		const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
 		
 		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
@@ -336,7 +377,8 @@ async function processTTSJob(job) {
 				outputsDir: OUTPUTS_DIR, 
 				jobId: job.id, 
 				index: i,
-				user: job.user
+				user: job.user,
+				bibleReference
 			});
 			segmentFiles.push(file);
 		}
@@ -347,7 +389,8 @@ async function processTTSJob(job) {
 			jobId: job.id, 
 			format,
 			user: job.user,
-			voiceModelId: job.data.voiceModelId
+			voiceModelId: job.data.voiceModelId,
+			bibleReference
 		});
 		
 		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
@@ -399,7 +442,21 @@ async function handleBibleTtsJob(job) {
 	const verses = parseVerseRanges(String(verseRanges || ''));
 	const raw = await fetchBibleText({ translation, book, chapter, verses });
 	const text = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
-	await processTTSJob({ id: job.id, data: { text, voiceModelId, format, sentencesPerChunk } });
+	
+	// Create Bible reference for file naming
+	const bibleReference = `${book}-${chapter}-${verses.join('-')}`;
+	
+	await processTTSJob({ 
+		id: job.id, 
+		user: job.user, 
+		data: { 
+			text, 
+			voiceModelId, 
+			format, 
+			sentencesPerChunk,
+			bibleReference 
+		} 
+	});
 }
 
 // Start TTS job

@@ -11,7 +11,7 @@ const FISH_AUDIO_BASE_URL = 'https://api.fish.audio';
 const FISH_AUDIO_WS_URL = 'wss://api.fish.audio';
 
 // Utility function to generate user-friendly file names
-function generateFileName({ user, voiceModelId, type = 'tts', index = null, format = 'mp3' }) {
+function generateFileName({ user, voiceModelId, type = 'tts', index = null, format = 'mp3', bibleReference = null }) {
 	// Create a short, readable name with essential variables only
 	const now = new Date();
 	const time = now.toTimeString().slice(0, 8).replace(/:/g, '-'); // HH-MM-SS
@@ -23,12 +23,15 @@ function generateFileName({ user, voiceModelId, type = 'tts', index = null, form
 	const safeVoiceId = voiceModelId || 'unknown';
 	const shortVoiceId = safeVoiceId.length > 8 ? safeVoiceId.slice(-8) : safeVoiceId;
 	
+	// For Bible files, include the reference
+	const typePrefix = type === 'bible' && bibleReference ? `bible-${bibleReference.replace(/[^a-zA-Z0-9]/g, '-')}-` : `${type}-`;
+	
 	if (index !== null) {
 		// For segment files
-		return `${userPrefix}${shortVoiceId}-${time}-${index}.${format}`;
+		return `${userPrefix}${typePrefix}${shortVoiceId}-${time}-${index}.${format}`;
 	} else {
 		// For complete files
-		return `${userPrefix}${shortVoiceId}-${time}-${date}.${format}`;
+		return `${userPrefix}${typePrefix}${shortVoiceId}-${time}-${date}.${format}`;
 	}
 }
 
@@ -39,7 +42,7 @@ export class FishAudioTTS {
 		this.wsUrl = FISH_AUDIO_WS_URL;
 	}
 
-	async synthesizeChunkToFile({ chunkText, voiceModelId, format = 'mp3', outputsDir, jobId, index, user }) {
+	async synthesizeChunkToFile({ chunkText, voiceModelId, format = 'mp3', outputsDir, jobId, index, user, bibleReference }) {
 		try {
 			console.log(`[FishAudio] Synthesizing chunk ${index} with voice ${voiceModelId}`);
 			
@@ -71,7 +74,8 @@ export class FishAudioTTS {
 			const audioBuffer = await response.arrayBuffer();
 			
 			// Save to file with improved naming
-			const filename = generateFileName({ user, voiceModelId, type: 'tts', index, format });
+			const type = bibleReference ? 'bible' : 'tts';
+			const filename = generateFileName({ user, voiceModelId, type, index, format, bibleReference });
 			const filepath = path.join(outputsDir, filename);
 			fs.writeFileSync(filepath, Buffer.from(audioBuffer));
 			
@@ -84,7 +88,7 @@ export class FishAudioTTS {
 		}
 	}
 
-	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId }) {
+	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId, bibleReference }) {
 		try {
 			console.log(`[FishAudio] Stitching ${segmentFiles.length} segments`);
 			
@@ -94,10 +98,11 @@ export class FishAudioTTS {
 			
 			if (ffmpegAvailable) {
 				// Use proper audio stitching with ffmpeg
-				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format, user, voiceModelId });
+				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format, user, voiceModelId, bibleReference });
 			} else {
 				// Fallback to simple concatenation for non-MP3 formats
-				const outputFilename = generateFileName({ user, voiceModelId, type: 'tts', format });
+				const type = bibleReference ? 'bible' : 'tts';
+				const outputFilename = generateFileName({ user, voiceModelId, type, format, bibleReference });
 				outputPath = path.join(outputsDir, outputFilename);
 				
 				if (format === 'mp3') {

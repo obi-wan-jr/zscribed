@@ -35,6 +35,12 @@ async function init() {
 	// Load voice models
 	await loadVoiceModels();
 	
+	// Load Bible translations
+	await loadBibleTranslations();
+	
+	// Load Bible books
+	loadBibleBooks();
+	
 	// Load outputs
 	refreshOutputs();
 	
@@ -61,6 +67,83 @@ async function loadVoiceModels() {
 		console.error('Failed to load voice models:', error);
 		voiceModel.innerHTML = '<option value="">No voice models available</option>';
 	}
+}
+
+async function loadBibleTranslations() {
+	try {
+		const res = await authenticatedFetch('/api/bible/translations');
+		if (!res) return; // Redirect happened
+		
+		const data = await res.json();
+		translation.innerHTML = '';
+		
+		// Group translations by language
+		const translationsByLanguage = {};
+		for (const t of data.translations || []) {
+			if (!translationsByLanguage[t.language]) {
+				translationsByLanguage[t.language] = [];
+			}
+			translationsByLanguage[t.language].push(t);
+		}
+		
+		// Add options grouped by language
+		for (const [language, translations] of Object.entries(translationsByLanguage)) {
+			// Add language header
+			const optgroup = document.createElement('optgroup');
+			optgroup.label = language;
+			
+			for (const t of translations) {
+				const opt = document.createElement('option');
+				opt.value = t.id;
+				opt.textContent = t.name;
+				optgroup.appendChild(opt);
+			}
+			
+			translation.appendChild(optgroup);
+		}
+		
+		// Set default to World English Bible
+		translation.value = 'web';
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
+		console.error('Failed to load Bible translations:', error);
+		translation.innerHTML = '<option value="web">World English Bible</option>';
+	}
+}
+
+function loadBibleBooks() {
+	const books = [
+		// Old Testament
+		'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
+		'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel',
+		'1 Kings', '2 Kings', '1 Chronicles', '2 Chronicles',
+		'Ezra', 'Nehemiah', 'Esther', 'Job', 'Psalms',
+		'Proverbs', 'Ecclesiastes', 'Song of Solomon', 'Isaiah',
+		'Jeremiah', 'Lamentations', 'Ezekiel', 'Daniel',
+		'Hosea', 'Joel', 'Amos', 'Obadiah', 'Jonah',
+		'Micah', 'Nahum', 'Habakkuk', 'Zephaniah', 'Haggai',
+		'Zechariah', 'Malachi',
+		// New Testament
+		'Matthew', 'Mark', 'Luke', 'John', 'Acts',
+		'Romans', '1 Corinthians', '2 Corinthians', 'Galatians',
+		'Ephesians', 'Philippians', 'Colossians', '1 Thessalonians',
+		'2 Thessalonians', '1 Timothy', '2 Timothy', 'Titus',
+		'Philemon', 'Hebrews', 'James', '1 Peter', '2 Peter',
+		'1 John', '2 John', '3 John', 'Jude', 'Revelation'
+	];
+	
+	book.innerHTML = '';
+	for (const bookName of books) {
+		const opt = document.createElement('option');
+		opt.value = bookName;
+		opt.textContent = bookName;
+		book.appendChild(opt);
+	}
+	
+	// Set default to John
+	book.value = 'John';
 }
 
 async function refreshOutputs() {

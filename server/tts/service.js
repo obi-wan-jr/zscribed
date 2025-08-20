@@ -24,14 +24,14 @@ export class TTSService {
 		}
 	}
 
-	async synthesizeChunkToFile({ chunkText, voiceModelId, format = 'mp3', outputsDir, jobId, index, user }) {
+	async synthesizeChunkToFile({ chunkText, voiceModelId, format = 'mp3', outputsDir, jobId, index, user, bibleReference }) {
 		if (!this.useFishAudio || !this.fishAudio) {
 			throw new Error('Fish.Audio is not available. Please check your API key configuration in config.json');
 		}
 		
 		try {
 			return await this.fishAudio.synthesizeChunkToFile({ 
-				chunkText, voiceModelId, format, outputsDir, jobId, index, user 
+				chunkText, voiceModelId, format, outputsDir, jobId, index, user, bibleReference 
 			});
 		} catch (error) {
 			console.error('[TTSService] Fish.Audio synthesis failed:', error.message);
@@ -51,13 +51,13 @@ export class TTSService {
 		}
 	}
 
-	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId }) {
+	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId, bibleReference }) {
 		if (!this.useFishAudio || !this.fishAudio) {
 			throw new Error('Fish.Audio is not available. Please check your API key configuration in config.json');
 		}
 		
 		try {
-			return await this.fishAudio.stitchSegments({ segmentFiles, outputsDir, jobId, format, user, voiceModelId });
+			return await this.fishAudio.stitchSegments({ segmentFiles, outputsDir, jobId, format, user, voiceModelId, bibleReference });
 		} catch (error) {
 			console.error('[TTSService] Fish.Audio stitching failed:', error.message);
 			
