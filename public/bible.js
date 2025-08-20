@@ -130,7 +130,11 @@ async function loadBibleBooks() {
 }
 
 function populateBookGrid(books) {
-	if (!bookGrid) return;
+	console.log('[Bible] Populating book grid with', books.length, 'books');
+	if (!bookGrid) {
+		console.error('[Bible] Book grid element not found!');
+		return;
+	}
 	
 	bookGrid.innerHTML = '';
 	
@@ -202,8 +206,13 @@ function selectBook(bookName) {
 }
 
 function openBookModal() {
-	if (!bookModal) return;
+	console.log('[Bible] Opening book modal...');
+	if (!bookModal) {
+		console.error('[Bible] Book modal element not found!');
+		return;
+	}
 	bookModal.classList.remove('hidden');
+	console.log('[Bible] Modal opened');
 	
 	// Sync search terms between main field and modal
 	if (bookSearchInput && bookSearch) {
@@ -220,12 +229,17 @@ function closeBookModalFunc() {
 }
 
 function filterBooks(searchTerm) {
-	if (!bookGrid) return;
+	console.log('[Bible] Filtering books with term:', searchTerm);
+	if (!bookGrid) {
+		console.error('[Bible] Book grid element not found!');
+		return;
+	}
 	
 	const filteredBooks = allBooks.filter(book => 
 		book.name.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 	
+	console.log('[Bible] Filtered books:', filteredBooks.length);
 	populateBookGrid(filteredBooks);
 }
 
@@ -388,8 +402,20 @@ function listenToProgress(jobId) {
 }
 
 function setupEventListeners() {
+	console.log('[Bible] Setting up event listeners...');
+	console.log('[Bible] Elements found:', {
+		bookSelectBtn: !!bookSelectBtn,
+		closeBookModal: !!closeBookModal,
+		bookModal: !!bookModal,
+		bookSearch: !!bookSearch,
+		bookSearchInput: !!bookSearchInput
+	});
+	
 	// Book selection modal
-	bookSelectBtn?.addEventListener('click', openBookModal);
+	bookSelectBtn?.addEventListener('click', () => {
+		console.log('[Bible] Book select button clicked');
+		openBookModal();
+	});
 	closeBookModal?.addEventListener('click', closeBookModalFunc);
 	
 	// Close modal when clicking outside
@@ -406,10 +432,12 @@ function setupEventListeners() {
 	
 	// Main book search field - typing opens modal and filters
 	bookSearch?.addEventListener('input', (e) => {
+		console.log('[Bible] Book search input:', e.target.value);
 		const searchTerm = e.target.value;
 		
 		// If modal is not open, open it
 		if (bookModal && bookModal.classList.contains('hidden')) {
+			console.log('[Bible] Opening modal from search input');
 			openBookModal();
 		}
 		
