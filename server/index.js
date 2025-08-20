@@ -335,7 +335,8 @@ async function processTTSJob(job) {
 				format, 
 				outputsDir: OUTPUTS_DIR, 
 				jobId: job.id, 
-				index: i 
+				index: i,
+				user: job.user
 			});
 			segmentFiles.push(file);
 		}
@@ -344,7 +345,8 @@ async function processTTSJob(job) {
 			segmentFiles, 
 			outputsDir: OUTPUTS_DIR, 
 			jobId: job.id, 
-			format 
+			format,
+			user: job.user
 		});
 		
 		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });

@@ -10,6 +10,22 @@ const __dirname = path.dirname(__filename);
 const FISH_AUDIO_BASE_URL = 'https://api.fish.audio';
 const FISH_AUDIO_WS_URL = 'wss://api.fish.audio';
 
+// Utility function to generate user-friendly file names
+function generateFileName({ user, jobId, type = 'tts', index = null, format = 'mp3' }) {
+	// Create a short, readable name
+	const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+	const shortId = jobId.slice(0, 8); // First 8 characters of job ID
+	const userPrefix = user ? `${user}-` : '';
+	
+	if (index !== null) {
+		// For segment files
+		return `${userPrefix}${type}-${shortId}-${String(index).padStart(3, '0')}.${format}`;
+	} else {
+		// For complete files
+		return `${userPrefix}${type}-${shortId}-${timestamp}.${format}`;
+	}
+}
+
 export class FishAudioTTS {
 	constructor(apiKey) {
 		this.apiKey = apiKey;
@@ -17,7 +33,7 @@ export class FishAudioTTS {
 		this.wsUrl = FISH_AUDIO_WS_URL;
 	}
 
-	async synthesizeChunkToFile({ chunkText, voiceModelId, format = 'mp3', outputsDir, jobId, index }) {
+	async synthesizeChunkToFile({ chunkText, voiceModelId, format = 'mp3', outputsDir, jobId, index, user }) {
 		try {
 			console.log(`[FishAudio] Synthesizing chunk ${index} with voice ${voiceModelId}`);
 			
@@ -48,8 +64,8 @@ export class FishAudioTTS {
 			// Get the audio data
 			const audioBuffer = await response.arrayBuffer();
 			
-			// Save to file
-			const filename = `${jobId}-${String(index).padStart(3, '0')}.${format}`;
+			// Save to file with improved naming
+			const filename = generateFileName({ user, jobId, type: 'tts', index, format });
 			const filepath = path.join(outputsDir, filename);
 			fs.writeFileSync(filepath, Buffer.from(audioBuffer));
 			
@@ -62,7 +78,7 @@ export class FishAudioTTS {
 		}
 	}
 
-	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3' }) {
+	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user }) {
 		try {
 			console.log(`[FishAudio] Stitching ${segmentFiles.length} segments`);
 			
@@ -72,10 +88,10 @@ export class FishAudioTTS {
 			
 			if (ffmpegAvailable) {
 				// Use proper audio stitching with ffmpeg
-				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format });
+				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format, user });
 			} else {
 				// Fallback to simple concatenation for non-MP3 formats
-				const outputFilename = `${jobId}-complete.${format}`;
+				const outputFilename = generateFileName({ user, jobId, type: 'tts', format });
 				outputPath = path.join(outputsDir, outputFilename);
 				
 				if (format === 'mp3') {

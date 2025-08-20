@@ -2,16 +2,26 @@ import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 
+// Utility function to generate user-friendly file names
+function generateFileName({ user, jobId, type = 'tts', format = 'mp3' }) {
+	// Create a short, readable name
+	const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+	const shortId = jobId.slice(0, 8); // First 8 characters of job ID
+	const userPrefix = user ? `${user}-` : '';
+	
+	return `${userPrefix}${type}-${shortId}-${timestamp}.${format}`;
+}
+
 export class AudioStitcher {
 	constructor() {
 		this.ffmpegPath = 'ffmpeg'; // Assumes ffmpeg is in PATH
 	}
 
-	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3' }) {
+	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user }) {
 		try {
 			console.log(`[AudioStitcher] Stitching ${segmentFiles.length} segments to ${format}`);
 			
-			const outputFilename = `${jobId}-complete.${format}`;
+			const outputFilename = generateFileName({ user, jobId, type: 'tts', format });
 			const outputPath = path.join(outputsDir, outputFilename);
 			
 			// Create a file list for ffmpeg
