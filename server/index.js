@@ -69,11 +69,26 @@ app.use('/', express.static(PUBLIC_DIR));
 // Auth endpoints (no auth required)
 app.post('/api/auth/login', (req, res) => {
 	const { user } = req.body || {};
-	if (!user || !(config.allowedUsers || []).includes(user)) {
-		return res.status(400).json({ error: 'Invalid user' });
+	if (!user) {
+		return res.status(400).json({ error: 'Please enter your name' });
 	}
 	
-	const sessionId = createSession(user);
+	const normalizedInput = user.trim().toLowerCase();
+	const allowedUsers = config.allowedUsers || [];
+	const isValidUser = allowedUsers.some(allowedUser => 
+		allowedUser.toLowerCase() === normalizedInput
+	);
+	
+	if (!isValidUser) {
+		return res.status(400).json({ error: 'Invalid user name' });
+	}
+	
+	// Use the original case from config
+	const normalizedUser = allowedUsers.find(allowedUser => 
+		allowedUser.toLowerCase() === normalizedInput
+	);
+	
+	const sessionId = createSession(normalizedUser);
 	res.cookie('sessionId', sessionId, { 
 		httpOnly: true, 
 		secure: false, // set to true in production with HTTPS

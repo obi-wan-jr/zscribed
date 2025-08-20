@@ -1,23 +1,19 @@
 import { fetchMeta } from './common.js';
 
 const loginForm = document.getElementById('loginForm');
-const userSelect = document.getElementById('userSelect');
+const userName = document.getElementById('userName');
 const loginError = document.getElementById('loginError');
+
+let allowedUsers = [];
 
 init();
 
 async function init() {
 	try {
 		const meta = await fetchMeta();
-		userSelect.innerHTML = '<option value="">Choose a user...</option>';
-		for (const user of meta.allowedUsers || []) {
-			const opt = document.createElement('option');
-			opt.value = user;
-			opt.textContent = user;
-			userSelect.appendChild(opt);
-		}
+		allowedUsers = meta.allowedUsers || [];
 	} catch (e) {
-		showError('Failed to load users');
+		showError('Failed to load user list');
 	}
 }
 
@@ -30,21 +26,40 @@ function hideError() {
 	loginError.classList.add('hidden');
 }
 
+function isValidUser(name) {
+	if (!name || !allowedUsers.length) return false;
+	const normalizedName = name.trim().toLowerCase();
+	return allowedUsers.some(user => user.toLowerCase() === normalizedName);
+}
+
+function getNormalizedUserName(name) {
+	const normalizedName = name.trim().toLowerCase();
+	const user = allowedUsers.find(user => user.toLowerCase() === normalizedName);
+	return user || name.trim(); // Return original case from config, or trimmed input
+}
+
 loginForm?.addEventListener('submit', async (e) => {
 	e.preventDefault();
 	hideError();
 	
-	const user = userSelect.value;
-	if (!user) {
-		showError('Please select a user');
+	const inputName = userName.value;
+	if (!inputName.trim()) {
+		showError('Please enter your name');
 		return;
 	}
+	
+	if (!isValidUser(inputName)) {
+		showError('Invalid user name. Please try again.');
+		return;
+	}
+	
+	const normalizedUser = getNormalizedUserName(inputName);
 	
 	try {
 		const res = await fetch('/api/auth/login', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ user })
+			body: JSON.stringify({ user: normalizedUser })
 		});
 		
 		if (!res.ok) {
