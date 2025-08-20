@@ -1,8 +1,5 @@
 import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
-// Load Bible books immediately (public endpoint)
-loadBibleBooks();
-
 // Check authentication first
 requireAuth().then(isAuthenticated => {
 	if (!isAuthenticated) return; // Will redirect to login
@@ -26,6 +23,9 @@ const userWelcome = document.getElementById('userWelcome');
 const outputsList = document.getElementById('outputsList');
 const refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 const queueStatus = document.getElementById('queueStatus');
+
+// Load Bible books immediately after DOM elements are available (public endpoint)
+loadBibleBooks();
 
 async function init() {
 	// Update the login/logout link
