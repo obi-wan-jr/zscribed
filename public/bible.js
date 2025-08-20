@@ -185,6 +185,11 @@ function selectBook(bookName) {
 	book.value = bookName;
 	bookSearch.value = bookName;
 	
+	// Clear the modal search input
+	if (bookSearchInput) {
+		bookSearchInput.value = '';
+	}
+	
 	// Find the book info to update chapter max
 	const bookInfo = allBooks.find(b => b.name === bookName);
 	if (bookInfo && chapter) {
@@ -199,8 +204,13 @@ function selectBook(bookName) {
 function openBookModal() {
 	if (!bookModal) return;
 	bookModal.classList.remove('hidden');
-	if (bookSearchInput) {
+	
+	// Sync search terms between main field and modal
+	if (bookSearchInput && bookSearch) {
+		bookSearchInput.value = bookSearch.value;
 		bookSearchInput.focus();
+		// Filter books based on current search term
+		filterBooks(bookSearch.value);
 	}
 }
 
@@ -389,9 +399,29 @@ function setupEventListeners() {
 		}
 	});
 	
-	// Book search functionality
+	// Book search functionality - both in modal and main field
 	bookSearchInput?.addEventListener('input', (e) => {
 		filterBooks(e.target.value);
+	});
+	
+	// Main book search field - typing opens modal and filters
+	bookSearch?.addEventListener('input', (e) => {
+		const searchTerm = e.target.value;
+		
+		// If modal is not open, open it
+		if (bookModal && bookModal.classList.contains('hidden')) {
+			openBookModal();
+		}
+		
+		// Filter books in modal
+		filterBooks(searchTerm);
+	});
+	
+	// Focus on main book search field opens modal
+	bookSearch?.addEventListener('focus', () => {
+		if (bookModal && bookModal.classList.contains('hidden')) {
+			openBookModal();
+		}
 	});
 	
 	// Chapter input change
