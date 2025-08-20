@@ -107,6 +107,7 @@ export class FishAudioTTS {
 			});
 
 			if (!response.ok) {
+				console.warn(`[FishAudio] API returned ${response.status}, falling back to config voices`);
 				throw new Error(`Failed to fetch voices: ${response.status}`);
 			}
 
@@ -114,7 +115,8 @@ export class FishAudioTTS {
 			return voices.data || [];
 			
 		} catch (error) {
-			console.error(`[FishAudio] Error fetching voices:`, error);
+			console.error(`[FishAudio] Error fetching voices:`, error.message);
+			// Return empty array to trigger fallback to config voices
 			return [];
 		}
 	}

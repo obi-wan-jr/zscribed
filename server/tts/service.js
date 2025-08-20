@@ -72,22 +72,23 @@ export class TTSService {
 
 	async getAvailableVoices() {
 		if (!this.useFishAudio || !this.fishAudio) {
-			throw new Error('Fish.Audio is not available. Please check your API key configuration in config.json');
+			// Return config voices if Fish.Audio is not available
+			return this.config.voiceModels || [];
 		}
 		
 		try {
 			const voices = await this.fishAudio.getAvailableVoices();
-			return voices;
+			// If Fish.Audio returns voices, use them
+			if (voices && voices.length > 0) {
+				return voices;
+			}
+			// If Fish.Audio returns empty array, fall back to config
+			console.log('[TTSService] Fish.Audio returned no voices, using config voices');
+			return this.config.voiceModels || [];
 		} catch (error) {
 			console.error('[TTSService] Failed to fetch Fish.Audio voices:', error.message);
-			
-			if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-				throw new Error(`Fish.Audio authentication failed. Please check your API key in config.json. Error: ${error.message}`);
-			} else if (error.message.includes('403') || error.message.includes('Forbidden')) {
-				throw new Error(`Fish.Audio access denied. Please check your API key permissions. Error: ${error.message}`);
-			} else {
-				throw new Error(`Failed to fetch Fish.Audio voices: ${error.message}. Please check your internet connection and API key.`);
-			}
+			// Return config voices as fallback
+			return this.config.voiceModels || [];
 		}
 	}
 
