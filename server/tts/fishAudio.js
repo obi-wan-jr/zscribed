@@ -21,17 +21,17 @@ export class FishAudioTTS {
 		try {
 			console.log(`[FishAudio] Synthesizing chunk ${index} with voice ${voiceModelId}`);
 			
-			// Create the synthesis request
+			// Create the synthesis request using Fish.Audio API format
 			const synthesisRequest = {
 				text: chunkText,
-				voice_id: voiceModelId,
-				output_format: format,
-				optimization_level: 0, // Standard quality
-				enable_timestamps: false
+				reference_id: voiceModelId, // Fish.Audio uses reference_id instead of voice_id
+				format: format, // mp3, wav, etc.
+				latency: 'normal', // normal or balanced
+				normalize: true // Normalize text for better stability
 			};
 
-			// Make the API request
-			const response = await fetch(`${this.baseUrl}/v1/speech`, {
+			// Make the API request to the correct Fish.Audio TTS endpoint
+			const response = await fetch(`${this.baseUrl}/v1/tts`, {
 				method: 'POST',
 				headers: {
 					'Authorization': `Bearer ${this.apiKey}`,
@@ -100,22 +100,40 @@ export class FishAudioTTS {
 
 	async getAvailableVoices() {
 		try {
-			const response = await fetch(`${this.baseUrl}/v1/voices`, {
+			// Fish.Audio API doesn't have a direct endpoint to list voices
+			// Instead, you need to know your model reference_ids from their playground
+			// or when you create models. We'll attempt a test request to validate the API key
+			// and fall back to config voices.
+			
+			console.log(`[FishAudio] Testing API connection to validate available voices`);
+			
+			const testResponse = await fetch(`${this.baseUrl}/v1/tts`, {
+				method: 'POST',
 				headers: {
-					'Authorization': `Bearer ${this.apiKey}`
-				}
+					'Authorization': `Bearer ${this.apiKey}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					text: "test", // Minimal test
+					reference_id: "test-invalid-id", // This will fail but validate our API key
+					format: "mp3"
+				})
 			});
 
-			if (!response.ok) {
-				console.warn(`[FishAudio] API returned ${response.status}, falling back to config voices`);
-				throw new Error(`Failed to fetch voices: ${response.status}`);
+			if (testResponse.status === 401) {
+				console.warn(`[FishAudio] API key is invalid (401), falling back to config voices`);
+				throw new Error(`Invalid API key: ${testResponse.status}`);
+			} else if (testResponse.status === 404) {
+				console.warn(`[FishAudio] Reference ID not found (expected for test), but API key is valid - using config voices`);
+				// This is expected - the test reference_id doesn't exist, but API key is valid
+				return []; // Return empty to trigger fallback to config
+			} else {
+				console.log(`[FishAudio] API responded with status ${testResponse.status} - falling back to config voices`);
+				return []; // Return empty to trigger fallback to config
 			}
-
-			const voices = await response.json();
-			return voices.data || [];
 			
 		} catch (error) {
-			console.error(`[FishAudio] Error fetching voices:`, error.message);
+			console.error(`[FishAudio] Error testing API connection:`, error.message);
 			// Return empty array to trigger fallback to config voices
 			return [];
 		}
@@ -123,16 +141,56 @@ export class FishAudioTTS {
 
 	async testConnection() {
 		try {
-			const voices = await this.getAvailableVoices();
-			return {
-				success: true,
-				voiceCount: voices.length,
-				voices: voices.slice(0, 5) // Return first 5 voices as sample
-			};
+			// Test the TTS endpoint directly with a minimal request
+			console.log(`[FishAudio] Testing connection to Fish.Audio API`);
+			
+			const testResponse = await fetch(`${this.baseUrl}/v1/tts`, {
+				method: 'POST',
+				headers: {
+					'Authorization': `Bearer ${this.apiKey}`,
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					text: "API connection test",
+					reference_id: "test-connection", // This will likely fail but validate API key
+					format: "mp3"
+				})
+			});
+
+			if (testResponse.status === 401) {
+				return {
+					success: false,
+					error: "Invalid API key (401 Unauthorized)",
+					statusCode: 401
+				};
+			} else if (testResponse.status === 400 || testResponse.status === 404) {
+				// API key is valid, but reference_id is invalid (expected)
+				return {
+					success: true,
+					message: "API key is valid. Ready to use with your voice models.",
+					statusCode: testResponse.status,
+					note: "Use your model reference_ids from Fish.Audio playground"
+				};
+			} else if (testResponse.status === 200) {
+				// Unexpected success with test reference_id
+				return {
+					success: true,
+					message: "API connection successful",
+					statusCode: 200
+				};
+			} else {
+				const errorText = await testResponse.text();
+				return {
+					success: false,
+					error: `API returned ${testResponse.status}: ${errorText}`,
+					statusCode: testResponse.status
+				};
+			}
+			
 		} catch (error) {
 			return {
 				success: false,
-				error: error.message
+				error: `Connection failed: ${error.message}`
 			};
 		}
 	}
