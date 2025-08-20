@@ -6,5 +6,5 @@
       "name": "Default Voice"
     }
   ],
-  "allowedUsers": ["Inggo", "Gelo", "JM"]
+  "allowedUsers": ["Admin", "User1", "User2"]
 }
