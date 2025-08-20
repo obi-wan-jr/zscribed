@@ -1,16 +1,5 @@
 import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
-// Global error handler
-window.addEventListener('error', (e) => {
-	console.error('[Bible] JavaScript error:', e.error);
-});
-
-// Wait for DOM to be ready, then load Bible books
-document.addEventListener('DOMContentLoaded', () => {
-	console.log('[Bible] DOM loaded, loading Bible books immediately...');
-	loadBibleBooks();
-});
-
 // Check authentication for protected features
 console.log('[Bible] Checking authentication...');
 requireAuth().then(isAuthenticated => {
@@ -60,7 +49,8 @@ async function init() {
 		userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
 	}
 	
-	// Bible books are already loaded (public endpoint)
+	// Set up chapter validation for hardcoded books
+	setupChapterValidation();
 	
 	// Load voice models
 	await loadVoiceModels();
@@ -96,94 +86,40 @@ async function loadVoiceModels() {
 	}
 }
 
-async function loadBibleBooks() {
-	console.log('[Bible] loadBibleBooks function called');
+function setupChapterValidation() {
+	// Bible books with their chapter counts for validation
+	const bibleBooks = {
+		'Genesis': 50, 'Exodus': 40, 'Leviticus': 27, 'Numbers': 36, 'Deuteronomy': 34,
+		'Joshua': 24, 'Judges': 21, 'Ruth': 4, '1 Samuel': 31, '2 Samuel': 24,
+		'1 Kings': 22, '2 Kings': 25, '1 Chronicles': 29, '2 Chronicles': 36,
+		'Ezra': 10, 'Nehemiah': 13, 'Esther': 10, 'Job': 42, 'Psalms': 150,
+		'Proverbs': 31, 'Ecclesiastes': 12, 'Song of Solomon': 8, 'Isaiah': 66,
+		'Jeremiah': 52, 'Lamentations': 5, 'Ezekiel': 48, 'Daniel': 12,
+		'Hosea': 14, 'Joel': 3, 'Amos': 9, 'Obadiah': 1, 'Jonah': 4, 'Micah': 7,
+		'Nahum': 3, 'Habakkuk': 3, 'Zephaniah': 3, 'Haggai': 2, 'Zechariah': 14, 'Malachi': 4,
+		'Matthew': 28, 'Mark': 16, 'Luke': 24, 'John': 21, 'Acts': 28,
+		'Romans': 16, '1 Corinthians': 16, '2 Corinthians': 13, 'Galatians': 6,
+		'Ephesians': 6, 'Philippians': 4, 'Colossians': 4, '1 Thessalonians': 5,
+		'2 Thessalonians': 3, '1 Timothy': 6, '2 Timothy': 4, 'Titus': 3, 'Philemon': 1,
+		'Hebrews': 13, 'James': 5, '1 Peter': 5, '2 Peter': 3, '1 John': 5,
+		'2 John': 1, '3 John': 1, 'Jude': 1, 'Revelation': 22
+	};
 	
-	// Check if DOM elements are available
-	if (!document.getElementById('book')) {
-		console.error('[Bible] Book element not found in DOM!');
-		return;
-	}
+	// Store the books data globally for validation
+	window.bibleBooks = bibleBooks;
 	
-	try {
-		console.log('[Bible] Loading Bible books...');
-		
-		const res = await fetch('/api/bible/books');
-		if (!res.ok) {
-			throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-		}
-		
-		const data = await res.json();
-		const books = data.books || [];
-		console.log('[Bible] Received books:', books.length);
-		
-		if (!book) {
-			console.error('[Bible] Book element not found!');
-			return;
-		}
-		
-		// Clear existing options
-		book.innerHTML = '';
-		
-		// Group books by testament
-		const oldTestament = books.filter(b => b.testament === 'old');
-		const newTestament = books.filter(b => b.testament === 'new');
-		
-		// Add Old Testament optgroup
-		if (oldTestament.length > 0) {
-			const oldGroup = document.createElement('optgroup');
-			oldGroup.label = 'Old Testament';
-			
-			for (const bookInfo of oldTestament) {
-				const opt = document.createElement('option');
-				opt.value = bookInfo.name;
-				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
-				opt.dataset.chapters = bookInfo.chapters;
-				oldGroup.appendChild(opt);
-			}
-			
-			book.appendChild(oldGroup);
-		}
-		
-		// Add New Testament optgroup
-		if (newTestament.length > 0) {
-			const newGroup = document.createElement('optgroup');
-			newGroup.label = 'New Testament';
-			
-			for (const bookInfo of newTestament) {
-				const opt = document.createElement('option');
-				opt.value = bookInfo.name;
-				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
-				opt.dataset.chapters = bookInfo.chapters;
-				newGroup.appendChild(opt);
-			}
-			
-			book.appendChild(newGroup);
-		}
-		
-		// Set default to John
-		book.value = 'John';
-		
-		// Update chapter max value
-		updateChapterMax();
-		
-		console.log('[Bible] Books loaded successfully');
-		
-	} catch (error) {
-		console.error('Failed to load Bible books:', error);
-		if (book) {
-			book.innerHTML = '<option value="">Failed to load books</option>';
-		}
-	}
+	// Set up initial chapter validation
+	updateChapterMax();
 }
 
 // Update chapter input max value based on selected book
 function updateChapterMax() {
 	if (!book || !chapter || !verses) return;
 	
-	const selectedOption = book.options[book.selectedIndex];
-	if (selectedOption && selectedOption.dataset.chapters) {
-		const maxChapters = parseInt(selectedOption.dataset.chapters);
+	const selectedBook = book.value;
+	const maxChapters = window.bibleBooks[selectedBook];
+	
+	if (maxChapters) {
 		chapter.max = maxChapters;
 		chapter.placeholder = `1-${maxChapters}`;
 		verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${maxChapters})`;
