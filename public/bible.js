@@ -1,8 +1,15 @@
 import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
-// Load Bible books immediately (public endpoint, no auth required)
-console.log('[Bible] Loading Bible books immediately...');
-loadBibleBooks();
+// Global error handler
+window.addEventListener('error', (e) => {
+	console.error('[Bible] JavaScript error:', e.error);
+});
+
+// Wait for DOM to be ready, then load Bible books
+document.addEventListener('DOMContentLoaded', () => {
+	console.log('[Bible] DOM loaded, loading Bible books immediately...');
+	loadBibleBooks();
+});
 
 // Check authentication for protected features
 console.log('[Bible] Checking authentication...');
@@ -91,6 +98,13 @@ async function loadVoiceModels() {
 
 async function loadBibleBooks() {
 	console.log('[Bible] loadBibleBooks function called');
+	
+	// Check if DOM elements are available
+	if (!document.getElementById('book')) {
+		console.error('[Bible] Book element not found in DOM!');
+		return;
+	}
+	
 	try {
 		console.log('[Bible] Loading Bible books...');
 		
