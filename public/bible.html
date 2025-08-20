@@ -14,7 +14,6 @@
 				<div class="space-x-4">
 					<a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
 					<a href="/bible.html" class="text-white">Bible Transcription</a>
-					<a href="/outputs.html" class="hover:text-white">Outputs</a>
 					<a href="/settings.html" class="hover:text-white">Settings</a>
 					<a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
 				</div>
@@ -68,6 +67,15 @@
 					<button id="bibleTtsBtn" class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500">Create Audio</button>
 				</div>
 				<div id="bibleProgress" class="mt-3 text-sm text-slate-300"></div>
+			</section>
+			
+			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
+				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-lg font-medium text-indigo-200">Generated Outputs</h2>
+					<button id="refreshOutputsBtn" class="px-3 py-2 rounded bg-slate-600 hover:bg-slate-500">Refresh</button>
+				</div>
+				<div id="outputsList" class="space-y-2"></div>
+				<div id="queueStatus" class="mt-4 text-sm text-slate-400"></div>
 			</section>
 		</main>
 	</div>
