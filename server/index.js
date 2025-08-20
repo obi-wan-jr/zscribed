@@ -75,6 +75,15 @@ try {
 logger.prune();
 setInterval(() => logger.prune(), 24 * 60 * 60 * 1000);
 
+// Public Bible endpoints (no auth required)
+app.get('/api/bible/books', (_req, res) => {
+	res.json({ books: BIBLE_BOOKS });
+});
+
+app.get('/api/bible/translations', (_req, res) => {
+	res.json({ translations: AVAILABLE_TRANSLATIONS });
+});
+
 // Auth middleware for all routes
 app.use(getAuthMiddleware());
 
@@ -252,16 +261,6 @@ app.post('/api/bible/fetch', async (req, res) => {
 			]
 		});
 	}
-});
-
-// Get available Bible translations
-app.get('/api/bible/translations', (_req, res) => {
-	res.json({ translations: AVAILABLE_TRANSLATIONS });
-});
-
-// Get Bible books information
-app.get('/api/bible/books', (_req, res) => {
-	res.json({ books: BIBLE_BOOKS });
 });
 
 // Validate Bible reference
