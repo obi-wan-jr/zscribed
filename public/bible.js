@@ -9,8 +9,12 @@ requireAuth().then(isAuthenticated => {
 });
 
 // DOM elements - will be initialized in init()
-let voiceModel, translation, book, chapter, verses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
+let voiceModel, translation, book, bookSearch, bookSelectBtn, chapter, verses, excludeNumbers, excludeFootnotes, sentencesPerChunkBible;
 let bibleFetchBtn, bibleTtsBtn, bibleProgress, userWelcome, outputsList, refreshOutputsBtn, queueStatus;
+let bookModal, bookSearchInput, bookGrid, closeBookModal;
+
+// Store all books data
+let allBooks = [];
 
 async function init() {
 	console.log('[Bible] Initializing Bible page...');
@@ -19,6 +23,8 @@ async function init() {
 	voiceModel = document.getElementById('voiceModel');
 	translation = document.getElementById('translation');
 	book = document.getElementById('book');
+	bookSearch = document.getElementById('bookSearch');
+	bookSelectBtn = document.getElementById('bookSelectBtn');
 	chapter = document.getElementById('chapter');
 	verses = document.getElementById('verses');
 	excludeNumbers = document.getElementById('excludeNumbers');
@@ -31,9 +37,15 @@ async function init() {
 	outputsList = document.getElementById('outputsList');
 	refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 	queueStatus = document.getElementById('queueStatus');
+	bookModal = document.getElementById('bookModal');
+	bookSearchInput = document.getElementById('bookSearchInput');
+	bookGrid = document.getElementById('bookGrid');
+	closeBookModal = document.getElementById('closeBookModal');
 	
 	console.log('[Bible] DOM elements initialized:', {
 		book: !!book,
+		bookSearch: !!bookSearch,
+		bookModal: !!bookModal,
 		voiceModel: !!voiceModel,
 		userWelcome: !!userWelcome
 	});
@@ -88,7 +100,6 @@ async function loadVoiceModels() {
 async function loadBibleBooks() {
 	try {
 		console.log('[Bible] Starting to load Bible books...');
-		console.log('[Bible] Book element:', book);
 		
 		const res = await fetch('/api/bible/books');
 		if (!res.ok) {
@@ -96,78 +107,127 @@ async function loadBibleBooks() {
 		}
 		
 		const data = await res.json();
-		const books = data.books || [];
-		console.log('[Bible] Received books:', books.length);
+		allBooks = data.books || [];
+		console.log('[Bible] Received books:', allBooks.length);
 		
-		if (!book) {
-			console.error('[Bible] Book element is null!');
+		if (!bookGrid) {
+			console.error('[Bible] Book grid element is null!');
 			return;
 		}
 		
-		book.innerHTML = '';
+		// Populate the book grid
+		populateBookGrid(allBooks);
 		
-		// Group books by testament
-		const oldTestament = books.filter(b => b.testament === 'old');
-		const newTestament = books.filter(b => b.testament === 'new');
-		
-		// Add Old Testament optgroup
-		if (oldTestament.length > 0) {
-			const oldGroup = document.createElement('optgroup');
-			oldGroup.label = 'Old Testament';
-			
-			for (const bookInfo of oldTestament) {
-				const opt = document.createElement('option');
-				opt.value = bookInfo.name;
-				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
-				opt.dataset.chapters = bookInfo.chapters;
-				oldGroup.appendChild(opt);
-			}
-			
-			book.appendChild(oldGroup);
-		}
-		
-		// Add New Testament optgroup
-		if (newTestament.length > 0) {
-			const newGroup = document.createElement('optgroup');
-			newGroup.label = 'New Testament';
-			
-			for (const bookInfo of newTestament) {
-				const opt = document.createElement('option');
-				opt.value = bookInfo.name;
-				opt.textContent = `${bookInfo.name} (${bookInfo.chapters} chapters)`;
-				opt.dataset.chapters = bookInfo.chapters;
-				newGroup.appendChild(opt);
-			}
-			
-			book.appendChild(newGroup);
-		}
-		
-		// Set default to John
-		book.value = 'John';
-		
-		// Update chapter max value
-		updateChapterMax();
+		// Set default book to John
+		selectBook('John');
 		
 	} catch (error) {
 		console.error('Failed to load Bible books:', error);
-		if (book) {
-			book.innerHTML = '<option value="">Failed to load books</option>';
+		if (bookSearch) {
+			bookSearch.placeholder = 'Failed to load books';
 		}
 	}
+}
+
+function populateBookGrid(books) {
+	if (!bookGrid) return;
+	
+	bookGrid.innerHTML = '';
+	
+	// Group books by testament
+	const oldTestament = books.filter(b => b.testament === 'old');
+	const newTestament = books.filter(b => b.testament === 'new');
+	
+	// Add Old Testament section
+	if (oldTestament.length > 0) {
+		const oldHeader = document.createElement('div');
+		oldHeader.className = 'col-span-full text-sm font-medium text-indigo-300 mt-4 mb-2';
+		oldHeader.textContent = 'Old Testament';
+		bookGrid.appendChild(oldHeader);
+		
+		oldTestament.forEach(bookInfo => {
+			const bookBtn = createBookButton(bookInfo);
+			bookGrid.appendChild(bookBtn);
+		});
+	}
+	
+	// Add New Testament section
+	if (newTestament.length > 0) {
+		const newHeader = document.createElement('div');
+		newHeader.className = 'col-span-full text-sm font-medium text-indigo-300 mt-4 mb-2';
+		newHeader.textContent = 'New Testament';
+		bookGrid.appendChild(newHeader);
+		
+		newTestament.forEach(bookInfo => {
+			const bookBtn = createBookButton(bookInfo);
+			bookGrid.appendChild(bookBtn);
+		});
+	}
+}
+
+function createBookButton(bookInfo) {
+	const btn = document.createElement('button');
+	btn.className = 'text-left p-3 bg-[#0b1020] border border-slate-600 rounded hover:bg-slate-700 hover:border-slate-500 transition-colors';
+	btn.innerHTML = `
+		<div class="font-medium text-slate-200">${bookInfo.name}</div>
+		<div class="text-xs text-slate-400">${bookInfo.chapters} chapters</div>
+	`;
+	btn.onclick = () => {
+		selectBook(bookInfo.name);
+		closeBookModalFunc();
+	};
+	return btn;
+}
+
+function selectBook(bookName) {
+	if (!book || !bookSearch) return;
+	
+	book.value = bookName;
+	bookSearch.value = bookName;
+	
+	// Find the book info to update chapter max
+	const bookInfo = allBooks.find(b => b.name === bookName);
+	if (bookInfo && chapter) {
+		chapter.max = bookInfo.chapters;
+		chapter.placeholder = `1-${bookInfo.chapters}`;
+		if (verses) {
+			verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${bookInfo.chapters})`;
+		}
+	}
+}
+
+function openBookModal() {
+	if (!bookModal) return;
+	bookModal.classList.remove('hidden');
+	if (bookSearchInput) {
+		bookSearchInput.focus();
+	}
+}
+
+function closeBookModalFunc() {
+	if (!bookModal) return;
+	bookModal.classList.add('hidden');
+}
+
+function filterBooks(searchTerm) {
+	if (!bookGrid) return;
+	
+	const filteredBooks = allBooks.filter(book => 
+		book.name.toLowerCase().includes(searchTerm.toLowerCase())
+	);
+	
+	populateBookGrid(filteredBooks);
 }
 
 // Update chapter input max value based on selected book
 function updateChapterMax() {
 	if (!book || !chapter || !verses) return;
 	
-	const selectedOption = book.options[book.selectedIndex];
-	if (selectedOption && selectedOption.dataset.chapters) {
-		const maxChapters = parseInt(selectedOption.dataset.chapters);
-		chapter.max = maxChapters;
-		chapter.placeholder = `1-${maxChapters}`;
-		
-		// Update verses placeholder
-		verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${maxChapters})`;
+	const bookInfo = allBooks.find(b => b.name === book.value);
+	if (bookInfo) {
+		chapter.max = bookInfo.chapters;
+		chapter.placeholder = `1-${bookInfo.chapters}`;
+		verses.placeholder = `e.g. 1-10, 15, 20-25 (max: ${bookInfo.chapters})`;
 	}
 }
 
@@ -318,101 +378,117 @@ function listenToProgress(jobId) {
 }
 
 function setupEventListeners() {
-	// Event listeners
-	book?.addEventListener('change', updateChapterMax);
+	// Book selection modal
+	bookSelectBtn?.addEventListener('click', openBookModal);
+	closeBookModal?.addEventListener('click', closeBookModalFunc);
+	
+	// Close modal when clicking outside
+	bookModal?.addEventListener('click', (e) => {
+		if (e.target === bookModal) {
+			closeBookModalFunc();
+		}
+	});
+	
+	// Book search functionality
+	bookSearchInput?.addEventListener('input', (e) => {
+		filterBooks(e.target.value);
+	});
+	
+	// Chapter input change
+	chapter?.addEventListener('change', updateChapterMax);
 
 	bibleFetchBtn?.addEventListener('click', async () => {
-	// Validate before fetching
-	if (!(await validateBibleReference())) {
-		return;
-	}
-	
-	bibleProgress.textContent = 'Fetching...';
-	try {
-		const res = await authenticatedFetch('/api/bible/fetch', {
-			method: 'POST', headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				translation: translation.value,
-				book: book.value,
-				chapter: Number(chapter.value || 1),
-				verseRanges: verses.value,
-				excludeNumbers: excludeNumbers.checked,
-				excludeFootnotes: excludeFootnotes.checked
-			})
-		});
-		if (!res) return; // Redirect happened
-		
-		const data = await res.json();
-		if (data.error) throw new Error(data.error);
-		bibleProgress.textContent = data.text || '';
-	} catch (e) {
-		if (handleUnauthorizedError(e)) return; // Redirect happened
-		bibleProgress.textContent = 'Error: ' + e.message;
-	}
-});
-
-bibleTtsBtn?.addEventListener('click', async () => {
-	// Validate before creating audio
-	if (!(await validateBibleReference())) {
-		return;
-	}
-	
-	const user = getActiveUser();
-	const voiceModelId = voiceModel.value;
-	const format = 'mp3';
-	const sentencesPerChunk = Number(sentencesPerChunkBible.value || 3);
-	
-	if (!voiceModelId) {
-		bibleProgress.textContent = 'Please select a voice model';
-		return;
-	}
-	
-	bibleTtsBtn.disabled = true;
-	bibleTtsBtn.textContent = 'Creating Audio...';
-	bibleProgress.textContent = 'Starting Bible audio creation...';
-	
-	try {
-		const res = await authenticatedFetch('/api/jobs/bible', {
-			method: 'POST', headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				user, voiceModelId, format, sentencesPerChunk,
-				translation: translation.value,
-				book: book.value,
-				chapter: Number(chapter.value || 1),
-				verseRanges: verses.value,
-				excludeNumbers: excludeNumbers.checked,
-				excludeFootnotes: excludeFootnotes.checked
-			})
-		});
-		
-		if (!res) return; // Redirect happened
-		
-		if (!res.ok) {
-			const errorData = await res.json();
-			throw new Error(errorData.error || 'Failed to start Bible audio creation');
+		// Validate before fetching
+		if (!(await validateBibleReference())) {
+			return;
 		}
 		
-		const { id } = await res.json();
-		listenToProgress(id);
-	} catch (error) {
-		if (handleUnauthorizedError(error)) return; // Redirect happened
+		bibleProgress.textContent = 'Fetching...';
+		try {
+			const res = await authenticatedFetch('/api/bible/fetch', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					translation: translation.value,
+					book: book.value,
+					chapter: Number(chapter.value || 1),
+					verseRanges: verses.value,
+					excludeNumbers: excludeNumbers.checked,
+					excludeFootnotes: excludeFootnotes.checked
+				})
+			});
+			if (!res) return; // Redirect happened
+			
+			const data = await res.json();
+			if (data.error) throw new Error(data.error);
+			bibleProgress.textContent = data.text || '';
+		} catch (e) {
+			if (handleUnauthorizedError(e)) return; // Redirect happened
+			bibleProgress.textContent = 'Error: ' + e.message;
+		}
+	});
+
+	bibleTtsBtn?.addEventListener('click', async () => {
+		// Validate before creating audio
+		if (!(await validateBibleReference())) {
+			return;
+		}
 		
-		bibleProgress.innerHTML = `
-			<div class="text-red-400">❌ Error: ${error.message}</div>
-			<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
-				<strong class="text-yellow-400">Troubleshooting Steps:</strong>
-				<ul class="mt-2 list-disc list-inside text-sm">
-					<li>Check your Fish.Audio API key configuration</li>
-					<li>Ensure your voice model is valid</li>
-					<li>Verify your Bible reference is correct</li>
-					<li>Try again in a few moments</li>
-				</ul>
-			</div>
-		`;
-		bibleTtsBtn.disabled = false;
-		bibleTtsBtn.textContent = 'Create Audio';
-	}
-});
+		const user = getActiveUser();
+		const voiceModelId = voiceModel.value;
+		const format = 'mp3';
+		const sentencesPerChunk = Number(sentencesPerChunkBible.value || 3);
+		
+		if (!voiceModelId) {
+			bibleProgress.textContent = 'Please select a voice model';
+			return;
+		}
+		
+		bibleTtsBtn.disabled = true;
+		bibleTtsBtn.textContent = 'Creating Audio...';
+		bibleProgress.textContent = 'Starting Bible audio creation...';
+		
+		try {
+			const res = await authenticatedFetch('/api/jobs/bible', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					user, voiceModelId, format, sentencesPerChunk,
+					translation: translation.value,
+					book: book.value,
+					chapter: Number(chapter.value || 1),
+					verseRanges: verses.value,
+					excludeNumbers: excludeNumbers.checked,
+					excludeFootnotes: excludeFootnotes.checked
+				})
+			});
+			
+			if (!res) return; // Redirect happened
+			
+			if (!res.ok) {
+				const errorData = await res.json();
+				throw new Error(errorData.error || 'Failed to start Bible audio creation');
+			}
+			
+			const { id } = await res.json();
+			listenToProgress(id);
+		} catch (error) {
+			if (handleUnauthorizedError(error)) return; // Redirect happened
+			
+			bibleProgress.innerHTML = `
+				<div class="text-red-400">❌ Error: ${error.message}</div>
+				<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
+					<strong class="text-yellow-400">Troubleshooting Steps:</strong>
+					<ul class="mt-2 list-disc list-inside text-sm">
+						<li>Check your Fish.Audio API key configuration</li>
+						<li>Ensure your voice model is valid</li>
+						<li>Verify your Bible reference is correct</li>
+						<li>Try again in a few moments</li>
+					</ul>
+				</div>
+			`;
+			bibleTtsBtn.disabled = false;
+			bibleTtsBtn.textContent = 'Create Audio';
+		}
+	});
 
 	refreshOutputsBtn?.addEventListener('click', refreshOutputs);
 }
