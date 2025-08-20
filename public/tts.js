@@ -9,15 +9,20 @@ requireAuth().then(isAuthenticated => {
 });
 
 const voiceModel = document.getElementById('voiceModel');
-const convertBtn = document.getElementById('convertBtn');
-const ttsInput = document.getElementById('ttsInput');
+const ttsBtn = document.getElementById('ttsBtn');
+const textInput = document.getElementById('textInput');
 const ttsProgress = document.getElementById('ttsProgress');
-const audioFormat = document.getElementById('audioFormat');
 const sentencesPerChunkTts = document.getElementById('sentencesPerChunkTts');
 const userWelcome = document.getElementById('userWelcome');
 const outputsList = document.getElementById('outputsList');
 const refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 const queueStatus = document.getElementById('queueStatus');
+
+// Translation elements
+const fromLanguage = document.getElementById('fromLanguage');
+const toLanguage = document.getElementById('toLanguage');
+const translateBtn = document.getElementById('translateBtn');
+const translationStatus = document.getElementById('translationStatus');
 
 async function init() {
 	// Update the login/logout link
@@ -25,10 +30,13 @@ async function init() {
 	
 	// Set welcome message
 	const currentUser = getActiveUser();
-	userWelcome.textContent = `Welcome, ${currentUser}! Ready to create some audio.`;
+	userWelcome.textContent = `Welcome, ${currentUser}! Ready to create audio from text.`;
 	
 	// Load voice models
 	await loadVoiceModels();
+	
+	// Load available languages
+	await loadLanguages();
 	
 	// Load outputs
 	refreshOutputs();
@@ -55,6 +63,42 @@ async function loadVoiceModels() {
 		
 		console.error('Failed to load voice models:', error);
 		voiceModel.innerHTML = '<option value="">No voice models available</option>';
+	}
+}
+
+async function loadLanguages() {
+	try {
+		const res = await authenticatedFetch('/api/translation/languages');
+		if (!res) return; // Redirect happened
+		
+		const data = await res.json();
+		
+		// Populate from language dropdown
+		fromLanguage.innerHTML = '<option value="auto">Auto-detect</option>';
+		for (const lang of data.languages || []) {
+			const opt = document.createElement('option');
+			opt.value = lang.code;
+			opt.textContent = lang.name;
+			fromLanguage.appendChild(opt);
+		}
+		
+		// Populate to language dropdown
+		toLanguage.innerHTML = '';
+		for (const lang of data.languages || []) {
+			const opt = document.createElement('option');
+			opt.value = lang.code;
+			opt.textContent = lang.name;
+			toLanguage.appendChild(opt);
+		}
+		
+		// Set default to English
+		toLanguage.value = 'en';
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
+		console.error('Failed to load languages:', error);
+		translationStatus.textContent = 'Failed to load languages';
 	}
 }
 
@@ -129,8 +173,8 @@ function listenToProgress(jobId) {
 			ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
 		} else if (data.status === 'completed') {
 			ttsProgress.innerHTML = `✅ Complete! <a href="${data.output}" class="text-indigo-300 hover:underline">Download</a>`;
-			convertBtn.disabled = false;
-			convertBtn.textContent = 'Convert';
+			ttsBtn.disabled = false;
+			ttsBtn.textContent = 'Convert';
 			// Refresh outputs list to show new file
 			refreshOutputs();
 		} else if (data.status === 'error') {
@@ -150,18 +194,18 @@ function listenToProgress(jobId) {
 				<div class="text-red-400">❌ Error: ${data.error}</div>
 				${troubleshootingHtml}
 			`;
-			convertBtn.disabled = false;
-			convertBtn.textContent = 'Convert';
+			ttsBtn.disabled = false;
+			ttsBtn.textContent = 'Convert';
 		}
 	};
 	return ev;
 }
 
-convertBtn?.addEventListener('click', async () => {
+ttsBtn?.addEventListener('click', async () => {
 	const user = getActiveUser();
-	const text = ttsInput.value;
+	const text = textInput.value;
 	const voiceModelId = voiceModel.value;
-	const format = audioFormat.value;
+	const format = 'mp3'; // Default format
 	const sentencesPerChunk = Number(sentencesPerChunkTts.value || 3);
 	
 	if (!text.trim()) {
@@ -174,8 +218,8 @@ convertBtn?.addEventListener('click', async () => {
 		return;
 	}
 	
-	convertBtn.disabled = true;
-	convertBtn.textContent = 'Converting...';
+	ttsBtn.disabled = true;
+	ttsBtn.textContent = 'Converting...';
 	ttsProgress.textContent = 'Starting conversion...';
 	
 	try {
@@ -208,8 +252,73 @@ convertBtn?.addEventListener('click', async () => {
 				</ul>
 			</div>
 		`;
-		convertBtn.disabled = false;
-		convertBtn.textContent = 'Convert';
+		ttsBtn.disabled = false;
+		ttsBtn.textContent = 'Convert';
+	}
+});
+
+// Translation button functionality
+translateBtn?.addEventListener('click', async () => {
+	const text = textInput.value.trim();
+	const fromLang = fromLanguage.value;
+	const toLang = toLanguage.value;
+	
+	if (!text) {
+		translationStatus.textContent = 'Please enter text to translate';
+		return;
+	}
+	
+	if (fromLang === toLang && fromLang !== 'auto') {
+		translationStatus.textContent = 'Source and target languages are the same';
+		return;
+	}
+	
+	translateBtn.disabled = true;
+	translateBtn.textContent = 'Translating...';
+	translationStatus.textContent = 'Translating text...';
+	
+	try {
+		const res = await authenticatedFetch('/api/translation/translate', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				text,
+				fromLanguage: fromLang,
+				toLanguage: toLang
+			})
+		});
+		
+		if (!res) return; // Redirect happened
+		
+		const data = await res.json();
+		
+		if (data.error) {
+			throw new Error(data.error);
+		}
+		
+		// Update the text input with translated text
+		textInput.value = data.translatedText;
+		
+		// Show success message
+		const fromLangName = fromLang === 'auto' ? 'Auto-detected' : fromLanguage.options[fromLanguage.selectedIndex].text;
+		const toLangName = toLanguage.options[toLanguage.selectedIndex].text;
+		
+		translationStatus.innerHTML = `
+			✅ Translated from ${fromLangName} to ${toLangName}
+			<br><small class="text-slate-400">Original: ${data.originalText.substring(0, 100)}${data.originalText.length > 100 ? '...' : ''}</small>
+		`;
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
+		console.error('Translation failed:', error);
+		translationStatus.innerHTML = `
+			❌ Translation failed: ${error.message}
+			<br><small class="text-slate-400">Please try again or check your internet connection</small>
+		`;
+	} finally {
+		translateBtn.disabled = false;
+		translateBtn.textContent = 'Translate Text';
 	}
 });
 
