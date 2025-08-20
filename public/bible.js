@@ -68,8 +68,10 @@ async function loadVoiceModels() {
 
 async function loadBibleBooks() {
 	try {
-		const res = await authenticatedFetch('/api/bible/books');
-		if (!res) return; // Redirect happened
+		const res = await fetch('/api/bible/books');
+		if (!res.ok) {
+			throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+		}
 		
 		const data = await res.json();
 		const books = data.books || [];
@@ -119,8 +121,6 @@ async function loadBibleBooks() {
 		updateChapterMax();
 		
 	} catch (error) {
-		if (handleUnauthorizedError(error)) return; // Redirect happened
-		
 		console.error('Failed to load Bible books:', error);
 		book.innerHTML = '<option value="">Failed to load books</option>';
 	}
