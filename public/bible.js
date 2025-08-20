@@ -1,5 +1,8 @@
 import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
+// Load Bible books immediately (public endpoint)
+loadBibleBooks();
+
 // Check authentication first
 requireAuth().then(isAuthenticated => {
 	if (!isAuthenticated) return; // Will redirect to login
@@ -34,9 +37,6 @@ async function init() {
 	
 	// Load voice models
 	await loadVoiceModels();
-	
-	// Load Bible books
-	await loadBibleBooks();
 	
 	// Load outputs
 	refreshOutputs();
