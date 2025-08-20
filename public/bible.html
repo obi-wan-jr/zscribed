@@ -19,209 +19,197 @@
 				</div>
 			</div>
 		</nav>
-		<main class="max-w-6xl mx-auto p-4 space-y-6">
-			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
-				<h2 class="text-lg font-medium text-indigo-200 mb-4">Bible Transcription</h2>
-				<div class="mb-4">
+		<main class="max-w-4xl mx-auto p-6 space-y-8">
+			<section class="bg-[#121733] border border-slate-700 rounded-lg p-6">
+				<h2 class="text-xl font-semibold text-indigo-200 mb-6">Bible Audio Creation</h2>
+				<div class="mb-6">
 					<div id="userWelcome" class="text-sm text-slate-300">Welcome! Ready to create Bible audio.</div>
 				</div>
 				
-				<!-- Step 1: Book Selection -->
-				<div class="mb-6">
-					<h3 class="text-md font-medium text-indigo-300 mb-3">Step 1: Select Bible Book</h3>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<!-- Book Selection -->
+				<div class="space-y-6">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<div>
-							<label class="text-sm">Bible Translation
-								<select id="translation" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
-									<option value="web">World English Bible (WEB)</option>
-								</select>
-							</label>
-							<div class="text-xs text-slate-400 mt-1">Only WEB translation is available locally for better performance</div>
+							<label class="block text-sm font-medium mb-2">Bible Book</label>
+							<select id="book" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+								<optgroup label="Old Testament">
+									<option value="Genesis">Genesis (50 chapters)</option>
+									<option value="Exodus">Exodus (40 chapters)</option>
+									<option value="Leviticus">Leviticus (27 chapters)</option>
+									<option value="Numbers">Numbers (36 chapters)</option>
+									<option value="Deuteronomy">Deuteronomy (34 chapters)</option>
+									<option value="Joshua">Joshua (24 chapters)</option>
+									<option value="Judges">Judges (21 chapters)</option>
+									<option value="Ruth">Ruth (4 chapters)</option>
+									<option value="1 Samuel">1 Samuel (31 chapters)</option>
+									<option value="2 Samuel">2 Samuel (24 chapters)</option>
+									<option value="1 Kings">1 Kings (22 chapters)</option>
+									<option value="2 Kings">2 Kings (25 chapters)</option>
+									<option value="1 Chronicles">1 Chronicles (29 chapters)</option>
+									<option value="2 Chronicles">2 Chronicles (36 chapters)</option>
+									<option value="Ezra">Ezra (10 chapters)</option>
+									<option value="Nehemiah">Nehemiah (13 chapters)</option>
+									<option value="Esther">Esther (10 chapters)</option>
+									<option value="Job">Job (42 chapters)</option>
+									<option value="Psalms">Psalms (150 chapters)</option>
+									<option value="Proverbs">Proverbs (31 chapters)</option>
+									<option value="Ecclesiastes">Ecclesiastes (12 chapters)</option>
+									<option value="Song of Solomon">Song of Solomon (8 chapters)</option>
+									<option value="Isaiah">Isaiah (66 chapters)</option>
+									<option value="Jeremiah">Jeremiah (52 chapters)</option>
+									<option value="Lamentations">Lamentations (5 chapters)</option>
+									<option value="Ezekiel">Ezekiel (48 chapters)</option>
+									<option value="Daniel">Daniel (12 chapters)</option>
+									<option value="Hosea">Hosea (14 chapters)</option>
+									<option value="Joel">Joel (3 chapters)</option>
+									<option value="Amos">Amos (9 chapters)</option>
+									<option value="Obadiah">Obadiah (1 chapter)</option>
+									<option value="Jonah">Jonah (4 chapters)</option>
+									<option value="Micah">Micah (7 chapters)</option>
+									<option value="Nahum">Nahum (3 chapters)</option>
+									<option value="Habakkuk">Habakkuk (3 chapters)</option>
+									<option value="Zephaniah">Zephaniah (3 chapters)</option>
+									<option value="Haggai">Haggai (2 chapters)</option>
+									<option value="Zechariah">Zechariah (14 chapters)</option>
+									<option value="Malachi">Malachi (4 chapters)</option>
+								</optgroup>
+								<optgroup label="New Testament">
+									<option value="Matthew">Matthew (28 chapters)</option>
+									<option value="Mark">Mark (16 chapters)</option>
+									<option value="Luke">Luke (24 chapters)</option>
+									<option value="John" selected>John (21 chapters)</option>
+									<option value="Acts">Acts (28 chapters)</option>
+									<option value="Romans">Romans (16 chapters)</option>
+									<option value="1 Corinthians">1 Corinthians (16 chapters)</option>
+									<option value="2 Corinthians">2 Corinthians (13 chapters)</option>
+									<option value="Galatians">Galatians (6 chapters)</option>
+									<option value="Ephesians">Ephesians (6 chapters)</option>
+									<option value="Philippians">Philippians (4 chapters)</option>
+									<option value="Colossians">Colossians (4 chapters)</option>
+									<option value="1 Thessalonians">1 Thessalonians (5 chapters)</option>
+									<option value="2 Thessalonians">2 Thessalonians (3 chapters)</option>
+									<option value="1 Timothy">1 Timothy (6 chapters)</option>
+									<option value="2 Timothy">2 Timothy (4 chapters)</option>
+									<option value="Titus">Titus (3 chapters)</option>
+									<option value="Philemon">Philemon (1 chapter)</option>
+									<option value="Hebrews">Hebrews (13 chapters)</option>
+									<option value="James">James (5 chapters)</option>
+									<option value="1 Peter">1 Peter (5 chapters)</option>
+									<option value="2 Peter">2 Peter (3 chapters)</option>
+									<option value="1 John">1 John (5 chapters)</option>
+									<option value="2 John">2 John (1 chapter)</option>
+									<option value="3 John">3 John (1 chapter)</option>
+									<option value="Jude">Jude (1 chapter)</option>
+									<option value="Revelation">Revelation (22 chapters)</option>
+								</optgroup>
+							</select>
 						</div>
 						<div>
-							<label class="text-sm">Book
-								<select id="book" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
-									<optgroup label="Old Testament">
-										<option value="Genesis">Genesis (50 chapters)</option>
-										<option value="Exodus">Exodus (40 chapters)</option>
-										<option value="Leviticus">Leviticus (27 chapters)</option>
-										<option value="Numbers">Numbers (36 chapters)</option>
-										<option value="Deuteronomy">Deuteronomy (34 chapters)</option>
-										<option value="Joshua">Joshua (24 chapters)</option>
-										<option value="Judges">Judges (21 chapters)</option>
-										<option value="Ruth">Ruth (4 chapters)</option>
-										<option value="1 Samuel">1 Samuel (31 chapters)</option>
-										<option value="2 Samuel">2 Samuel (24 chapters)</option>
-										<option value="1 Kings">1 Kings (22 chapters)</option>
-										<option value="2 Kings">2 Kings (25 chapters)</option>
-										<option value="1 Chronicles">1 Chronicles (29 chapters)</option>
-										<option value="2 Chronicles">2 Chronicles (36 chapters)</option>
-										<option value="Ezra">Ezra (10 chapters)</option>
-										<option value="Nehemiah">Nehemiah (13 chapters)</option>
-										<option value="Esther">Esther (10 chapters)</option>
-										<option value="Job">Job (42 chapters)</option>
-										<option value="Psalms">Psalms (150 chapters)</option>
-										<option value="Proverbs">Proverbs (31 chapters)</option>
-										<option value="Ecclesiastes">Ecclesiastes (12 chapters)</option>
-										<option value="Song of Solomon">Song of Solomon (8 chapters)</option>
-										<option value="Isaiah">Isaiah (66 chapters)</option>
-										<option value="Jeremiah">Jeremiah (52 chapters)</option>
-										<option value="Lamentations">Lamentations (5 chapters)</option>
-										<option value="Ezekiel">Ezekiel (48 chapters)</option>
-										<option value="Daniel">Daniel (12 chapters)</option>
-										<option value="Hosea">Hosea (14 chapters)</option>
-										<option value="Joel">Joel (3 chapters)</option>
-										<option value="Amos">Amos (9 chapters)</option>
-										<option value="Obadiah">Obadiah (1 chapter)</option>
-										<option value="Jonah">Jonah (4 chapters)</option>
-										<option value="Micah">Micah (7 chapters)</option>
-										<option value="Nahum">Nahum (3 chapters)</option>
-										<option value="Habakkuk">Habakkuk (3 chapters)</option>
-										<option value="Zephaniah">Zephaniah (3 chapters)</option>
-										<option value="Haggai">Haggai (2 chapters)</option>
-										<option value="Zechariah">Zechariah (14 chapters)</option>
-										<option value="Malachi">Malachi (4 chapters)</option>
-									</optgroup>
-									<optgroup label="New Testament">
-										<option value="Matthew">Matthew (28 chapters)</option>
-										<option value="Mark">Mark (16 chapters)</option>
-										<option value="Luke">Luke (24 chapters)</option>
-										<option value="John" selected>John (21 chapters)</option>
-										<option value="Acts">Acts (28 chapters)</option>
-										<option value="Romans">Romans (16 chapters)</option>
-										<option value="1 Corinthians">1 Corinthians (16 chapters)</option>
-										<option value="2 Corinthians">2 Corinthians (13 chapters)</option>
-										<option value="Galatians">Galatians (6 chapters)</option>
-										<option value="Ephesians">Ephesians (6 chapters)</option>
-										<option value="Philippians">Philippians (4 chapters)</option>
-										<option value="Colossians">Colossians (4 chapters)</option>
-										<option value="1 Thessalonians">1 Thessalonians (5 chapters)</option>
-										<option value="2 Thessalonians">2 Thessalonians (3 chapters)</option>
-										<option value="1 Timothy">1 Timothy (6 chapters)</option>
-										<option value="2 Timothy">2 Timothy (4 chapters)</option>
-										<option value="Titus">Titus (3 chapters)</option>
-										<option value="Philemon">Philemon (1 chapter)</option>
-										<option value="Hebrews">Hebrews (13 chapters)</option>
-										<option value="James">James (5 chapters)</option>
-										<option value="1 Peter">1 Peter (5 chapters)</option>
-										<option value="2 Peter">2 Peter (3 chapters)</option>
-										<option value="1 John">1 John (5 chapters)</option>
-										<option value="2 John">2 John (1 chapter)</option>
-										<option value="3 John">3 John (1 chapter)</option>
-										<option value="Jude">Jude (1 chapter)</option>
-										<option value="Revelation">Revelation (22 chapters)</option>
-									</optgroup>
-								</select>
-							</label>
+							<label class="block text-sm font-medium mb-2">Voice Model</label>
+							<select id="voiceModel" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2"></select>
 						</div>
 					</div>
-				</div>
 
-				<!-- Step 2: Selection Type -->
-				<div class="mb-6">
-					<h3 class="text-md font-medium text-indigo-300 mb-3">Step 2: Choose What to Transcribe</h3>
-					<div class="space-y-3">
-						<label class="flex items-center">
-							<input type="radio" name="selectionType" value="entireBook" class="mr-2">
-							<span class="text-sm">Entire Book (all chapters)</span>
-						</label>
-						<label class="flex items-center">
-							<input type="radio" name="selectionType" value="chapters" class="mr-2">
-							<span class="text-sm">Specific Chapters</span>
-						</label>
-						<label class="flex items-center">
-							<input type="radio" name="selectionType" value="verses" class="mr-2" checked>
-							<span class="text-sm">Specific Verses</span>
-						</label>
-					</div>
-				</div>
-
-				<!-- Step 3: Content Selection (Dynamic) -->
-				<div id="contentSelection" class="mb-6">
-					<!-- Chapters Selection -->
-					<div id="chaptersSelection" class="hidden">
-						<h3 class="text-md font-medium text-indigo-300 mb-3">Step 3: Select Chapters</h3>
-						<div class="space-y-3">
-							<div>
-								<label class="text-sm">Chapter Range (e.g., 1-5, 10, 15-20)
-									<input id="chapterRange" type="text" placeholder="1-5, 10, 15-20" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 w-full"/>
-								</label>
-								<div class="text-xs text-slate-400 mt-1">Enter chapter numbers separated by commas. Use ranges like 1-5 for multiple chapters.</div>
+					<!-- Simple Content Selection -->
+					<div class="border border-slate-600 rounded-lg p-6 bg-[#0a0f1a]">
+						<h3 class="text-lg font-medium text-indigo-300 mb-4">What to transcribe?</h3>
+						
+						<div class="space-y-4">
+							<!-- Option 1: Entire Book -->
+							<div class="border border-slate-600 rounded p-4 bg-[#121733] hover:border-indigo-500 cursor-pointer" id="entireBookOption">
+								<div class="flex items-center justify-between">
+									<div>
+										<h4 class="font-medium text-white">Entire Book</h4>
+										<p class="text-sm text-slate-400">Create audio for the complete book</p>
+									</div>
+									<button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium">Select</button>
+								</div>
 							</div>
-							<button id="selectAllChapters" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded text-sm">Select All Chapters</button>
-						</div>
-					</div>
 
-					<!-- Verses Selection -->
-					<div id="versesSelection">
-						<h3 class="text-md font-medium text-indigo-300 mb-3">Step 3: Select Chapter and Verses</h3>
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-							<div>
-								<label class="text-sm">Chapter
-									<input id="chapter" type="number" min="1" value="1" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 w-20"/>
-								</label>
+							<!-- Option 2: Specific Chapters -->
+							<div class="border border-slate-600 rounded p-4 bg-[#121733] hover:border-indigo-500 cursor-pointer" id="chaptersOption">
+								<div class="flex items-center justify-between">
+									<div>
+										<h4 class="font-medium text-white">Specific Chapters</h4>
+										<p class="text-sm text-slate-400">Choose one or more chapters (e.g., 1-3, 5, 10-12)</p>
+									</div>
+									<button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium">Select</button>
+								</div>
+								<div class="mt-4 hidden" id="chaptersInput">
+									<input type="text" id="chapters" placeholder="e.g., 1-3, 5, 10-12" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+									<div class="mt-2">
+										<button id="allChaptersBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">All Chapters</button>
+									</div>
+								</div>
 							</div>
-							<div>
-								<label class="text-sm">Verses (e.g., 1-10, 15, 20-25)
-									<input id="verses" type="text" value="1-10" placeholder="1-10, 15, 20-25" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 w-full"/>
-								</label>
+
+							<!-- Option 3: Specific Verses -->
+							<div class="border border-slate-600 rounded p-4 bg-[#121733] hover:border-indigo-500 cursor-pointer" id="versesOption">
+								<div class="flex items-center justify-between">
+									<div>
+										<h4 class="font-medium text-white">Specific Verses</h4>
+										<p class="text-sm text-slate-400">Choose a chapter and specific verses</p>
+									</div>
+									<button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded text-sm font-medium">Select</button>
+								</div>
+								<div class="mt-4 hidden" id="versesInput">
+									<div class="grid grid-cols-2 gap-4">
+										<div>
+											<label class="block text-xs text-slate-400 mb-1">Chapter</label>
+											<input type="number" id="chapter" min="1" value="1" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+										</div>
+										<div>
+											<label class="block text-xs text-slate-400 mb-1">Verses</label>
+											<input type="text" id="verses" placeholder="e.g., 1-10, 15" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+										</div>
+									</div>
+									<div class="mt-2">
+										<button id="allVersesBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs mr-2">All Verses</button>
+										<button id="wholeChapterBtn" class="px-3 py-1 bg-slate-600 hover:bg-slate-500 rounded text-xs">Whole Chapter</button>
+									</div>
+								</div>
 							</div>
 						</div>
-						<div class="mt-3">
-							<button id="selectAllVerses" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded text-sm mr-2">Select All Verses in Chapter</button>
-							<button id="selectEntireChapter" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded text-sm">Select Entire Chapter</button>
-						</div>
 					</div>
-				</div>
 
-				<!-- Step 4: Options -->
-				<div class="mb-6">
-					<h3 class="text-md font-medium text-indigo-300 mb-3">Step 4: Options</h3>
-					<div class="flex items-center gap-6">
-						<label class="text-sm"><input id="excludeNumbers" type="checkbox" checked/> Exclude verse numbers</label>
-						<label class="text-sm"><input id="excludeFootnotes" type="checkbox" checked/> Exclude footnotes</label>
-					</div>
-				</div>
-
-				<!-- Step 5: Voice Settings -->
-				<div class="mb-6">
-					<h3 class="text-md font-medium text-indigo-300 mb-3">Step 5: Voice Settings</h3>
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<!-- Settings -->
+					<div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-slate-600 rounded-lg bg-[#0a0f1a]">
 						<div>
-							<label class="text-sm">Voice Model
-								<select id="voiceModel" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 w-full"></select>
+							<label class="flex items-center text-sm">
+								<input type="checkbox" id="excludeNumbers" checked class="mr-2">
+								Exclude verse numbers
 							</label>
 						</div>
 						<div>
-							<label class="text-sm">Sentences per chunk
-								<input id="sentencesPerChunkBible" type="number" min="1" value="3" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 w-20"/>
+							<label class="flex items-center text-sm">
+								<input type="checkbox" id="excludeFootnotes" checked class="mr-2">
+								Exclude footnotes
 							</label>
 						</div>
 						<div>
-							<label class="text-sm">Audio Format
-								<select id="audioFormat" class="ml-2 bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
-									<option value="mp3">MP3</option>
-									<option value="wav">WAV</option>
-								</select>
+							<label class="text-sm">
+								Sentences per chunk
+								<input type="number" id="sentencesPerChunk" min="1" value="3" class="ml-2 w-16 bg-[#0b1020] border border-slate-600 rounded px-2 py-1">
 							</label>
 						</div>
 					</div>
-				</div>
 
-				<!-- Action Buttons -->
-				<div class="flex items-center gap-4">
-					<button id="previewBtn" class="px-6 py-3 rounded bg-slate-600 hover:bg-slate-500 font-medium">Preview Text</button>
-					<button id="createAudioBtn" class="px-6 py-3 rounded bg-indigo-600 hover:bg-indigo-500 font-medium">Create Audio</button>
-				</div>
+					<!-- Action Buttons -->
+					<div class="flex items-center gap-4">
+						<button id="previewBtn" class="px-6 py-3 bg-slate-600 hover:bg-slate-500 rounded font-medium">Preview Text</button>
+						<button id="createAudioBtn" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-medium">Create Audio</button>
+					</div>
 
-				<!-- Progress and Results -->
-				<div id="progress" class="mt-4 text-sm text-slate-300"></div>
+					<!-- Status -->
+					<div id="status" class="text-sm text-slate-300"></div>
+				</div>
 			</section>
 			
-			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
+			<!-- Outputs -->
+			<section class="bg-[#121733] border border-slate-700 rounded-lg p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-medium text-indigo-200">Generated Outputs</h2>
-					<button id="refreshOutputsBtn" class="px-3 py-2 rounded bg-slate-600 hover:bg-slate-500">Refresh</button>
+					<h2 class="text-lg font-medium text-indigo-200">Generated Audio Files</h2>
+					<button id="refreshBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded">Refresh</button>
 				</div>
 				<div id="outputsList" class="space-y-2"></div>
 				<div id="queueStatus" class="mt-4 text-sm text-slate-400"></div>
