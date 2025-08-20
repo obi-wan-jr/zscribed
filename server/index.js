@@ -9,7 +9,6 @@ import { loadConfig, saveConfig } from './config.js';
 import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
 import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testBibleApiConnection } from './bible/bibleApiProvider.js';
-import { translateText, testTranslationService, AVAILABLE_LANGUAGES } from './translation/translationService.js';
 import { groupSentences, splitIntoSentences } from './text/segment.js';
 import { createTTSService } from './tts/service.js';
 import { loadPreferences, savePreferences } from './memory.js';
@@ -257,56 +256,6 @@ app.get('/api/bible/test', async (_req, res) => {
 			troubleshooting: [
 				'Check your internet connection',
 				'Verify bible-api.com is accessible',
-				'Try again in a few moments'
-			]
-		});
-	}
-});
-
-// Translation endpoints
-app.post('/api/translation/translate', async (req, res) => {
-	try {
-		const { text, fromLanguage = 'auto', toLanguage = 'en' } = req.body || {};
-		
-		if (!text || text.trim().length === 0) {
-			return res.status(400).json({ error: 'No text provided for translation' });
-		}
-		
-		console.log(`[API] Translation request: ${fromLanguage} → ${toLanguage}`);
-		
-		const result = await translateText({ text, fromLanguage, toLanguage });
-		
-		res.json(result);
-	} catch (error) {
-		console.error('[API] Translation error:', error.message);
-		res.status(500).json({ 
-			error: error.message,
-			troubleshooting: error.troubleshooting || [
-				'Check your internet connection',
-				'Verify the translation service is accessible',
-				'Try again in a few moments'
-			]
-		});
-	}
-});
-
-// Get available languages for translation
-app.get('/api/translation/languages', (_req, res) => {
-	res.json({ languages: AVAILABLE_LANGUAGES });
-});
-
-// Test translation service connection
-app.get('/api/translation/test', async (_req, res) => {
-	try {
-		const result = await testTranslationService();
-		res.json(result);
-	} catch (error) {
-		console.error('[API] Translation test error:', error);
-		res.status(500).json({ 
-			error: error.message,
-			troubleshooting: [
-				'Check your internet connection',
-				'Verify the translation service is accessible',
 				'Try again in a few moments'
 			]
 		});
