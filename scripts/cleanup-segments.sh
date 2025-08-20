@@ -12,8 +12,9 @@ echo "[cleanup] Looking for orphaned audio segment files..."
 if [ -d "$OUTPUTS_DIR" ]; then
 	cd "$OUTPUTS_DIR"
 	
-	# Updated pattern to match new naming: user-tts-shortid-XXX.mp3
-	segment_files=$(find . -name "*-tts-*-[0-9][0-9][0-9].mp3" -type f 2>/dev/null || true)
+	# Updated pattern to match new naming: user-voicemodel-time-index.mp3
+	# Pattern: *-*-*-[0-9].mp3 (where the last part is a single digit index)
+	segment_files=$(find . -name "*-*-*-[0-9].mp3" -type f 2>/dev/null || true)
 	
 	if [ -n "$segment_files" ]; then
 		echo "[cleanup] Found segment files:"
@@ -21,22 +22,23 @@ if [ -d "$OUTPUTS_DIR" ]; then
 			echo "  $file"
 		done
 		
-		# Extract job IDs from the new naming pattern
-		# Pattern: user-tts-shortid-XXX.mp3 -> extract shortid
-		job_ids=$(echo "$segment_files" | sed 's/.*-tts-\([^-]*\)-[0-9][0-9][0-9]\.mp3$/\1/' | sort -u)
+		# Extract the base pattern from segment files
+		# Pattern: user-voicemodel-time-index.mp3 -> extract user-voicemodel-time
+		base_patterns=$(echo "$segment_files" | sed 's/-[0-9]\.mp3$//' | sort -u)
 		
-		echo "[cleanup] Job IDs found: $job_ids"
+		echo "[cleanup] Base patterns found: $base_patterns"
 		
-		for job_id in $job_ids; do
-			# Look for complete files with the new pattern: user-tts-shortid-YYYY-MM-DD.mp3
-			complete_file=$(find . -name "*-tts-${job_id}-*.mp3" -not -name "*-[0-9][0-9][0-9].mp3" -type f 2>/dev/null | head -1)
+		for base_pattern in $base_patterns; do
+			# Look for complete files with the new pattern: user-voicemodel-time-date.mp3
+			# Pattern: user-voicemodel-time-YYYY-MM-DD.mp3
+			complete_file=$(find . -name "${base_pattern}-[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].mp3" -type f 2>/dev/null | head -1)
 			
 			if [ -n "$complete_file" ] && [ -f "$complete_file" ]; then
-				echo "[cleanup] Job $job_id has complete file ($complete_file), cleaning up segments..."
-				rm -f "./*-tts-${job_id}-[0-9][0-9][0-9].mp3"
-				echo "[cleanup] Cleaned up segments for job $job_id"
+				echo "[cleanup] Pattern $base_pattern has complete file ($complete_file), cleaning up segments..."
+				rm -f "./${base_pattern}-[0-9].mp3"
+				echo "[cleanup] Cleaned up segments for pattern $base_pattern"
 			else
-				echo "[cleanup] Job $job_id has no complete file, keeping segments for debugging"
+				echo "[cleanup] Pattern $base_pattern has no complete file, keeping segments for debugging"
 			fi
 		done
 	else

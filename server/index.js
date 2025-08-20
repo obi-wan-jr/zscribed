@@ -346,7 +346,8 @@ async function processTTSJob(job) {
 			outputsDir: OUTPUTS_DIR, 
 			jobId: job.id, 
 			format,
-			user: job.user
+			user: job.user,
+			voiceModelId: job.data.voiceModelId
 		});
 		
 		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });

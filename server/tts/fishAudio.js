@@ -11,18 +11,22 @@ const FISH_AUDIO_BASE_URL = 'https://api.fish.audio';
 const FISH_AUDIO_WS_URL = 'wss://api.fish.audio';
 
 // Utility function to generate user-friendly file names
-function generateFileName({ user, jobId, type = 'tts', index = null, format = 'mp3' }) {
-	// Create a short, readable name
-	const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-	const shortId = jobId.slice(0, 8); // First 8 characters of job ID
+function generateFileName({ user, voiceModelId, type = 'tts', index = null, format = 'mp3' }) {
+	// Create a short, readable name with essential variables only
+	const now = new Date();
+	const time = now.toTimeString().slice(0, 8).replace(/:/g, '-'); // HH-MM-SS
+	const date = now.toISOString().slice(0, 10); // YYYY-MM-DD
 	const userPrefix = user ? `${user}-` : '';
+	
+	// Get a short voice model name (last 8 characters if it's a long ID)
+	const shortVoiceId = voiceModelId.length > 8 ? voiceModelId.slice(-8) : voiceModelId;
 	
 	if (index !== null) {
 		// For segment files
-		return `${userPrefix}${type}-${shortId}-${String(index).padStart(3, '0')}.${format}`;
+		return `${userPrefix}${shortVoiceId}-${time}-${index}.${format}`;
 	} else {
 		// For complete files
-		return `${userPrefix}${type}-${shortId}-${timestamp}.${format}`;
+		return `${userPrefix}${shortVoiceId}-${time}-${date}.${format}`;
 	}
 }
 
@@ -65,7 +69,7 @@ export class FishAudioTTS {
 			const audioBuffer = await response.arrayBuffer();
 			
 			// Save to file with improved naming
-			const filename = generateFileName({ user, jobId, type: 'tts', index, format });
+			const filename = generateFileName({ user, voiceModelId, type: 'tts', index, format });
 			const filepath = path.join(outputsDir, filename);
 			fs.writeFileSync(filepath, Buffer.from(audioBuffer));
 			
@@ -91,7 +95,7 @@ export class FishAudioTTS {
 				outputPath = await audioStitcher.stitchSegments({ segmentFiles, outputsDir, jobId, format, user });
 			} else {
 				// Fallback to simple concatenation for non-MP3 formats
-				const outputFilename = generateFileName({ user, jobId, type: 'tts', format });
+				const outputFilename = generateFileName({ user, voiceModelId, type: 'tts', format });
 				outputPath = path.join(outputsDir, outputFilename);
 				
 				if (format === 'mp3') {

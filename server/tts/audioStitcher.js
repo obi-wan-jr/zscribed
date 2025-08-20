@@ -3,13 +3,17 @@ import path from 'path';
 import { spawn } from 'child_process';
 
 // Utility function to generate user-friendly file names
-function generateFileName({ user, jobId, type = 'tts', format = 'mp3' }) {
-	// Create a short, readable name
-	const timestamp = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-	const shortId = jobId.slice(0, 8); // First 8 characters of job ID
+function generateFileName({ user, voiceModelId, type = 'tts', format = 'mp3' }) {
+	// Create a short, readable name with essential variables only
+	const now = new Date();
+	const time = now.toTimeString().slice(0, 8).replace(/:/g, '-'); // HH-MM-SS
+	const date = now.toISOString().slice(0, 10); // YYYY-MM-DD
 	const userPrefix = user ? `${user}-` : '';
 	
-	return `${userPrefix}${type}-${shortId}-${timestamp}.${format}`;
+	// Get a short voice model name (last 8 characters if it's a long ID)
+	const shortVoiceId = voiceModelId.length > 8 ? voiceModelId.slice(-8) : voiceModelId;
+	
+	return `${userPrefix}${shortVoiceId}-${time}-${date}.${format}`;
 }
 
 export class AudioStitcher {
@@ -17,11 +21,11 @@ export class AudioStitcher {
 		this.ffmpegPath = 'ffmpeg'; // Assumes ffmpeg is in PATH
 	}
 
-	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user }) {
+	async stitchSegments({ segmentFiles, outputsDir, jobId, format = 'mp3', user, voiceModelId }) {
 		try {
 			console.log(`[AudioStitcher] Stitching ${segmentFiles.length} segments to ${format}`);
 			
-			const outputFilename = generateFileName({ user, jobId, type: 'tts', format });
+			const outputFilename = generateFileName({ user, voiceModelId, type: 'tts', format });
 			const outputPath = path.join(outputsDir, outputFilename);
 			
 			// Create a file list for ffmpeg
