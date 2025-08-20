@@ -8,7 +8,6 @@ requireAuth().then(isAuthenticated => {
 	init();
 });
 
-const userSelect = document.getElementById('userSelect');
 const voiceModel = document.getElementById('voiceModel');
 const translation = document.getElementById('translation');
 const book = document.getElementById('book');
@@ -20,20 +19,18 @@ const sentencesPerChunkBible = document.getElementById('sentencesPerChunkBible')
 const bibleFetchBtn = document.getElementById('bibleFetchBtn');
 const bibleTtsBtn = document.getElementById('bibleTtsBtn');
 const bibleProgress = document.getElementById('bibleProgress');
+const userWelcome = document.getElementById('userWelcome');
 
 async function init() {
 	// Update the login/logout link
 	await updateAuthLink();
 	
+	// Set welcome message
+	const currentUser = getActiveUser();
+	userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
+	
+	// Load voice models
 	const meta = await fetchMeta();
-	userSelect.innerHTML = '';
-	for (const u of meta.allowedUsers || []) {
-		const opt = document.createElement('option');
-		opt.value = u; opt.textContent = u; userSelect.appendChild(opt);
-	}
-	userSelect.value = getActiveUser();
-	userSelect.addEventListener('change', () => setActiveUser(userSelect.value));
-
 	voiceModel.innerHTML = '';
 	for (const m of meta.voiceModels || []) {
 		const opt = document.createElement('option');
@@ -98,7 +95,7 @@ bibleFetchBtn?.addEventListener('click', async () => {
 });
 
 bibleTtsBtn?.addEventListener('click', async () => {
-	const user = userSelect.value || 'Inggo';
+	const user = getActiveUser();
 	const voiceModelId = voiceModel.value;
 	const format = 'mp3';
 	const sentencesPerChunk = Number(sentencesPerChunkBible.value || 3);

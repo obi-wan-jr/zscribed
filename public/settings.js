@@ -8,26 +8,21 @@ requireAuth().then(isAuthenticated => {
 	init();
 });
 
-const userSelect = document.getElementById('userSelect');
 const autoRefresh = document.getElementById('autoRefresh');
 const showNotifications = document.getElementById('showNotifications');
 const savePrefsBtn = document.getElementById('savePrefsBtn');
 const addModelBtn = document.getElementById('addModelBtn');
 const modelsList = document.getElementById('modelsList');
+const userWelcome = document.getElementById('userWelcome');
 
 async function init() {
 	// Update the login/logout link
 	await updateAuthLink();
 	
-	// Load user preferences
-	userSelect.innerHTML = '';
-	userSelect.appendChild(new Option('Select user...', ''));
-	userSelect.appendChild(new Option('Inggo', 'Inggo'));
-	userSelect.appendChild(new Option('Gelo', 'Gelo'));
-	userSelect.appendChild(new Option('JM', 'JM'));
-	userSelect.value = getActiveUser();
-	userSelect.addEventListener('change', () => setActiveUser(userSelect.value));
-
+	// Set welcome message
+	const currentUser = getActiveUser();
+	userWelcome.textContent = `Welcome, ${currentUser}! Manage your preferences here.`;
+	
 	// Load preferences
 	await loadPreferencesIntoUI();
 	
@@ -42,7 +37,7 @@ async function loadPreferencesIntoUI() {
 	try {
 		const res = await fetch('/api/memory/preferences');
 		const prefs = await res.json();
-		const user = userSelect.value;
+		const user = getActiveUser();
 		const p = (prefs.users && prefs.users[user]) || {};
 		autoRefresh.checked = p.autoRefresh || false;
 		showNotifications.checked = p.showNotifications || false;
@@ -155,7 +150,7 @@ function addTTSTestSection() {
 
 // Event listeners
 savePrefsBtn?.addEventListener('click', async () => {
-	const user = userSelect.value;
+	const user = getActiveUser();
 	const body = { users: {} };
 	body.users[user] = {
 		autoRefresh: autoRefresh.checked,

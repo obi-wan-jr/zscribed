@@ -8,27 +8,24 @@ requireAuth().then(isAuthenticated => {
 	init();
 });
 
-const userSelect = document.getElementById('userSelect');
 const voiceModel = document.getElementById('voiceModel');
 const convertBtn = document.getElementById('convertBtn');
 const ttsInput = document.getElementById('ttsInput');
 const ttsProgress = document.getElementById('ttsProgress');
 const audioFormat = document.getElementById('audioFormat');
 const sentencesPerChunkTts = document.getElementById('sentencesPerChunkTts');
+const userWelcome = document.getElementById('userWelcome');
 
 async function init() {
 	// Update the login/logout link
 	await updateAuthLink();
 	
+	// Set welcome message
+	const currentUser = getActiveUser();
+	userWelcome.textContent = `Welcome, ${currentUser}! Ready to create some audio.`;
+	
+	// Load voice models
 	const meta = await fetchMeta();
-	userSelect.innerHTML = '';
-	for (const u of meta.allowedUsers || []) {
-		const opt = document.createElement('option');
-		opt.value = u; opt.textContent = u; userSelect.appendChild(opt);
-	}
-	userSelect.value = getActiveUser();
-	userSelect.addEventListener('change', () => setActiveUser(userSelect.value));
-
 	voiceModel.innerHTML = '';
 	for (const m of meta.voiceModels || []) {
 		const opt = document.createElement('option');
@@ -71,7 +68,7 @@ function listenToProgress(jobId) {
 }
 
 convertBtn?.addEventListener('click', async () => {
-	const user = userSelect.value || 'Inggo';
+	const user = getActiveUser();
 	const text = ttsInput.value;
 	const voiceModelId = voiceModel.value;
 	const format = audioFormat.value;
