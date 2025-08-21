@@ -197,20 +197,42 @@ function setupAllChaptersButton() {
 async function loadModels() {
 	try {
 		const response = await authenticatedFetch('/api/models');
-		const models = await response.json();
+		const data = await response.json();
+		
+		console.log('API response for models:', data);
 		
 		const modelSelect = document.getElementById('voiceModel');
 		if (modelSelect) {
 			modelSelect.innerHTML = '<option value="">Select voice model</option>';
+			
+			// Handle different response formats
+			let models = [];
+			if (Array.isArray(data)) {
+				models = data;
+			} else if (data.models && Array.isArray(data.models)) {
+				models = data.models;
+			} else if (data.voiceModels && Array.isArray(data.voiceModels)) {
+				models = data.voiceModels;
+			} else {
+				console.error('Expected array of models, got:', typeof data, data);
+				updateStatus('No voice models available');
+				return;
+			}
+			
+			console.log('Processing models:', models);
+			
 			models.forEach(model => {
 				const option = document.createElement('option');
-				option.value = model.id;
-				option.textContent = model.name;
+				option.value = model.id || model.value || model;
+				option.textContent = model.name || model.label || model.id || model;
 				modelSelect.appendChild(option);
 			});
+			
+			console.log('Loaded', models.length, 'voice models');
 		}
 	} catch (error) {
 		console.error('Failed to load models:', error);
+		updateStatus('Failed to load voice models');
 	}
 }
 
