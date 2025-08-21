@@ -22,8 +22,8 @@ let bibleBooks = {
 // Initialize when page loads
 console.log('Bible.js: Starting authentication check...');
 
-// Define selectMode function first (before it's called)
-function selectMode(mode) {
+// Define selectMode function first (before it's called) and make it globally available
+window.selectMode = function(mode) {
 	console.log('Bible.js: selectMode called with mode:', mode);
 	currentMode = mode;
 	
@@ -221,7 +221,7 @@ async function loadVoiceModels() {
 	}
 }
 
-function setupRadioButtonListeners() {
+window.setupRadioButtonListeners = function() {
 	console.log('Bible.js: setupRadioButtonListeners() called');
 	
 	// Radio button listeners for mode selection
@@ -321,7 +321,7 @@ function setupChaptersEventListeners() {
 
 
 
-function updateStatus(message) {
+window.updateStatus = function(message) {
 	document.getElementById('status').textContent = message;
 }
 
