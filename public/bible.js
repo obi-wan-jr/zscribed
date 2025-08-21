@@ -256,9 +256,10 @@ async function loadVerses() {
 			body: JSON.stringify({
 				translation: 'web',
 				book: book,
-				type: 'verses',
 				chapter: chapter,
-				verseRanges: '1-999' // Get all verses to count them
+				verseRanges: '1-999', // Get all verses to count them
+				excludeNumbers: false, // Keep verse numbers for counting
+				excludeFootnotes: true
 			})
 		});
 		
