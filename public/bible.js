@@ -100,6 +100,13 @@ function setupEventListeners() {
 		});
 	});
 	
+	// Initialize visual state based on any pre-checked radio button
+	const checkedRadio = document.querySelector('input[name="transcribeMode"]:checked');
+	if (checkedRadio) {
+		console.log('Bible.js: Found pre-checked radio:', checkedRadio.value);
+		selectMode(checkedRadio.value);
+	}
+	
 	// Action buttons (always visible)
 	const previewBtn = document.getElementById('previewBtn');
 	if (previewBtn) previewBtn.addEventListener('click', previewText);
@@ -160,6 +167,12 @@ function setupChaptersEventListeners() {
 function selectMode(mode) {
 	console.log('Bible.js: selectMode called with mode:', mode);
 	currentMode = mode;
+	
+	// Force sync: uncheck all radio buttons first, then check the correct one
+	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+	radioButtons.forEach(radio => {
+		radio.checked = (radio.value === mode);
+	});
 	
 	// Reset all visual states - be more explicit about which elements to reset
 	const bookOption = document.getElementById('bookOption');
@@ -226,6 +239,12 @@ function selectMode(mode) {
 	} else {
 		console.error('Bible.js: No selected option found for mode:', mode);
 	}
+	
+	// Verify state is correct
+	console.log('Bible.js: Final state verification:');
+	console.log('  - currentMode:', currentMode);
+	console.log('  - checked radio:', document.querySelector('input[name="transcribeMode"]:checked')?.value);
+	console.log('  - selected option has border-indigo-500:', selectedOption?.classList.contains('border-indigo-500'));
 	
 	// Hide all input sections
 	const chapterInput = document.getElementById('chapterInput');
