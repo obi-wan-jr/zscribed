@@ -249,23 +249,29 @@ async function loadVerses() {
 	updateStatus('Loading verses...');
 	
 	try {
+		// Prepare the request data
+		const requestData = {
+			translation: 'web',
+			book: book,
+			chapter: chapter,
+			verseRanges: '1-999', // Get all verses to count them
+			excludeNumbers: false, // Keep verse numbers for counting
+			excludeFootnotes: true
+		};
+		
+		console.log('Bible.js: loadVerses request data:', requestData);
+		
 		// Fetch the chapter data to get verse count
 		const res = await authenticatedFetch('/api/bible/fetch', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				translation: 'web',
-				book: book,
-				chapter: chapter,
-				verseRanges: '1-999', // Get all verses to count them
-				excludeNumbers: false, // Keep verse numbers for counting
-				excludeFootnotes: true
-			})
+			body: JSON.stringify(requestData)
 		});
 		
 		if (!res) return;
 		
 		const result = await res.json();
+		console.log('Bible.js: loadVerses response:', result);
 		if (result.error) throw new Error(result.error);
 		
 		// Parse the text to count verses (verses are numbered)
