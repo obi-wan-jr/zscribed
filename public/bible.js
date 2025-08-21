@@ -22,6 +22,138 @@ let bibleBooks = {
 // Initialize when page loads
 console.log('Bible.js: Starting authentication check...');
 
+// Define selectMode function first (before it's called)
+function selectMode(mode) {
+	console.log('Bible.js: selectMode called with mode:', mode);
+	currentMode = mode;
+	
+	// Force sync: uncheck all radio buttons first, then check the correct one
+	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+	radioButtons.forEach(radio => {
+		radio.checked = (radio.value === mode);
+	});
+	
+	// Reset all visual states - be more explicit about which elements to reset
+	const bookOption = document.getElementById('bookOption');
+	const chapterOption = document.getElementById('chapterOption');
+	const chaptersOption = document.getElementById('chaptersOption');
+	
+	console.log('Bible.js: Found elements - bookOption:', bookOption?.id, 'chapterOption:', chapterOption?.id, 'chaptersOption:', chaptersOption?.id);
+	
+	// Reset all options explicitly
+	[bookOption, chapterOption, chaptersOption].forEach(option => {
+		if (option && option.classList) {
+			console.log('Bible.js: Resetting option:', option.id);
+			// Reset border and background
+			option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
+			option.classList.add('border-slate-600');
+			
+			// Reset radio indicator
+			const radioIndicator = option.querySelector('.w-3.h-3');
+			if (radioIndicator) {
+				radioIndicator.classList.remove('bg-indigo-500');
+				radioIndicator.classList.add('bg-transparent');
+			}
+			
+			// Reset border color of radio circle
+			const radioCircle = option.querySelector('.w-8.h-8');
+			if (radioCircle) {
+				radioCircle.classList.remove('border-indigo-500');
+				radioCircle.classList.add('border-slate-400');
+			}
+		}
+	});
+	
+	// Update selected option - be more explicit
+	let selectedOption = null;
+	if (mode === 'book') {
+		selectedOption = bookOption;
+	} else if (mode === 'chapter') {
+		selectedOption = chapterOption;
+	} else if (mode === 'chapters') {
+		selectedOption = chaptersOption;
+	}
+	
+	console.log('Bible.js: Selected option for mode', mode, ':', selectedOption?.id);
+	
+	if (selectedOption) {
+		console.log('Bible.js: Applying selected state to:', selectedOption.id);
+		
+		// Set selected visual state
+		selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
+		selectedOption.classList.remove('border-slate-600');
+		
+		console.log('Bible.js: Applied classes to', selectedOption.id, ':', selectedOption.className);
+		
+		// Update radio indicator
+		const selectedRadioIndicator = selectedOption.querySelector('.w-3.h-3');
+		if (selectedRadioIndicator) {
+			selectedRadioIndicator.classList.add('bg-indigo-500');
+			selectedRadioIndicator.classList.remove('bg-transparent');
+			console.log('Bible.js: Updated radio indicator for', selectedOption.id);
+		} else {
+			console.error('Bible.js: Radio indicator not found for', selectedOption.id);
+		}
+		
+		// Update border color of radio circle
+		const selectedRadioCircle = selectedOption.querySelector('.w-8.h-8');
+		if (selectedRadioCircle) {
+			selectedRadioCircle.classList.add('border-indigo-500');
+			selectedRadioCircle.classList.remove('border-slate-400');
+			console.log('Bible.js: Updated radio circle for', selectedOption.id);
+		} else {
+			console.error('Bible.js: Radio circle not found for', selectedOption.id);
+		}
+		
+		// Force a repaint to ensure visual changes are applied
+		selectedOption.offsetHeight;
+		
+	} else {
+		console.error('Bible.js: No selected option found for mode:', mode);
+	}
+	
+	// Verify state is correct
+	console.log('Bible.js: Final state verification:');
+	console.log('  - currentMode:', currentMode);
+	console.log('  - checked radio:', document.querySelector('input[name="transcribeMode"]:checked')?.value);
+	console.log('  - selected option has border-indigo-500:', selectedOption?.classList.contains('border-indigo-500'));
+	
+	// Hide all input sections
+	const chapterInput = document.getElementById('chapterInput');
+	if (chapterInput) chapterInput.classList.add('hidden');
+
+	const chaptersInput = document.getElementById('chaptersInput');
+	if (chaptersInput) chaptersInput.classList.add('hidden');
+
+	const versesCheckboxContainer = document.getElementById('versesCheckboxContainer');
+	if (versesCheckboxContainer) versesCheckboxContainer.classList.add('hidden');
+
+	// Show relevant input section
+	if (mode === 'chapter') {
+		const chapterInput = document.getElementById('chapterInput');
+		if (chapterInput) {
+			chapterInput.classList.remove('hidden');
+			console.log('Chapter input shown');
+			// Set up event listeners for chapter-specific elements
+			setupChapterEventListeners();
+		} else {
+			console.error('chapterInput element not found');
+		}
+	} else if (mode === 'chapters') {
+		const chaptersInput = document.getElementById('chaptersInput');
+		if (chaptersInput) {
+			chaptersInput.classList.remove('hidden');
+			console.log('Chapters input shown');
+			// Set up event listeners for chapters-specific elements
+			setupChaptersEventListeners();
+		} else {
+			console.error('chaptersInput element not found');
+		}
+	}
+
+	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : mode === 'chapter' ? 'Specific Chapter' : 'Multiple Chapters'}`);
+}
+
 // Set up radio button listeners immediately (don't wait for auth)
 console.log('Bible.js: Setting up radio button listeners immediately...');
 setupRadioButtonListeners();
@@ -187,136 +319,7 @@ function setupChaptersEventListeners() {
 	}
 }
 
-function selectMode(mode) {
-	console.log('Bible.js: selectMode called with mode:', mode);
-	currentMode = mode;
-	
-	// Force sync: uncheck all radio buttons first, then check the correct one
-	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
-	radioButtons.forEach(radio => {
-		radio.checked = (radio.value === mode);
-	});
-	
-	// Reset all visual states - be more explicit about which elements to reset
-	const bookOption = document.getElementById('bookOption');
-	const chapterOption = document.getElementById('chapterOption');
-	const chaptersOption = document.getElementById('chaptersOption');
-	
-	console.log('Bible.js: Found elements - bookOption:', bookOption?.id, 'chapterOption:', chapterOption?.id, 'chaptersOption:', chaptersOption?.id);
-	
-	// Reset all options explicitly
-	[bookOption, chapterOption, chaptersOption].forEach(option => {
-		if (option && option.classList) {
-			console.log('Bible.js: Resetting option:', option.id);
-			// Reset border and background
-			option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
-			option.classList.add('border-slate-600');
-			
-			// Reset radio indicator
-			const radioIndicator = option.querySelector('.w-3.h-3');
-			if (radioIndicator) {
-				radioIndicator.classList.remove('bg-indigo-500');
-				radioIndicator.classList.add('bg-transparent');
-			}
-			
-			// Reset border color of radio circle
-			const radioCircle = option.querySelector('.w-8.h-8');
-			if (radioCircle) {
-				radioCircle.classList.remove('border-indigo-500');
-				radioCircle.classList.add('border-slate-400');
-			}
-		}
-	});
-	
-	// Update selected option - be more explicit
-	let selectedOption = null;
-	if (mode === 'book') {
-		selectedOption = bookOption;
-	} else if (mode === 'chapter') {
-		selectedOption = chapterOption;
-	} else if (mode === 'chapters') {
-		selectedOption = chaptersOption;
-	}
-	
-	console.log('Bible.js: Selected option for mode', mode, ':', selectedOption?.id);
-	
-	if (selectedOption) {
-		console.log('Bible.js: Applying selected state to:', selectedOption.id);
-		
-		// Set selected visual state
-		selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
-		selectedOption.classList.remove('border-slate-600');
-		
-		console.log('Bible.js: Applied classes to', selectedOption.id, ':', selectedOption.className);
-		
-		// Update radio indicator
-		const selectedRadioIndicator = selectedOption.querySelector('.w-3.h-3');
-		if (selectedRadioIndicator) {
-			selectedRadioIndicator.classList.add('bg-indigo-500');
-			selectedRadioIndicator.classList.remove('bg-transparent');
-			console.log('Bible.js: Updated radio indicator for', selectedOption.id);
-		} else {
-			console.error('Bible.js: Radio indicator not found for', selectedOption.id);
-		}
-		
-		// Update border color of radio circle
-		const selectedRadioCircle = selectedOption.querySelector('.w-8.h-8');
-		if (selectedRadioCircle) {
-			selectedRadioCircle.classList.add('border-indigo-500');
-			selectedRadioCircle.classList.remove('border-slate-400');
-			console.log('Bible.js: Updated radio circle for', selectedOption.id);
-		} else {
-			console.error('Bible.js: Radio circle not found for', selectedOption.id);
-		}
-		
-		// Force a repaint to ensure visual changes are applied
-		selectedOption.offsetHeight;
-		
-	} else {
-		console.error('Bible.js: No selected option found for mode:', mode);
-	}
-	
-	// Verify state is correct
-	console.log('Bible.js: Final state verification:');
-	console.log('  - currentMode:', currentMode);
-	console.log('  - checked radio:', document.querySelector('input[name="transcribeMode"]:checked')?.value);
-	console.log('  - selected option has border-indigo-500:', selectedOption?.classList.contains('border-indigo-500'));
-	
-	// Hide all input sections
-	const chapterInput = document.getElementById('chapterInput');
-	if (chapterInput) chapterInput.classList.add('hidden');
-	
-	const chaptersInput = document.getElementById('chaptersInput');
-	if (chaptersInput) chaptersInput.classList.add('hidden');
-	
-	const versesCheckboxContainer = document.getElementById('versesCheckboxContainer');
-	if (versesCheckboxContainer) versesCheckboxContainer.classList.add('hidden');
-	
-	// Show relevant input section
-	if (mode === 'chapter') {
-		const chapterInput = document.getElementById('chapterInput');
-		if (chapterInput) {
-			chapterInput.classList.remove('hidden');
-			console.log('Chapter input shown');
-			// Set up event listeners for chapter-specific elements
-			setupChapterEventListeners();
-		} else {
-			console.error('chapterInput element not found');
-		}
-	} else if (mode === 'chapters') {
-		const chaptersInput = document.getElementById('chaptersInput');
-		if (chaptersInput) {
-			chaptersInput.classList.remove('hidden');
-			console.log('Chapters input shown');
-			// Set up event listeners for chapters-specific elements
-			setupChaptersEventListeners();
-		} else {
-			console.error('chaptersInput element not found');
-		}
-	}
-	
-	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : mode === 'chapter' ? 'Specific Chapter' : 'Multiple Chapters'}`);
-}
+
 
 function updateStatus(message) {
 	document.getElementById('status').textContent = message;
