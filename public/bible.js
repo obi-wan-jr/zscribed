@@ -159,17 +159,38 @@ function setupAllChaptersButton() {
 		
 		const maxChapters = getMaxChapters(selectedBook);
 		
-		// Use requestAnimationFrame to ensure DOM is fully updated
-		requestAnimationFrame(() => {
+		// Add debugging and use multiple attempts to access the element
+		console.log('Setting chapter range for book:', selectedBook, 'maxChapters:', maxChapters);
+		
+		const setChapterRange = () => {
 			const chaptersRangeInput = document.getElementById('chaptersRange');
+			console.log('Looking for chaptersRange element:', chaptersRangeInput);
+			
 			if (chaptersRangeInput) {
+				console.log('Found chaptersRange element, setting value');
 				chaptersRangeInput.value = `1-${maxChapters}`;
 				updateStatus(`Set chapter range to 1-${maxChapters} for ${selectedBook}`);
+				return true;
 			} else {
-				console.error('Chapters range input not found');
-				updateStatus('Error: Chapter range input not available');
+				console.error('Chapters range input not found, element is null');
+				return false;
 			}
-		});
+		};
+		
+		// Try immediately first
+		if (!setChapterRange()) {
+			// If that fails, try after DOM update
+			requestAnimationFrame(() => {
+				if (!setChapterRange()) {
+					// If that fails, try with a small delay
+					setTimeout(() => {
+						if (!setChapterRange()) {
+							updateStatus('Error: Chapter range input not available');
+						}
+					}, 50);
+				}
+			});
+		}
 	});
 }
 
