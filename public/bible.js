@@ -21,6 +21,11 @@ let bibleBooks = {
 
 // Initialize when page loads
 console.log('Bible.js: Starting authentication check...');
+
+// Set up radio button listeners immediately (don't wait for auth)
+console.log('Bible.js: Setting up radio button listeners immediately...');
+setupRadioButtonListeners();
+
 requireAuth().then(isAuthenticated => {
 	console.log('Bible.js: Authentication result:', isAuthenticated);
 	if (!isAuthenticated) {
@@ -84,8 +89,8 @@ async function loadVoiceModels() {
 	}
 }
 
-function setupEventListeners() {
-	console.log('Bible.js: setupEventListeners() called');
+function setupRadioButtonListeners() {
+	console.log('Bible.js: setupRadioButtonListeners() called');
 	
 	// Radio button listeners for mode selection
 	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
@@ -106,6 +111,10 @@ function setupEventListeners() {
 		console.log('Bible.js: Found pre-checked radio:', checkedRadio.value);
 		selectMode(checkedRadio.value);
 	}
+}
+
+function setupEventListeners() {
+	console.log('Bible.js: setupEventListeners() called');
 	
 	// Action buttons (always visible)
 	const previewBtn = document.getElementById('previewBtn');
