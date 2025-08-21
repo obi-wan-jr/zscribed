@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Radio Debug</title>
-  <script src="/bible.js" type="module"></script>
   <link rel="stylesheet" href="/styles.build.css">
   <style>
     .mode-label {
@@ -61,9 +60,8 @@
   </div>
 
   <div style="margin: 20px 0;">
-    <button onclick="testSelectMode('chapter')">Select 'chapter'</button>
-    <button onclick="testSelectMode('chapters')">Select 'chapters'</button>
-    <button onclick="resetAll()">Reset All</button>
+    <button onclick="safeSelect('chapter')">Select 'chapter'</button>
+    <button onclick="safeSelect('chapters')">Select 'chapters'</button>
   </div>
 
   <!-- Add missing elements to prevent crashes -->
@@ -77,70 +75,32 @@
     Waiting for page load...
   </div>
 
+  <!-- Load bible.js as module and wait for it -->
+  <script type="module">
+    // Wait for bible.js to load and define selectMode
+    await import('/bible.js');
+
+    // Now selectMode should be available
+    console.log('✅ selectMode is now:', typeof window.selectMode);
+
+    // Expose a safe version to global scope
+    window.safeSelect = function(mode) {
+      console.log('=== DEBUG: Calling real selectMode ===', mode);
+      if (typeof window.selectMode === 'function') {
+        window.selectMode(mode);
+      } else {
+        console.error('❌ selectMode function not available');
+      }
+    };
+
+    // Optional: Auto-test after load
+    console.log('✅ Debug page ready. Use safeSelect("chapter") or safeSelect("chapters")');
+    
+    // Update debug info
+    updateDebugInfo();
+  </script>
+
   <script>
-    // Test function that mimics the real selectMode
-    function testSelectMode(mode) {
-      console.log('=== TESTING selectMode ===');
-      console.log('Mode:', mode);
-      
-      // Get elements
-      const chapterOption = document.getElementById('chapterOption');
-      const chaptersOption = document.getElementById('chaptersOption');
-      
-      console.log('Elements found:', {
-        chapterOption: !!chapterOption,
-        chaptersOption: !!chaptersOption
-      });
-      
-      // Reset all
-      [chapterOption, chaptersOption].forEach(option => {
-        if (option) {
-          option.classList.remove('selected');
-          console.log('Reset:', option.id);
-        }
-      });
-      
-      // Select the correct one
-      let selectedOption = null;
-      if (mode === 'chapter') {
-        selectedOption = chapterOption;
-      } else if (mode === 'chapters') {
-        selectedOption = chaptersOption;
-      }
-      
-      if (selectedOption) {
-        selectedOption.classList.add('selected');
-        console.log('Selected:', selectedOption.id);
-      }
-      
-      // Update radio button state
-      const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
-      radioButtons.forEach(radio => {
-        radio.checked = (radio.value === mode);
-      });
-      
-      updateDebugInfo();
-    }
-    
-    function resetAll() {
-      console.log('=== RESETTING ALL ===');
-      const chapterOption = document.getElementById('chapterOption');
-      const chaptersOption = document.getElementById('chaptersOption');
-      
-      [chapterOption, chaptersOption].forEach(option => {
-        if (option) {
-          option.classList.remove('selected');
-        }
-      });
-      
-      const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
-      radioButtons.forEach(radio => {
-        radio.checked = false;
-      });
-      
-      updateDebugInfo();
-    }
-    
     function updateDebugInfo() {
       const debugOutput = document.getElementById('debug-output');
       const chapterOption = document.getElementById('chapterOption');
@@ -159,34 +119,11 @@
         <br>
         <strong>Global Functions:</strong><br>
         window.selectMode: ${typeof window.selectMode}<br>
-        window.setupRadioButtonListeners: ${typeof window.setupRadioButtonListeners}<br>
+        window.safeSelect: ${typeof window.safeSelect}<br>
       `;
       
       debugOutput.innerHTML = info;
     }
-    
-    // Ensure bible.js is loaded
-    window.addEventListener('load', () => {
-      console.log('=== DEBUG PAGE LOADED ===');
-      console.log('selectMode =', typeof window.selectMode);
-      console.log('setupRadioButtonListeners =', typeof window.setupRadioButtonListeners);
-      
-      // Test if the real selectMode works
-      if (typeof window.selectMode === 'function') {
-        console.log('✅ Real selectMode function is available');
-        
-        // Override our test function to use the real one
-        window.testSelectMode = function(mode) {
-          console.log('Using REAL selectMode function');
-          window.selectMode(mode);
-          updateDebugInfo();
-        };
-      } else {
-        console.log('❌ Real selectMode function NOT available');
-      }
-      
-      updateDebugInfo();
-    });
     
     // Also test radio button clicks
     document.addEventListener('DOMContentLoaded', () => {
@@ -195,11 +132,16 @@
         radio.addEventListener('change', (e) => {
           console.log('Radio changed:', e.target.value);
           if (e.target.checked) {
-            testSelectMode(e.target.value);
+            if (typeof window.safeSelect === 'function') {
+              window.safeSelect(e.target.value);
+            }
           }
         });
       });
     });
   </script>
+
+  <!-- Add safelist div to ensure Tailwind includes classes -->
+  <div class="hidden border-indigo-500 bg-indigo-900/20 bg-transparent border-slate-400"></div>
 </body>
 </html>
