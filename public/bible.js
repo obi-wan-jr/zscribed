@@ -20,6 +20,9 @@ function init() {
 	// Load available models
 	loadModels();
 	
+	// Load outputs
+	refreshOutputs();
+	
 	// Set initial state
 	selectMode('book');
 }
@@ -33,31 +36,25 @@ function setupEventListeners() {
 		});
 	});
 	
-	// All chapters button
-	const allChaptersBtn = document.getElementById('allChaptersBtn');
-	if (allChaptersBtn) {
-		allChaptersBtn.addEventListener('click', () => {
-			const bookSelect = document.getElementById('book');
-			if (!bookSelect) {
-				console.error('Book select element not found');
-				return;
-			}
-			
-			const selectedBook = bookSelect.value;
-			const maxChapters = getMaxChapters(selectedBook);
-			const chaptersRangeInput = document.getElementById('chaptersRange');
-			if (chaptersRangeInput) {
-				chaptersRangeInput.value = `1-${maxChapters}`;
-			} else {
-				console.error('Chapters range input not found');
-			}
-		});
+	// All chapters button - Note: We'll add the event listener when the chapters mode is activated
+	// This ensures the chaptersRange element is visible and accessible
+	
+	// Preview button
+	const previewBtn = document.getElementById('previewBtn');
+	if (previewBtn) {
+		previewBtn.addEventListener('click', previewText);
 	}
 	
 	// Create audio button
 	const createAudioBtn = document.getElementById('createAudioBtn');
 	if (createAudioBtn) {
 		createAudioBtn.addEventListener('click', createAudio);
+	}
+	
+	// Refresh button
+	const refreshBtn = document.getElementById('refreshBtn');
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', refreshOutputs);
 	}
 }
 
@@ -126,10 +123,50 @@ function selectMode(mode) {
 	if (mode === 'chapters') {
 		if (chaptersInput) {
 			chaptersInput.classList.remove('hidden');
+			// Set up the "All Chapters" button event listener now that the input is visible
+			setupAllChaptersButton();
 		}
 	}
 	
 	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : 'Multiple Chapters'}`);
+}
+
+function setupAllChaptersButton() {
+	const allChaptersBtn = document.getElementById('allChaptersBtn');
+	if (!allChaptersBtn) {
+		console.error('All chapters button not found');
+		return;
+	}
+	
+	// Remove any existing event listeners to prevent duplicates
+	const newBtn = allChaptersBtn.cloneNode(true);
+	allChaptersBtn.parentNode.replaceChild(newBtn, allChaptersBtn);
+	
+	// Add the event listener
+	newBtn.addEventListener('click', () => {
+		const bookSelect = document.getElementById('book');
+		if (!bookSelect) {
+			console.error('Book select element not found');
+			updateStatus('Error: Book selection not available');
+			return;
+		}
+		
+		const selectedBook = bookSelect.value;
+		if (!selectedBook) {
+			updateStatus('Please select a book first');
+			return;
+		}
+		
+		const maxChapters = getMaxChapters(selectedBook);
+		const chaptersRangeInput = document.getElementById('chaptersRange');
+		if (chaptersRangeInput) {
+			chaptersRangeInput.value = `1-${maxChapters}`;
+			updateStatus(`Set chapter range to 1-${maxChapters} for ${selectedBook}`);
+		} else {
+			console.error('Chapters range input not found');
+			updateStatus('Error: Chapter range input not available');
+		}
+	});
 }
 
 async function loadModels() {
@@ -262,3 +299,122 @@ function updateStatus(message) {
 		statusElement.textContent = message;
 	}
 }
+
+function buildRequestData() {
+	const book = document.getElementById('book').value;
+	const excludeNumbers = document.getElementById('excludeNumbers').checked;
+	const excludeFootnotes = document.getElementById('excludeFootnotes').checked;
+	
+	const baseData = {
+		translation: 'web',
+		book: book,
+		excludeNumbers: excludeNumbers,
+		excludeFootnotes: excludeFootnotes
+	};
+	
+	if (currentMode === 'book') {
+		return { ...baseData, type: 'book' };
+	} else if (currentMode === 'chapters') {
+		const chaptersRangeElement = document.getElementById('chaptersRange');
+		if (chaptersRangeElement) {
+			return {
+				...baseData,
+				type: 'chapters',
+				chapters: chaptersRangeElement.value.trim()
+			};
+		}
+	}
+	
+	return baseData;
+}
+
+async function previewText() {
+	if (!validateSelection()) return;
+	
+	updateStatus('Loading preview...');
+	
+	try {
+		const data = buildRequestData();
+		const res = await authenticatedFetch('/api/bible/fetch', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(data)
+		});
+		
+		if (!res) return;
+		
+		const result = await res.json();
+		if (result.error) throw new Error(result.error);
+		
+		// Show preview in status area
+		const preview = result.text.substring(0, 500) + (result.text.length > 500 ? '...' : '');
+		updateStatus(`Preview: ${preview}`);
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return;
+		updateStatus(`Error: ${error.message}`);
+	}
+}
+
+async function refreshOutputs() {
+	try {
+		const res = await authenticatedFetch('/api/outputs');
+		if (!res) return;
+		
+		const data = await res.json();
+		const outputsList = document.getElementById('outputsList');
+		if (!outputsList) return;
+		
+		outputsList.innerHTML = '';
+		
+		for (const file of data.files || []) {
+			const div = document.createElement('div');
+			div.className = 'flex items-center justify-between p-3 bg-[#0a0f1a] rounded border border-slate-600';
+			div.innerHTML = `
+				<a href="${file.url}" class="text-indigo-300 hover:underline font-medium">${file.name}</a>
+				<div class="flex gap-2">
+					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${file.name}')">Rename</button>
+					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${file.name}')">Delete</button>
+				</div>
+			`;
+			outputsList.appendChild(div);
+		}
+	} catch (e) {
+		if (handleUnauthorizedError(e)) return;
+		console.error('Failed to load outputs:', e);
+	}
+}
+
+// Global functions for file operations
+window.renameFile = async (oldName) => {
+	const newName = prompt('New name:', oldName);
+	if (!newName || newName === oldName) return;
+	
+	try {
+		const res = await authenticatedFetch('/api/outputs/rename', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ oldName, newName })
+		});
+		if (res) refreshOutputs();
+	} catch (e) {
+		if (handleUnauthorizedError(e)) return;
+		alert('Failed to rename file');
+	}
+};
+
+window.deleteFile = async (name) => {
+	if (!confirm(`Delete ${name}?`)) return;
+	
+	try {
+		const res = await authenticatedFetch('/api/outputs/delete', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name })
+		});
+		if (res) refreshOutputs();
+	} catch (e) {
+		if (handleUnauthorizedError(e)) return;
+		alert('Failed to delete file');
+	}
+};
