@@ -110,39 +110,8 @@ function setupEventListeners() {
 	if (refreshBtn) refreshBtn.addEventListener('click', refreshOutputs);
 }
 
-function setupChaptersEventListeners() {
-	console.log('Bible.js: setupChaptersEventListeners() called');
-	
-	// Quick action buttons
-	const allChaptersBtn = document.getElementById('allChaptersBtn');
-	if (allChaptersBtn) {
-		console.log('Bible.js: allChaptersBtn found and listener added');
-		allChaptersBtn.addEventListener('click', () => {
-			const book = document.getElementById('book').value;
-			const maxChapters = bibleBooks[book];
-			if (maxChapters) {
-				document.getElementById('chapters').value = `1-${maxChapters}`;
-			}
-		});
-	} else {
-		console.error('Bible.js: allChaptersBtn not found');
-	}
-	
-	// Include verses checkbox
-	const includeVerses = document.getElementById('includeVerses');
-	if (includeVerses) {
-		console.log('Bible.js: includeVerses found and listener added');
-		includeVerses.addEventListener('change', (e) => {
-			if (e.target.checked) {
-				document.getElementById('versesSubInput').classList.remove('hidden');
-			} else {
-				document.getElementById('versesSubInput').classList.add('hidden');
-				document.getElementById('versesCheckboxContainer').classList.add('hidden');
-			}
-		});
-	} else {
-		console.error('Bible.js: includeVerses not found');
-	}
+function setupChapterEventListeners() {
+	console.log('Bible.js: setupChapterEventListeners() called');
 	
 	// Verse loading and selection
 	const loadVersesBtn = document.getElementById('loadVersesBtn');
@@ -165,6 +134,25 @@ function setupChaptersEventListeners() {
 		deselectAllVersesBtn.addEventListener('click', () => {
 			document.querySelectorAll('#versesCheckboxList input[type="checkbox"]').forEach(cb => cb.checked = false);
 		});
+	}
+}
+
+function setupChaptersEventListeners() {
+	console.log('Bible.js: setupChaptersEventListeners() called');
+	
+	// Quick action buttons
+	const allChaptersBtn = document.getElementById('allChaptersBtn');
+	if (allChaptersBtn) {
+		console.log('Bible.js: allChaptersBtn found and listener added');
+		allChaptersBtn.addEventListener('click', () => {
+			const book = document.getElementById('book').value;
+			const maxChapters = bibleBooks[book];
+			if (maxChapters) {
+				document.getElementById('chapters').value = `1-${maxChapters}`;
+			}
+		});
+	} else {
+		console.error('Bible.js: allChaptersBtn not found');
 	}
 }
 
@@ -198,7 +186,10 @@ function selectMode(mode) {
 	});
 	
 	// Update selected option
-	const selectedOption = document.getElementById(mode === 'book' ? 'bookOption' : 'chaptersOption');
+	const selectedOption = document.getElementById(
+		mode === 'book' ? 'bookOption' : 
+		mode === 'chapter' ? 'chapterOption' : 'chaptersOption'
+	);
 	
 	if (selectedOption) {
 		// Set selected visual state
@@ -221,17 +212,27 @@ function selectMode(mode) {
 	}
 	
 	// Hide all input sections
+	const chapterInput = document.getElementById('chapterInput');
+	if (chapterInput) chapterInput.classList.add('hidden');
+	
 	const chaptersInput = document.getElementById('chaptersInput');
 	if (chaptersInput) chaptersInput.classList.add('hidden');
-	
-	const versesSubInput = document.getElementById('versesSubInput');
-	if (versesSubInput) versesSubInput.classList.add('hidden');
 	
 	const versesCheckboxContainer = document.getElementById('versesCheckboxContainer');
 	if (versesCheckboxContainer) versesCheckboxContainer.classList.add('hidden');
 	
 	// Show relevant input section
-	if (mode === 'chapters') {
+	if (mode === 'chapter') {
+		const chapterInput = document.getElementById('chapterInput');
+		if (chapterInput) {
+			chapterInput.classList.remove('hidden');
+			console.log('Chapter input shown');
+			// Set up event listeners for chapter-specific elements
+			setupChapterEventListeners();
+		} else {
+			console.error('chapterInput element not found');
+		}
+	} else if (mode === 'chapters') {
 		const chaptersInput = document.getElementById('chaptersInput');
 		if (chaptersInput) {
 			chaptersInput.classList.remove('hidden');
@@ -254,7 +255,7 @@ async function loadVerses() {
 	console.log('Bible.js: loadVerses() called');
 	
 	const book = document.getElementById('book').value;
-	const chapter = parseInt(document.getElementById('chapter').value);
+	const chapter = parseInt(document.getElementById('singleChapter').value);
 	
 	console.log('Bible.js: loadVerses - book:', book, 'chapter:', chapter);
 	
@@ -361,22 +362,42 @@ function validateSelection() {
 				}
 			}
 		}
+	} else 	if (currentMode === 'chapter') {
+		const chapter = parseInt(document.getElementById('singleChapter').value);
+		
+		if (isNaN(chapter) || chapter < 1 || chapter > maxChapters) {
+			updateStatus(`Invalid chapter: ${chapter}. Valid range: 1-${maxChapters}`);
+			return false;
+		}
+		
+		// Check if any verses are selected
+		const selectedVerses = document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked');
+		if (selectedVerses.length === 0) {
+			updateStatus('Please select at least one verse');
+			return false;
+		}
 	} else if (currentMode === 'chapters') {
-		// Check if verses are enabled and validate them
-		const includeVerses = document.getElementById('includeVerses').checked;
-		if (includeVerses) {
-			const chapter = parseInt(document.getElementById('chapter').value);
-			
-			if (isNaN(chapter) || chapter < 1 || chapter > maxChapters) {
-				updateStatus(`Invalid chapter: ${chapter}. Valid range: 1-${maxChapters}`);
-				return false;
-			}
-			
-			// Check if any verses are selected
-			const selectedVerses = document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked');
-			if (selectedVerses.length === 0) {
-				updateStatus('Please select at least one verse');
-				return false;
+		const chapters = document.getElementById('chapters').value.trim();
+		if (!chapters) {
+			updateStatus('Please enter chapter numbers');
+			return false;
+		}
+		
+		// Basic validation for chapter ranges
+		const ranges = chapters.split(',').map(r => r.trim());
+		for (const range of ranges) {
+			if (range.includes('-')) {
+				const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+				if (isNaN(start) || isNaN(end) || start > maxChapters || end > maxChapters) {
+					updateStatus(`Invalid chapter range: ${range}. Max chapters: ${maxChapters}`);
+					return false;
+				}
+			} else {
+				const chapter = parseInt(range);
+				if (isNaN(chapter) || chapter > maxChapters) {
+					updateStatus(`Invalid chapter: ${range}. Max chapters: ${maxChapters}`);
+					return false;
+				}
 			}
 		}
 	}
@@ -398,31 +419,27 @@ function buildRequestData() {
 	
 	if (currentMode === 'book') {
 		return { ...baseData, type: 'book' };
-	} else if (currentMode === 'chapters') {
-		const includeVerses = document.getElementById('includeVerses').checked;
+	} else if (currentMode === 'chapter') {
+		// Get selected verses from checkboxes
+		const selectedVerses = Array.from(document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked'))
+			.map(cb => parseInt(cb.value))
+			.sort((a, b) => a - b);
 		
-		if (includeVerses) {
-			// Get selected verses from checkboxes
-			const selectedVerses = Array.from(document.querySelectorAll('#versesCheckboxList input[type="checkbox"]:checked'))
-				.map(cb => parseInt(cb.value))
-				.sort((a, b) => a - b);
-			
-			// Convert to ranges format
-			const verseRanges = convertToRanges(selectedVerses);
-			
-			return {
-				...baseData,
-				type: 'verses',
-				chapter: parseInt(document.getElementById('chapter').value),
-				verseRanges: verseRanges
-			};
-		} else {
-			return {
-				...baseData,
-				type: 'chapters',
-				chapters: document.getElementById('chapters').value.trim()
-			};
-		}
+		// Convert to ranges format
+		const verseRanges = convertToRanges(selectedVerses);
+		
+		return {
+			...baseData,
+			type: 'verses',
+			chapter: parseInt(document.getElementById('singleChapter').value),
+			verseRanges: verseRanges
+		};
+	} else if (currentMode === 'chapters') {
+		return {
+			...baseData,
+			type: 'chapters',
+			chapters: document.getElementById('chapters').value.trim()
+		};
 	}
 }
 
