@@ -161,12 +161,17 @@ function selectMode(mode) {
 	console.log('Bible.js: selectMode called with mode:', mode);
 	currentMode = mode;
 	
-	// Reset all visual states
-	const optionElements = document.querySelectorAll('[id$="Option"]');
-	console.log('Found option elements:', optionElements.length);
-	optionElements.forEach((option, index) => {
-		console.log(`Option ${index}:`, option.id, option);
+	// Reset all visual states - be more explicit about which elements to reset
+	const bookOption = document.getElementById('bookOption');
+	const chapterOption = document.getElementById('chapterOption');
+	const chaptersOption = document.getElementById('chaptersOption');
+	
+	console.log('Bible.js: Found elements - bookOption:', bookOption?.id, 'chapterOption:', chapterOption?.id, 'chaptersOption:', chaptersOption?.id);
+	
+	// Reset all options explicitly
+	[bookOption, chapterOption, chaptersOption].forEach(option => {
 		if (option && option.classList) {
+			console.log('Bible.js: Resetting option:', option.id);
 			// Reset border and background
 			option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
 			option.classList.add('border-slate-600');
@@ -187,19 +192,20 @@ function selectMode(mode) {
 		}
 	});
 	
-	// Update selected option
-	let selectedOption;
+	// Update selected option - be more explicit
+	let selectedOption = null;
 	if (mode === 'book') {
-		selectedOption = document.getElementById('bookOption');
+		selectedOption = bookOption;
 	} else if (mode === 'chapter') {
-		selectedOption = document.getElementById('chapterOption');
+		selectedOption = chapterOption;
 	} else if (mode === 'chapters') {
-		selectedOption = document.getElementById('chaptersOption');
+		selectedOption = chaptersOption;
 	}
 	
 	console.log('Bible.js: Selected option for mode', mode, ':', selectedOption?.id);
 	
 	if (selectedOption) {
+		console.log('Bible.js: Applying selected state to:', selectedOption.id);
 		// Set selected visual state
 		selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
 		selectedOption.classList.remove('border-slate-600');
@@ -217,6 +223,8 @@ function selectMode(mode) {
 			selectedRadioCircle.classList.add('border-indigo-500');
 			selectedRadioCircle.classList.remove('border-slate-400');
 		}
+	} else {
+		console.error('Bible.js: No selected option found for mode:', mode);
 	}
 	
 	// Hide all input sections
@@ -252,7 +260,7 @@ function selectMode(mode) {
 		}
 	}
 	
-	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : mode === 'chapters' ? 'Specific Chapters' : 'Specific Verses'}`);
+	updateStatus(`Selected: ${mode === 'book' ? 'Entire Book' : mode === 'chapter' ? 'Specific Chapter' : 'Multiple Chapters'}`);
 }
 
 function updateStatus(message) {
