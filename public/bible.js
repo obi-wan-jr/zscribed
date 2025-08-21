@@ -344,31 +344,9 @@ function validateSelection() {
 	
 	const maxChapters = bibleBooks[book];
 	
-	if (currentMode === 'chapters') {
-		const chapters = document.getElementById('chapters').value.trim();
-		if (!chapters) {
-			updateStatus('Please enter chapter numbers');
-			return false;
-		}
-		
-		// Basic validation for chapter ranges
-		const ranges = chapters.split(',').map(r => r.trim());
-		for (const range of ranges) {
-			if (range.includes('-')) {
-				const [start, end] = range.split('-').map(n => parseInt(n.trim()));
-				if (isNaN(start) || isNaN(end) || start > maxChapters || end > maxChapters) {
-					updateStatus(`Invalid chapter range: ${range}. Max chapters: ${maxChapters}`);
-					return false;
-				}
-			} else {
-				const chapter = parseInt(range);
-				if (isNaN(chapter) || chapter > maxChapters) {
-					updateStatus(`Invalid chapter: ${range}. Max chapters: ${maxChapters}`);
-					return false;
-				}
-			}
-		}
-	} else 	if (currentMode === 'chapter') {
+	if (currentMode === 'book') {
+		// No additional validation needed for entire book
+	} else if (currentMode === 'chapter') {
 		const chapter = parseInt(document.getElementById('singleChapter').value);
 		
 		if (isNaN(chapter) || chapter < 1 || chapter > maxChapters) {
