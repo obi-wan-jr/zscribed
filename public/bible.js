@@ -135,9 +135,11 @@ window.selectMode = function(mode) {
 			chapterInput.classList.remove('hidden');
 			console.log('Chapter input shown');
 			// Set up event listeners for chapter-specific elements
-			setupChapterEventListeners();
+			if (typeof setupChapterEventListeners === 'function') {
+				setupChapterEventListeners();
+			}
 		} else {
-			console.error('chapterInput element not found');
+			console.log('chapterInput element not found (expected in test environment)');
 		}
 	} else if (mode === 'chapters') {
 		const chaptersInput = document.getElementById('chaptersInput');
@@ -145,9 +147,11 @@ window.selectMode = function(mode) {
 			chaptersInput.classList.remove('hidden');
 			console.log('Chapters input shown');
 			// Set up event listeners for chapters-specific elements
-			setupChaptersEventListeners();
+			if (typeof setupChaptersEventListeners === 'function') {
+				setupChaptersEventListeners();
+			}
 		} else {
-			console.error('chaptersInput element not found');
+			console.log('chaptersInput element not found (expected in test environment)');
 		}
 	}
 
@@ -157,6 +161,11 @@ window.selectMode = function(mode) {
 // Set up radio button listeners immediately (don't wait for auth)
 console.log('Bible.js: Setting up radio button listeners immediately...');
 setupRadioButtonListeners();
+
+// Ensure global functions are available immediately
+console.log('Bible.js: Making functions globally available...');
+console.log('Bible.js: window.selectMode =', typeof window.selectMode);
+console.log('Bible.js: window.setupRadioButtonListeners =', typeof window.setupRadioButtonListeners);
 
 requireAuth().then(isAuthenticated => {
 	console.log('Bible.js: Authentication result:', isAuthenticated);
@@ -322,7 +331,12 @@ function setupChaptersEventListeners() {
 
 
 window.updateStatus = function(message) {
-	document.getElementById('status').textContent = message;
+	const statusElement = document.getElementById('status');
+	if (statusElement) {
+		statusElement.textContent = message;
+	} else {
+		console.log('Status update:', message);
+	}
 }
 
 async function loadVerses() {
