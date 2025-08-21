@@ -158,14 +158,18 @@ function setupAllChaptersButton() {
 		}
 		
 		const maxChapters = getMaxChapters(selectedBook);
-		const chaptersRangeInput = document.getElementById('chaptersRange');
-		if (chaptersRangeInput) {
-			chaptersRangeInput.value = `1-${maxChapters}`;
-			updateStatus(`Set chapter range to 1-${maxChapters} for ${selectedBook}`);
-		} else {
-			console.error('Chapters range input not found');
-			updateStatus('Error: Chapter range input not available');
-		}
+		
+		// Use requestAnimationFrame to ensure DOM is fully updated
+		requestAnimationFrame(() => {
+			const chaptersRangeInput = document.getElementById('chaptersRange');
+			if (chaptersRangeInput) {
+				chaptersRangeInput.value = `1-${maxChapters}`;
+				updateStatus(`Set chapter range to 1-${maxChapters} for ${selectedBook}`);
+			} else {
+				console.error('Chapters range input not found');
+				updateStatus('Error: Chapter range input not available');
+			}
+		});
 	});
 }
 
