@@ -90,10 +90,11 @@ function setupEventListeners() {
 	// Radio button listeners for mode selection
 	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
 	console.log('Bible.js: Found radio buttons:', radioButtons.length);
-	radioButtons.forEach(radio => {
+	radioButtons.forEach((radio, index) => {
+		console.log(`Bible.js: Radio button ${index}:`, radio.value, radio);
 		radio.addEventListener('change', (e) => {
 			if (e.target.checked) {
-				console.log('Radio changed to:', e.target.value);
+				console.log('Bible.js: Radio changed to:', e.target.value);
 				selectMode(e.target.value);
 			}
 		});
@@ -157,6 +158,7 @@ function setupChaptersEventListeners() {
 }
 
 function selectMode(mode) {
+	console.log('Bible.js: selectMode called with mode:', mode);
 	currentMode = mode;
 	
 	// Reset all visual states
@@ -394,8 +396,19 @@ function validateSelection() {
 
 function buildRequestData() {
 	const book = document.getElementById('book').value;
-	const excludeNumbers = document.getElementById('excludeNumbers').checked;
-	const excludeFootnotes = document.getElementById('excludeFootnotes').checked;
+	const excludeNumbersElement = document.getElementById('excludeNumbers');
+	const excludeFootnotesElement = document.getElementById('excludeFootnotes');
+	
+	console.log('Bible.js: buildRequestData - excludeNumbers element:', excludeNumbersElement);
+	console.log('Bible.js: buildRequestData - excludeFootnotes element:', excludeFootnotesElement);
+	
+	if (!excludeNumbersElement || !excludeFootnotesElement) {
+		console.error('Bible.js: Missing excludeNumbers or excludeFootnotes elements');
+		return null;
+	}
+	
+	const excludeNumbers = excludeNumbersElement.checked;
+	const excludeFootnotes = excludeFootnotesElement.checked;
 	
 	const baseData = {
 		translation: 'web',
