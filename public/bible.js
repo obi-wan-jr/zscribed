@@ -118,21 +118,17 @@ window.selectMode = function(mode) {
 	console.log('  - checked radio:', document.querySelector('input[name="transcribeMode"]:checked')?.value);
 	console.log('  - selected option has border-indigo-500:', selectedOption?.classList.contains('border-indigo-500'));
 	
-	// Hide all input sections
-	const chapterInput = document.getElementById('chapterInput');
-	if (chapterInput) chapterInput.classList.add('hidden');
+	// Hide all input sections - Safe DOM access
+	['chapterInput', 'chaptersInput', 'versesCheckboxContainer']
+		.map(id => document.getElementById(id))
+		.filter(Boolean)
+		.forEach(el => el.classList.add('hidden'));
 
-	const chaptersInput = document.getElementById('chaptersInput');
-	if (chaptersInput) chaptersInput.classList.add('hidden');
-
-	const versesCheckboxContainer = document.getElementById('versesCheckboxContainer');
-	if (versesCheckboxContainer) versesCheckboxContainer.classList.add('hidden');
-
-	// Show relevant input section
+	// Show relevant input section - Safe DOM access
 	if (mode === 'chapter') {
-		const chapterInput = document.getElementById('chapterInput');
-		if (chapterInput) {
-			chapterInput.classList.remove('hidden');
+		const el = document.getElementById('chapterInput');
+		if (el) {
+			el.classList.remove('hidden');
 			console.log('Chapter input shown');
 			// Set up event listeners for chapter-specific elements
 			if (typeof setupChapterEventListeners === 'function') {
@@ -142,9 +138,9 @@ window.selectMode = function(mode) {
 			console.log('chapterInput element not found (expected in test environment)');
 		}
 	} else if (mode === 'chapters') {
-		const chaptersInput = document.getElementById('chaptersInput');
-		if (chaptersInput) {
-			chaptersInput.classList.remove('hidden');
+		const el = document.getElementById('chaptersInput');
+		if (el) {
+			el.classList.remove('hidden');
 			console.log('Chapters input shown');
 			// Set up event listeners for chapters-specific elements
 			if (typeof setupChaptersEventListeners === 'function') {
@@ -182,7 +178,7 @@ requireAuth().then(isAuthenticated => {
 async function init() {
 	console.log('Bible.js: init() called');
 	
-	// Set welcome message
+	// Set welcome message - Safe DOM access
 	const userWelcome = document.getElementById('userWelcome');
 	const currentUser = getActiveUser();
 	console.log('Bible.js: Current user:', currentUser);
@@ -190,7 +186,7 @@ async function init() {
 		userWelcome.textContent = `Welcome, ${currentUser}! Ready to create Bible audio.`;
 		console.log('Bible.js: Welcome message set');
 	} else {
-		console.error('Bible.js: userWelcome element not found');
+		console.log('Bible.js: userWelcome element not found (expected in test environment)');
 	}
 	
 	// Update auth link

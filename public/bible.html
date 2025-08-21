@@ -242,7 +242,16 @@
 		</main>
 	</div>
 	
-	<script type="module" src="/common.js"></script>
-	<script type="module" src="/bible.js"></script>
+			<!-- Tailwind safelist to prevent purging critical classes -->
+		<div class="hidden
+			border-indigo-500 bg-indigo-900/20
+			bg-transparent
+			border-slate-400 border-slate-600
+			bg-[#1a1f3a] hover:bg-[#1a1f3a]
+		">
+		</div>
+		
+		<script type="module" src="/common.js"></script>
+		<script type="module" src="/bible.js"></script>
 </body>
 </html>

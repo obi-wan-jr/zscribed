@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Radio Debug</title>
+  <script src="/bible.js" type="module"></script>
+  <link rel="stylesheet" href="/styles.build.css">
+  <style>
+    .mode-label {
+      display: block;
+      padding: 16px;
+      margin: 8px 0;
+      border: 2px solid rgb(71 85 105);
+      border-radius: 8px;
+      background-color: rgb(18 23 51);
+      cursor: pointer;
+      color: white;
+    }
+    
+    .mode-label.selected {
+      border-color: rgb(99 102 241);
+      background-color: rgba(49, 46, 129, 0.2);
+    }
+    
+    button {
+      margin: 8px;
+      padding: 8px 16px;
+      background: rgb(99 102 241);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background: rgb(79 70 229);
+    }
+    
+    .debug-info {
+      background: rgba(0,0,0,0.3);
+      padding: 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+      color: white;
+      font-family: monospace;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body style="background:#0b1020; padding:40px;">
+
+  <h1 style="color: white; margin-bottom: 20px;">Radio Button Debug Test</h1>
+
+  <div id="test-container">
+    <label id="chapterOption" class="mode-label">
+      <input type="radio" name="transcribeMode" value="chapter"> Specific Chapter
+    </label>
+
+    <label id="chaptersOption" class="mode-label">
+      <input type="radio" name="transcribeMode" value="chapters"> Multiple Chapters
+    </label>
+  </div>
+
+  <div style="margin: 20px 0;">
+    <button onclick="testSelectMode('chapter')">Select 'chapter'</button>
+    <button onclick="testSelectMode('chapters')">Select 'chapters'</button>
+    <button onclick="resetAll()">Reset All</button>
+  </div>
+
+  <!-- Add missing elements to prevent crashes -->
+  <div id="status" style="color: white; margin: 20px 0;"></div>
+  <div id="chapterInput" class="hidden"></div>
+  <div id="chaptersInput" class="hidden"></div>
+  <div id="versesCheckboxContainer" class="hidden"></div>
+
+  <div class="debug-info" id="debug-output">
+    <strong>Debug Info:</strong><br>
+    Waiting for page load...
+  </div>
+
+  <script>
+    // Test function that mimics the real selectMode
+    function testSelectMode(mode) {
+      console.log('=== TESTING selectMode ===');
+      console.log('Mode:', mode);
+      
+      // Get elements
+      const chapterOption = document.getElementById('chapterOption');
+      const chaptersOption = document.getElementById('chaptersOption');
+      
+      console.log('Elements found:', {
+        chapterOption: !!chapterOption,
+        chaptersOption: !!chaptersOption
+      });
+      
+      // Reset all
+      [chapterOption, chaptersOption].forEach(option => {
+        if (option) {
+          option.classList.remove('selected');
+          console.log('Reset:', option.id);
+        }
+      });
+      
+      // Select the correct one
+      let selectedOption = null;
+      if (mode === 'chapter') {
+        selectedOption = chapterOption;
+      } else if (mode === 'chapters') {
+        selectedOption = chaptersOption;
+      }
+      
+      if (selectedOption) {
+        selectedOption.classList.add('selected');
+        console.log('Selected:', selectedOption.id);
+      }
+      
+      // Update radio button state
+      const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+      radioButtons.forEach(radio => {
+        radio.checked = (radio.value === mode);
+      });
+      
+      updateDebugInfo();
+    }
+    
+    function resetAll() {
+      console.log('=== RESETTING ALL ===');
+      const chapterOption = document.getElementById('chapterOption');
+      const chaptersOption = document.getElementById('chaptersOption');
+      
+      [chapterOption, chaptersOption].forEach(option => {
+        if (option) {
+          option.classList.remove('selected');
+        }
+      });
+      
+      const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+      radioButtons.forEach(radio => {
+        radio.checked = false;
+      });
+      
+      updateDebugInfo();
+    }
+    
+    function updateDebugInfo() {
+      const debugOutput = document.getElementById('debug-output');
+      const chapterOption = document.getElementById('chapterOption');
+      const chaptersOption = document.getElementById('chaptersOption');
+      
+      const info = `
+        <strong>Current State:</strong><br>
+        chapterOption classes: ${chapterOption?.className || 'not found'}<br>
+        chaptersOption classes: ${chaptersOption?.className || 'not found'}<br>
+        chapterOption has 'selected': ${chapterOption?.classList.contains('selected')}<br>
+        chaptersOption has 'selected': ${chaptersOption?.classList.contains('selected')}<br>
+        <br>
+        <strong>Radio Buttons:</strong><br>
+        chapter radio checked: ${document.querySelector('input[value="chapter"]')?.checked}<br>
+        chapters radio checked: ${document.querySelector('input[value="chapters"]')?.checked}<br>
+        <br>
+        <strong>Global Functions:</strong><br>
+        window.selectMode: ${typeof window.selectMode}<br>
+        window.setupRadioButtonListeners: ${typeof window.setupRadioButtonListeners}<br>
+      `;
+      
+      debugOutput.innerHTML = info;
+    }
+    
+    // Ensure bible.js is loaded
+    window.addEventListener('load', () => {
+      console.log('=== DEBUG PAGE LOADED ===');
+      console.log('selectMode =', typeof window.selectMode);
+      console.log('setupRadioButtonListeners =', typeof window.setupRadioButtonListeners);
+      
+      // Test if the real selectMode works
+      if (typeof window.selectMode === 'function') {
+        console.log('✅ Real selectMode function is available');
+        
+        // Override our test function to use the real one
+        window.testSelectMode = function(mode) {
+          console.log('Using REAL selectMode function');
+          window.selectMode(mode);
+          updateDebugInfo();
+        };
+      } else {
+        console.log('❌ Real selectMode function NOT available');
+      }
+      
+      updateDebugInfo();
+    });
+    
+    // Also test radio button clicks
+    document.addEventListener('DOMContentLoaded', () => {
+      const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+      radioButtons.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          console.log('Radio changed:', e.target.value);
+          if (e.target.checked) {
+            testSelectMode(e.target.value);
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
