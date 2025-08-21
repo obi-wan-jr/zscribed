@@ -38,9 +38,19 @@ function setupEventListeners() {
 	if (allChaptersBtn) {
 		allChaptersBtn.addEventListener('click', () => {
 			const bookSelect = document.getElementById('book');
+			if (!bookSelect) {
+				console.error('Book select element not found');
+				return;
+			}
+			
 			const selectedBook = bookSelect.value;
 			const maxChapters = getMaxChapters(selectedBook);
-			document.getElementById('chaptersRange').value = `1-${maxChapters}`;
+			const chaptersRangeInput = document.getElementById('chaptersRange');
+			if (chaptersRangeInput) {
+				chaptersRangeInput.value = `1-${maxChapters}`;
+			} else {
+				console.error('Chapters range input not found');
+			}
 		});
 	}
 	
@@ -177,7 +187,13 @@ function validateSelection() {
 	}
 	
 	if (currentMode === 'chapters') {
-		const chaptersRange = document.getElementById('chaptersRange').value;
+		const chaptersRangeElement = document.getElementById('chaptersRange');
+		if (!chaptersRangeElement) {
+			console.error('Chapters range element not found');
+			updateStatus('Error: Chapter range input not available');
+			return false;
+		}
+		const chaptersRange = chaptersRangeElement.value;
 		if (!chaptersRange.trim()) {
 			updateStatus('Please enter chapter range');
 			return false;
@@ -206,8 +222,14 @@ async function createAudio() {
 	};
 	
 	if (currentMode === 'chapters') {
-		const chaptersRange = document.getElementById('chaptersRange').value;
-		requestBody.chapters = convertToRanges(chaptersRange);
+		const chaptersRangeElement = document.getElementById('chaptersRange');
+		if (chaptersRangeElement) {
+			requestBody.chapters = convertToRanges(chaptersRangeElement.value);
+		} else {
+			console.error('Chapters range element not found in createAudio');
+			updateStatus('Error: Chapter range input not available');
+			return;
+		}
 	}
 	
 	try {
