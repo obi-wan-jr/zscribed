@@ -95,13 +95,25 @@ function setupRadioButtonListeners() {
 	// Radio button listeners for mode selection
 	const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
 	console.log('Bible.js: Found radio buttons:', radioButtons.length);
+	
+	if (radioButtons.length === 0) {
+		console.error('Bible.js: No radio buttons found! This is a problem.');
+		return;
+	}
+	
 	radioButtons.forEach((radio, index) => {
 		console.log(`Bible.js: Radio button ${index}:`, radio.value, radio);
 		radio.addEventListener('change', (e) => {
+			console.log('Bible.js: Radio change event fired for:', e.target.value);
 			if (e.target.checked) {
 				console.log('Bible.js: Radio changed to:', e.target.value);
 				selectMode(e.target.value);
 			}
+		});
+		
+		// Also add click event for debugging
+		radio.addEventListener('click', (e) => {
+			console.log('Bible.js: Radio clicked:', e.target.value);
 		});
 	});
 	
@@ -110,6 +122,8 @@ function setupRadioButtonListeners() {
 	if (checkedRadio) {
 		console.log('Bible.js: Found pre-checked radio:', checkedRadio.value);
 		selectMode(checkedRadio.value);
+	} else {
+		console.log('Bible.js: No pre-checked radio found');
 	}
 }
 
@@ -228,15 +242,21 @@ function selectMode(mode) {
 	
 	if (selectedOption) {
 		console.log('Bible.js: Applying selected state to:', selectedOption.id);
+		
 		// Set selected visual state
 		selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
 		selectedOption.classList.remove('border-slate-600');
+		
+		console.log('Bible.js: Applied classes to', selectedOption.id, ':', selectedOption.className);
 		
 		// Update radio indicator
 		const selectedRadioIndicator = selectedOption.querySelector('.w-3.h-3');
 		if (selectedRadioIndicator) {
 			selectedRadioIndicator.classList.add('bg-indigo-500');
 			selectedRadioIndicator.classList.remove('bg-transparent');
+			console.log('Bible.js: Updated radio indicator for', selectedOption.id);
+		} else {
+			console.error('Bible.js: Radio indicator not found for', selectedOption.id);
 		}
 		
 		// Update border color of radio circle
@@ -244,7 +264,14 @@ function selectMode(mode) {
 		if (selectedRadioCircle) {
 			selectedRadioCircle.classList.add('border-indigo-500');
 			selectedRadioCircle.classList.remove('border-slate-400');
+			console.log('Bible.js: Updated radio circle for', selectedOption.id);
+		} else {
+			console.error('Bible.js: Radio circle not found for', selectedOption.id);
 		}
+		
+		// Force a repaint to ensure visual changes are applied
+		selectedOption.offsetHeight;
+		
 	} else {
 		console.error('Bible.js: No selected option found for mode:', mode);
 	}
