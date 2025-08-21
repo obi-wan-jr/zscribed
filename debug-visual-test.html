@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Visual Selection Debug Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <h1 class="text-2xl mb-6">Visual Selection Debug Test</h1>
+    
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <!-- Option 1: Entire Book -->
+        <label class="relative p-4 border-2 border-slate-600 rounded-lg bg-[#121733] hover:bg-[#1a1f3a] cursor-pointer transition-all duration-200" id="bookOption">
+            <input type="radio" name="transcribeMode" value="book" class="sr-only">
+            <div class="text-center">
+                <div class="w-8 h-8 mx-auto mb-2 rounded-full border-2 border-slate-400 flex items-center justify-center">
+                    <div class="w-3 h-3 rounded-full bg-transparent transition-colors duration-200"></div>
+                </div>
+                <h4 class="font-medium text-white">Entire Book</h4>
+                <p class="text-sm text-slate-400">Complete book</p>
+            </div>
+        </label>
+
+        <!-- Option 2: Multiple Chapters -->
+        <label class="relative p-4 border-2 border-slate-600 rounded-lg bg-[#121733] hover:bg-[#1a1f3a] cursor-pointer transition-all duration-200" id="chaptersOption">
+            <input type="radio" name="transcribeMode" value="chapters" class="sr-only">
+            <div class="text-center">
+                <div class="w-8 h-8 mx-auto mb-2 rounded-full border-2 border-slate-400 flex items-center justify-center">
+                    <div class="w-3 h-3 rounded-full bg-transparent transition-colors duration-200"></div>
+                </div>
+                <h4 class="font-medium text-white">Multiple Chapters</h4>
+                <p class="text-sm text-slate-400">Chapter ranges</p>
+            </div>
+        </label>
+
+        <!-- Option 3: Specific Chapter -->
+        <label class="relative p-4 border-2 border-slate-600 rounded-lg bg-[#121733] hover:bg-[#1a1f3a] cursor-pointer transition-all duration-200" id="chapterOption">
+            <input type="radio" name="transcribeMode" value="chapter" class="sr-only">
+            <div class="text-center">
+                <div class="w-8 h-8 mx-auto mb-2 rounded-full border-2 border-slate-400 flex items-center justify-center">
+                    <div class="w-3 h-3 rounded-full bg-transparent transition-colors duration-200"></div>
+                </div>
+                <h4 class="font-medium text-white">Specific Chapter</h4>
+                <p class="text-sm text-slate-400">Single chapter + verses</p>
+            </div>
+        </label>
+    </div>
+
+    <div class="bg-gray-800 p-4 rounded mb-4">
+        <h3 class="text-lg mb-2">Debug Info:</h3>
+        <div id="debugOutput" class="text-sm"></div>
+    </div>
+
+    <div class="mb-4">
+        <button onclick="testSelectMode('book')" class="bg-blue-600 px-4 py-2 rounded mr-2">Test Book</button>
+        <button onclick="testSelectMode('chapter')" class="bg-blue-600 px-4 py-2 rounded mr-2">Test Chapter</button>
+        <button onclick="testSelectMode('chapters')" class="bg-blue-600 px-4 py-2 rounded">Test Chapters</button>
+    </div>
+
+    <div class="mb-4">
+        <button onclick="testManualClasses()" class="bg-green-600 px-4 py-2 rounded mr-2">Test Manual Class Application</button>
+        <button onclick="resetAll()" class="bg-red-600 px-4 py-2 rounded">Reset All</button>
+    </div>
+
+    <div class="bg-gray-800 p-4 rounded">
+        <h3 class="text-lg mb-2">CSS Class Test:</h3>
+        <div id="cssTestOutput" class="text-sm"></div>
+    </div>
+
+    <script>
+        let currentMode = null;
+
+        function selectMode(mode) {
+            console.log('selectMode called with mode:', mode);
+            currentMode = mode;
+            
+            // Force sync: uncheck all radio buttons first, then check the correct one
+            const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+            radioButtons.forEach(radio => {
+                radio.checked = (radio.value === mode);
+            });
+            
+            // Reset all visual states - be more explicit about which elements to reset
+            const bookOption = document.getElementById('bookOption');
+            const chapterOption = document.getElementById('chapterOption');
+            const chaptersOption = document.getElementById('chaptersOption');
+            
+            console.log('Found elements - bookOption:', bookOption?.id, 'chapterOption:', chapterOption?.id, 'chaptersOption:', chaptersOption?.id);
+            
+            // Reset all options explicitly
+            [bookOption, chapterOption, chaptersOption].forEach(option => {
+                if (option && option.classList) {
+                    console.log('Resetting option:', option.id);
+                    // Reset border and background
+                    option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
+                    option.classList.add('border-slate-600');
+                    
+                    // Reset radio indicator
+                    const radioIndicator = option.querySelector('.w-3.h-3');
+                    if (radioIndicator) {
+                        radioIndicator.classList.remove('bg-indigo-500');
+                        radioIndicator.classList.add('bg-transparent');
+                    }
+                    
+                    // Reset border color of radio circle
+                    const radioCircle = option.querySelector('.w-8.h-8');
+                    if (radioCircle) {
+                        radioCircle.classList.remove('border-indigo-500');
+                        radioCircle.classList.add('border-slate-400');
+                    }
+                }
+            });
+            
+            // Update selected option - be more explicit
+            let selectedOption = null;
+            if (mode === 'book') {
+                selectedOption = bookOption;
+            } else if (mode === 'chapter') {
+                selectedOption = chapterOption;
+            } else if (mode === 'chapters') {
+                selectedOption = chaptersOption;
+            }
+            
+            console.log('Selected option for mode', mode, ':', selectedOption?.id);
+            
+            if (selectedOption) {
+                console.log('Applying selected state to:', selectedOption.id);
+                // Set selected visual state
+                selectedOption.classList.add('border-indigo-500', 'bg-indigo-900/20');
+                selectedOption.classList.remove('border-slate-600');
+                
+                // Update radio indicator
+                const selectedRadioIndicator = selectedOption.querySelector('.w-3.h-3');
+                if (selectedRadioIndicator) {
+                    selectedRadioIndicator.classList.add('bg-indigo-500');
+                    selectedRadioIndicator.classList.remove('bg-transparent');
+                }
+                
+                // Update border color of radio circle
+                const selectedRadioCircle = selectedOption.querySelector('.w-8.h-8');
+                if (selectedRadioCircle) {
+                    selectedRadioCircle.classList.add('border-indigo-500');
+                    selectedRadioCircle.classList.remove('border-slate-400');
+                }
+            } else {
+                console.error('No selected option found for mode:', mode);
+            }
+            
+            // Verify state is correct
+            console.log('Final state verification:');
+            console.log('  - currentMode:', currentMode);
+            console.log('  - checked radio:', document.querySelector('input[name="transcribeMode"]:checked')?.value);
+            console.log('  - selected option has border-indigo-500:', selectedOption?.classList.contains('border-indigo-500'));
+            
+            updateDebugOutput();
+        }
+
+        function testManualClasses() {
+            console.log('Testing manual class application...');
+            
+            const bookOption = document.getElementById('bookOption');
+            
+            // Test adding classes manually
+            bookOption.classList.add('border-indigo-500');
+            bookOption.classList.add('bg-indigo-900/20');
+            bookOption.classList.remove('border-slate-600');
+            
+            const radioIndicator = bookOption.querySelector('.w-3.h-3');
+            if (radioIndicator) {
+                radioIndicator.classList.add('bg-indigo-500');
+                radioIndicator.classList.remove('bg-transparent');
+            }
+            
+            const radioCircle = bookOption.querySelector('.w-8.h-8');
+            if (radioCircle) {
+                radioCircle.classList.add('border-indigo-500');
+                radioCircle.classList.remove('border-slate-400');
+            }
+            
+            console.log('Manual classes applied to bookOption');
+            updateDebugOutput();
+        }
+
+        function resetAll() {
+            console.log('Resetting all options...');
+            
+            const bookOption = document.getElementById('bookOption');
+            const chapterOption = document.getElementById('chapterOption');
+            const chaptersOption = document.getElementById('chaptersOption');
+            
+            [bookOption, chapterOption, chaptersOption].forEach(option => {
+                if (option && option.classList) {
+                    option.classList.remove('border-indigo-500', 'bg-indigo-900/20');
+                    option.classList.add('border-slate-600');
+                    
+                    const radioIndicator = option.querySelector('.w-3.h-3');
+                    if (radioIndicator) {
+                        radioIndicator.classList.remove('bg-indigo-500');
+                        radioIndicator.classList.add('bg-transparent');
+                    }
+                    
+                    const radioCircle = option.querySelector('.w-8.h-8');
+                    if (radioCircle) {
+                        radioCircle.classList.remove('border-indigo-500');
+                        radioCircle.classList.add('border-slate-400');
+                    }
+                }
+            });
+            
+            // Uncheck all radio buttons
+            const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+            radioButtons.forEach(radio => {
+                radio.checked = false;
+            });
+            
+            currentMode = null;
+            updateDebugOutput();
+        }
+
+        function updateDebugOutput() {
+            const debugOutput = document.getElementById('debugOutput');
+            const optionElements = document.querySelectorAll('[id$="Option"]');
+            
+            let debugInfo = `
+                <p><strong>Current Mode:</strong> ${currentMode || 'none'}</p>
+                <p><strong>All Options Found:</strong> ${Array.from(optionElements).map(el => el.id).join(', ')}</p>
+                <br>
+            `;
+            
+            optionElements.forEach((option, index) => {
+                const hasSelectedBorder = option.classList.contains('border-indigo-500');
+                const hasSelectedBg = option.classList.contains('bg-indigo-900/20');
+                const radioIndicator = option.querySelector('.w-3.h-3');
+                const radioCircle = option.querySelector('.w-8.h-8');
+                
+                debugInfo += `
+                    <p><strong>${option.id}:</strong></p>
+                    <ul class="ml-4">
+                        <li>Border indigo: ${hasSelectedBorder}</li>
+                        <li>Background indigo: ${hasSelectedBg}</li>
+                        <li>Radio indicator exists: ${radioIndicator ? 'yes' : 'no'}</li>
+                        <li>Radio circle exists: ${radioCircle ? 'yes' : 'no'}</li>
+                        <li>Radio indicator has bg-indigo-500: ${radioIndicator ? radioIndicator.classList.contains('bg-indigo-500') : 'N/A'}</li>
+                        <li>Radio circle has border-indigo-500: ${radioCircle ? radioCircle.classList.contains('border-indigo-500') : 'N/A'}</li>
+                        <li>All classes: ${option.className}</li>
+                    </ul>
+                `;
+            });
+            
+            debugOutput.innerHTML = debugInfo;
+            
+            // Update CSS test output
+            updateCSSTestOutput();
+        }
+
+        function updateCSSTestOutput() {
+            const cssTestOutput = document.getElementById('cssTestOutput');
+            
+            // Check if Tailwind classes are available
+            const testDiv = document.createElement('div');
+            testDiv.className = 'border-indigo-500 bg-indigo-900/20';
+            document.body.appendChild(testDiv);
+            
+            const computedStyle = window.getComputedStyle(testDiv);
+            const borderColor = computedStyle.borderColor;
+            const backgroundColor = computedStyle.backgroundColor;
+            
+            document.body.removeChild(testDiv);
+            
+            cssTestOutput.innerHTML = `
+                <p><strong>CSS Class Availability Test:</strong></p>
+                <ul class="ml-4">
+                    <li>border-indigo-500 computed border color: ${borderColor}</li>
+                    <li>bg-indigo-900/20 computed background color: ${backgroundColor}</li>
+                    <li>Classes available: ${borderColor !== 'rgba(0, 0, 0, 0)' && backgroundColor !== 'rgba(0, 0, 0, 0)' ? 'YES' : 'NO'}</li>
+                </ul>
+            `;
+        }
+
+        function testSelectMode(mode) {
+            console.log('Testing selectMode with:', mode);
+            selectMode(mode);
+        }
+
+        // Radio button listeners
+        const radioButtons = document.querySelectorAll('input[name="transcribeMode"]');
+        console.log('Found radio buttons:', radioButtons.length);
+        
+        radioButtons.forEach((radio, index) => {
+            console.log(`Radio button ${index}:`, radio.value, radio);
+            radio.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    console.log('Radio changed to:', e.target.value);
+                    selectMode(e.target.value);
+                }
+            });
+        });
+
+        // Initial debug output
+        updateDebugOutput();
+    </script>
+</body>
+</html>

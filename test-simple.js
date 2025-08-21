@@ -81,7 +81,7 @@ async function testBiblePageLoad() {
         // Check if the page contains expected elements
         const content = response.data;
         const checks = [
-            { name: 'Radio buttons', pattern: 'input[name="transcribeMode"]', found: content.includes('name="transcribeMode"') },
+            { name: 'Radio buttons', pattern: 'input[name="transcribeMode"]', found: content.includes('input[name="transcribeMode"]') },
             { name: 'Book option', pattern: 'id="bookOption"', found: content.includes('id="bookOption"') },
             { name: 'Chapter option', pattern: 'id="chapterOption"', found: content.includes('id="chapterOption"') },
             { name: 'Chapters option', pattern: 'id="chaptersOption"', found: content.includes('id="chaptersOption"') },

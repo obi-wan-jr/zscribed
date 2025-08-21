@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Selector Debug Test</title>
+</head>
+<body>
+    <h1>CSS Selector Debug Test</h1>
+    
+    <div id="bookOption">Book Option</div>
+    <div id="chapterOption">Chapter Option</div>
+    <div id="chaptersOption">Chapters Option</div>
+    <div id="somethingElse">Something Else</div>
+    
+    <div id="output"></div>
+    
+    <script>
+        const optionElements = document.querySelectorAll('[id$="Option"]');
+        console.log('Found elements with id ending in "Option":', optionElements.length);
+        
+        optionElements.forEach((el, index) => {
+            console.log(`Element ${index}:`, el.id, el);
+        });
+        
+        document.getElementById('output').innerHTML = `
+            <h3>Elements found with [id$="Option"]:</h3>
+            <ul>
+                ${Array.from(optionElements).map(el => `<li>${el.id}: ${el.textContent}</li>`).join('')}
+            </ul>
+        `;
+    </script>
+</body>
+</html>

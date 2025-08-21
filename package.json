@@ -17,6 +17,7 @@
     "mime": "^3.0.0",
     "morgan": "^1.10.0",
     "nanostores": "^0.9.5",
+    "puppeteer": "^24.17.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
