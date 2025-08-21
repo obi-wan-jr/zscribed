@@ -111,9 +111,12 @@ function setupEventListeners() {
 }
 
 function setupChaptersEventListeners() {
+	console.log('Bible.js: setupChaptersEventListeners() called');
+	
 	// Quick action buttons
 	const allChaptersBtn = document.getElementById('allChaptersBtn');
 	if (allChaptersBtn) {
+		console.log('Bible.js: allChaptersBtn found and listener added');
 		allChaptersBtn.addEventListener('click', () => {
 			const book = document.getElementById('book').value;
 			const maxChapters = bibleBooks[book];
@@ -121,11 +124,14 @@ function setupChaptersEventListeners() {
 				document.getElementById('chapters').value = `1-${maxChapters}`;
 			}
 		});
+	} else {
+		console.error('Bible.js: allChaptersBtn not found');
 	}
 	
 	// Include verses checkbox
 	const includeVerses = document.getElementById('includeVerses');
 	if (includeVerses) {
+		console.log('Bible.js: includeVerses found and listener added');
 		includeVerses.addEventListener('change', (e) => {
 			if (e.target.checked) {
 				document.getElementById('versesSubInput').classList.remove('hidden');
@@ -134,11 +140,18 @@ function setupChaptersEventListeners() {
 				document.getElementById('versesCheckboxContainer').classList.add('hidden');
 			}
 		});
+	} else {
+		console.error('Bible.js: includeVerses not found');
 	}
 	
 	// Verse loading and selection
 	const loadVersesBtn = document.getElementById('loadVersesBtn');
-	if (loadVersesBtn) loadVersesBtn.addEventListener('click', loadVerses);
+	if (loadVersesBtn) {
+		console.log('Bible.js: loadVersesBtn found and listener added');
+		loadVersesBtn.addEventListener('click', loadVerses);
+	} else {
+		console.error('Bible.js: loadVersesBtn not found');
+	}
 	
 	const selectAllVersesBtn = document.getElementById('selectAllVersesBtn');
 	if (selectAllVersesBtn) {
@@ -238,8 +251,12 @@ function updateStatus(message) {
 }
 
 async function loadVerses() {
+	console.log('Bible.js: loadVerses() called');
+	
 	const book = document.getElementById('book').value;
 	const chapter = parseInt(document.getElementById('chapter').value);
+	
+	console.log('Bible.js: loadVerses - book:', book, 'chapter:', chapter);
 	
 	if (!book || !chapter) {
 		updateStatus('Please select a book and chapter first');
