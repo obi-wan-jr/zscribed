@@ -1357,6 +1357,23 @@ app.post('/api/jobs/bible', (req, res) => {
 
 // Logs streaming endpoint
 app.get('/api/logs/stream', (req, res) => {
+	// Check if user is authenticated
+	if (!req.user) {
+		res.writeHead(401, {
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache',
+			'Connection': 'keep-alive'
+		});
+		res.write(`data: ${JSON.stringify({
+			timestamp: new Date().toISOString(),
+			level: 'error',
+			category: 'system',
+			message: 'Authentication required for logs access'
+		})}\n\n`);
+		res.end();
+		return;
+	}
+
 	res.writeHead(200, {
 		'Content-Type': 'text/event-stream',
 		'Cache-Control': 'no-cache',

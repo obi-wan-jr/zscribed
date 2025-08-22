@@ -1,3 +1,5 @@
+import { getActiveUser, updateAuthLink, requireAuth } from './common.js';
+
 // Real-time logs functionality
 let eventSource = null;
 let logs = [];
@@ -16,6 +18,14 @@ const clearLogsBtn = document.getElementById('clearLogs');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
+	// Check authentication first
+	if (!requireAuth()) {
+		return; // Redirect will happen in requireAuth
+	}
+	
+	// Update auth link
+	updateAuthLink();
+	
 	initializeControls();
 	connectToLogs();
 });
@@ -82,9 +92,17 @@ function connectToLogs() {
 	
 	eventSource.onerror = (error) => {
 		console.error('Log stream error:', error);
+		
+		// Check if it's an authentication error
+		if (eventSource.readyState === EventSource.CLOSED) {
+			updateConnectionStatus('error', 'Authentication required - please login');
+			// Don't retry for auth errors
+			return;
+		}
+		
 		updateConnectionStatus('error', 'Connection lost - retrying...');
 		
-		// Reconnect after 5 seconds
+		// Reconnect after 5 seconds for other errors
 		setTimeout(() => {
 			if (eventSource.readyState === EventSource.CLOSED) {
 				connectToLogs();
