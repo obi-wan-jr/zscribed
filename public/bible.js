@@ -1,4 +1,4 @@
-import { getActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
+import { getActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError, cancelCurrentJob } from './common.js';
 
 // Bible audio creation functionality
 let currentMode = 'book';
@@ -101,6 +101,29 @@ function setupEventListeners() {
 	const refreshBtn = document.getElementById('refreshBtn');
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', refreshOutputs);
+	}
+	
+	// Cancel button functionality
+	const cancelBibleBtn = document.getElementById('cancelBibleBtn');
+	if (cancelBibleBtn) {
+		cancelBibleBtn.addEventListener('click', async () => {
+			if (!confirm('Are you sure you want to cancel the current job?')) {
+				return;
+			}
+			
+			const success = await cancelCurrentJob();
+			if (success) {
+				updateStatus('⚠️ Job cancelled');
+				createAudioBtn.disabled = false;
+				createAudioBtn.textContent = 'Create Audio';
+				createVideoBtn.disabled = false;
+				createVideoBtn.textContent = 'Create Video';
+				cancelBibleBtn.classList.add('hidden');
+				hideProgress();
+			} else {
+				alert('Failed to cancel job. Please try again.');
+			}
+		});
 	}
 	
 
@@ -335,9 +358,13 @@ async function createAudio() {
 	try {
 		// Disable the create button during processing
 		const createAudioBtn = document.getElementById('createAudioBtn');
+		const cancelBibleBtn = document.getElementById('cancelBibleBtn');
 		if (createAudioBtn) {
 			createAudioBtn.disabled = true;
 			createAudioBtn.textContent = 'Creating...';
+		}
+		if (cancelBibleBtn) {
+			cancelBibleBtn.classList.remove('hidden');
 		}
 		
 		updateStatus('Creating audio...');
@@ -364,9 +391,13 @@ async function createAudio() {
 	} finally {
 		// Re-enable the create button
 		const createAudioBtn = document.getElementById('createAudioBtn');
+		const cancelBibleBtn = document.getElementById('cancelBibleBtn');
 		if (createAudioBtn) {
 			createAudioBtn.disabled = false;
 			createAudioBtn.textContent = 'Create Audio';
+		}
+		if (cancelBibleBtn) {
+			cancelBibleBtn.classList.add('hidden');
 		}
 	}
 }
@@ -464,6 +495,12 @@ function startProgressTracking(jobId) {
 				addProgressLog(`📁 File: ${data.output}`);
 				eventSource.close();
 				
+				// Hide cancel button
+				const cancelBibleBtn = document.getElementById('cancelBibleBtn');
+				if (cancelBibleBtn) {
+					cancelBibleBtn.classList.add('hidden');
+				}
+				
 				// Refresh outputs immediately and hide progress after a delay
 				refreshOutputs(); // Refresh the outputs list immediately
 				setTimeout(() => {
@@ -476,6 +513,12 @@ function startProgressTracking(jobId) {
 				updateProgressBar(0);
 				addProgressLog(`❌ Error: ${data.error}`);
 				eventSource.close();
+				
+				// Hide cancel button
+				const cancelBibleBtn = document.getElementById('cancelBibleBtn');
+				if (cancelBibleBtn) {
+					cancelBibleBtn.classList.add('hidden');
+				}
 				
 				// Hide progress after a delay
 				setTimeout(() => {

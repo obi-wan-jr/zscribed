@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError, cancelCurrentJob } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -148,7 +148,8 @@ function listenToProgress(jobId) {
 				<div class="text-green-400">✅ Audio creation completed!</div>
 			`;
 			ttsBtn.disabled = false;
-			ttsBtn.textContent = 'Convert';
+			ttsBtn.textContent = 'Convert to Audio';
+			cancelTtsBtn.classList.add('hidden');
 			// Refresh outputs list to show new file
 			refreshOutputs();
 		} else if (data.status === 'error') {
@@ -169,13 +170,34 @@ function listenToProgress(jobId) {
 				${troubleshootingHtml}
 			`;
 			ttsBtn.disabled = false;
-			ttsBtn.textContent = 'Convert';
+			ttsBtn.textContent = 'Convert to Audio';
+			cancelTtsBtn.classList.add('hidden');
 		}
 	};
 	return ev;
 }
 
-ttsBtn?.addEventListener('click', async () => {
+	// Cancel button functionality
+	const cancelTtsBtn = document.getElementById('cancelTtsBtn');
+	cancelTtsBtn?.addEventListener('click', async () => {
+		if (!confirm('Are you sure you want to cancel the current job?')) {
+			return;
+		}
+		
+		const success = await cancelCurrentJob();
+		if (success) {
+			ttsProgress.innerHTML = `
+				<div class="text-yellow-400">⚠️ Job cancelled</div>
+			`;
+			ttsBtn.disabled = false;
+			ttsBtn.textContent = 'Convert to Audio';
+			cancelTtsBtn.classList.add('hidden');
+		} else {
+			alert('Failed to cancel job. Please try again.');
+		}
+	});
+
+	ttsBtn?.addEventListener('click', async () => {
 	const user = getActiveUser();
 	const text = textInput.value;
 	const voiceModelId = voiceModel.value;
@@ -195,6 +217,7 @@ ttsBtn?.addEventListener('click', async () => {
 	ttsBtn.disabled = true;
 	ttsBtn.textContent = 'Converting...';
 	ttsProgress.textContent = 'Starting conversion...';
+	cancelTtsBtn.classList.remove('hidden');
 	
 	try {
 		const res = await authenticatedFetch('/api/jobs/tts', {
@@ -227,7 +250,8 @@ ttsBtn?.addEventListener('click', async () => {
 			</div>
 		`;
 		ttsBtn.disabled = false;
-		ttsBtn.textContent = 'Convert';
+		ttsBtn.textContent = 'Convert to Audio';
+		cancelTtsBtn.classList.add('hidden');
 	}
 });
 

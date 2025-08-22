@@ -1420,6 +1420,38 @@ app.post('/api/upload/background', (req, res) => {
 
 
 
+// Cancel current user's job endpoint
+app.post('/api/jobs/cancel-current', (req, res) => {
+	const user = req.user; // from auth middleware
+	
+	// Find the user's active job
+	let userJob = null;
+	for (const [jobId, jobInfo] of activeJobs.entries()) {
+		if (jobInfo.job.user === user) {
+			userJob = { jobId, jobInfo };
+			break;
+		}
+	}
+	
+	if (!userJob) {
+		return res.status(404).json({ error: 'No active job found for current user' });
+	}
+	
+	// Cancel the job
+	activeJobs.delete(userJob.jobId);
+	broadcastLog('info', 'job', `Job ${userJob.jobId} cancelled by user`, `User: ${user}`);
+	
+	// Emit cancellation progress
+	emitProgress(userJob.jobId, { 
+		status: 'cancelled', 
+		message: 'Job cancelled by user' 
+	});
+	
+	logger.log(user, { event: 'job_cancelled', jobId: userJob.jobId });
+	
+	res.json({ success: true, message: 'Current job cancelled successfully' });
+});
+
 // Job recovery and management endpoints
 app.post('/api/jobs/recover', (req, res) => {
 	const { jobId } = req.body || {};

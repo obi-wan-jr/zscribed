@@ -142,6 +142,24 @@ export function handleUnauthorizedError(error) {
 	return false; // Not an unauthorized error
 }
 
+// Cancel current user's job
+export async function cancelCurrentJob() {
+	try {
+		const res = await authenticatedFetch('/api/jobs/cancel-current', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' }
+		});
+		
+		if (!res) return false; // Redirect happened
+		
+		const result = await res.json();
+		return result.success;
+	} catch (error) {
+		console.error('Failed to cancel current job:', error);
+		return false;
+	}
+}
+
 // Enhanced fetch wrapper that handles unauthorized errors
 export async function authenticatedFetch(url, options = {}) {
 	try {
