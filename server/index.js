@@ -1038,7 +1038,7 @@ async function handleBibleTtsJob(job, jobState = {}) {
 	let allText = '';
 	let bibleReference = '';
 	
-	if (type === 'book') {
+			if (type === 'book') {
 		// Handle entire book
 		const maxChapters = getMaxChapters(book);
 		broadcastLog('info', 'audio', `Processing entire book: ${book}`, `Job: ${job.id}, Chapters: 1-${maxChapters}`);
@@ -1051,7 +1051,8 @@ async function handleBibleTtsJob(job, jobState = {}) {
 			broadcastLog('debug', 'audio', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 			const rawText = await fetchBibleText({ translation, book, chapter: ch });
 			const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-			allText += cleanedText + '\n\n';
+			// Add book name and chapter number at the beginning of each chapter
+			allText += `${book}, Chapter ${ch}.\n${cleanedText}\n\n`;
 		}
 		bibleReference = `${book}-entire`;
 	} else if (type === 'chapters' && chapters) {
@@ -1072,7 +1073,8 @@ async function handleBibleTtsJob(job, jobState = {}) {
 						broadcastLog('debug', 'audio', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 						const rawText = await fetchBibleText({ translation, book, chapter: ch });
 						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-						allText += cleanedText + '\n\n';
+						// Add book name and chapter number at the beginning of each chapter
+						allText += `${book}, Chapter ${ch}.\n${cleanedText}\n\n`;
 					}
 				}
 			} else {
@@ -1083,7 +1085,8 @@ async function handleBibleTtsJob(job, jobState = {}) {
 						broadcastLog('debug', 'audio', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 						const rawText = await fetchBibleText({ translation, book, chapter: ch });
 						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-						allText += cleanedText + '\n\n';
+						// Add book name and chapter number at the beginning of each chapter
+						allText += `${book}, Chapter ${ch}.\n${cleanedText}\n\n`;
 					}
 				}
 			}
@@ -1093,7 +1096,9 @@ async function handleBibleTtsJob(job, jobState = {}) {
 		// Handle single chapter (original logic)
 		const verses = parseVerseRanges(String(verseRanges || ''));
 		const raw = await fetchBibleText({ translation, book, chapter, verses });
-		allText = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		const cleanedText = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		// Add book name and chapter number at the beginning
+		allText = `${book}, Chapter ${chapter}.\n${cleanedText}`;
 		bibleReference = `${book}-${chapter}-${verses.join('-')}`;
 	}
 	
@@ -1133,7 +1138,8 @@ async function handleBibleVideoJob(job, jobState = {}) {
 			broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 			const rawText = await fetchBibleText({ translation, book, chapter: ch });
 			const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-			allText += cleanedText + '\n\n';
+			// Add book name and chapter number at the beginning of each chapter
+			allText += `${book}, Chapter ${ch}.\n${cleanedText}\n\n`;
 		}
 		bibleReference = `${book}-entire`;
 	} else if (type === 'chapters' && chapters) {
@@ -1155,20 +1161,22 @@ async function handleBibleVideoJob(job, jobState = {}) {
 						broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 						const rawText = await fetchBibleText({ translation, book, chapter: ch });
 						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-						allText += cleanedText + '\n\n';
+						// Add book name and chapter number at the beginning of each chapter
+						allText += `${book}, Chapter ${ch}.\n${cleanedText}\n\n`;
 					}
 				}
 			} else {
-				const ch = parseInt(range);
-				if (!isNaN(ch)) {
-					const chapterValidation = validateChapter(book, ch);
-					if (chapterValidation.valid) {
-						broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
-						const rawText = await fetchBibleText({ translation, book, chapter: ch });
-						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-						allText += cleanedText + '\n\n';
+									const ch = parseInt(range);
+					if (!isNaN(ch)) {
+						const chapterValidation = validateChapter(book, ch);
+						if (chapterValidation.valid) {
+							broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
+							const rawText = await fetchBibleText({ translation, book, chapter: ch });
+							const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+							// Add book name and chapter number at the beginning of each chapter
+							allText += `${book}, Chapter ${ch}.\n${cleanedText}\n\n`;
+						}
 					}
-				}
 			}
 		}
 		bibleReference = `${book}-${chapters}`;
@@ -1176,7 +1184,9 @@ async function handleBibleVideoJob(job, jobState = {}) {
 		// Handle single chapter (original logic)
 		const verses = parseVerseRanges(String(verseRanges || ''));
 		const raw = await fetchBibleText({ translation, book, chapter, verses });
-		allText = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		const cleanedText = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		// Add book name and chapter number at the beginning
+		allText = `${book}, Chapter ${chapter}.\n${cleanedText}`;
 		bibleReference = `${book}-${chapter}-${verses.join('-')}`;
 	}
 	
