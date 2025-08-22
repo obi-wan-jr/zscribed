@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import { v4 as uuidv4 } from 'uuid';
 import { spawn } from 'child_process';
 import { loadConfig, saveConfig } from './config.js';
+import { VideoGenerator } from './videoGenerator.js';
 import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
 import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testLocalBibleConnection, BIBLE_BOOKS, validateChapter, validateVerseRanges } from './bible/localBibleProvider.js';
