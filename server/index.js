@@ -964,7 +964,12 @@ async function createVideoFromAudio(audioFile, videoSettings, jobId) {
 
 
 async function handleBibleTtsJob(job, jobState = {}) {
-	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '' } = job.payload;
+	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '' } = job.payload || job.data || {};
+	
+	// Validate required parameters
+	if (!book) {
+		throw new Error('Book parameter is required for Bible transcription');
+	}
 	
 	broadcastLog('info', 'audio', `Starting Bible TTS job`, `Job: ${job.id}, Book: ${book}, Type: ${type}, Voice: ${voiceModelId}`);
 	
@@ -1000,8 +1005,8 @@ async function handleBibleTtsJob(job, jobState = {}) {
 					format,
 					sentencesPerChunk,
 					bibleReference: `${book}-${ch}`,
-					createVideo: job.data?.createVideo || false,
-					videoSettings: job.data?.videoSettings || null
+					createVideo: job.payload?.createVideo || false,
+					videoSettings: job.payload?.videoSettings || null
 				}
 			};
 			
@@ -1084,8 +1089,8 @@ async function handleBibleTtsJob(job, jobState = {}) {
 									format,
 									sentencesPerChunk,
 									bibleReference: `${book}-${ch}`,
-									createVideo: job.data?.createVideo || false,
-									videoSettings: job.data?.videoSettings || null
+														createVideo: job.payload?.createVideo || false,
+					videoSettings: job.payload?.videoSettings || null
 								}
 							};
 						
@@ -1129,7 +1134,12 @@ async function handleBibleTtsJob(job, jobState = {}) {
 }
 
 async function handleBibleVideoJob(job, jobState = {}) {
-	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '', videoSettings } = job.payload;
+	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '', videoSettings } = job.payload || job.data || {};
+	
+	// Validate required parameters
+	if (!book) {
+		throw new Error('Book parameter is required for Bible video creation');
+	}
 	
 	broadcastLog('info', 'video', `Starting Bible video job`, `Job: ${job.id}, Book: ${book}, Type: ${type}, Voice: ${voiceModelId}`);
 	
