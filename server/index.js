@@ -716,7 +716,7 @@ app.post('/api/jobs/bible', (req, res) => {
 	const id = uuidv4();
 	const user = req.user; // from auth middleware
 	const payload = {
-		translation: req.body?.translation || 'WEB',
+		translation: req.body?.translation || 'web',
 		book: req.body?.book || 'John',
 		chapter: Number(req.body?.chapter || 1),
 		verseRanges: req.body?.verseRanges || '',
