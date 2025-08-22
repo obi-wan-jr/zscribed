@@ -416,11 +416,11 @@ function startProgressTracking(jobId) {
 				addProgressLog(`📁 File: ${data.output}`);
 				eventSource.close();
 				
-				// Hide progress after a delay
+				// Refresh outputs immediately and hide progress after a delay
+				refreshOutputs(); // Refresh the outputs list immediately
 				setTimeout(() => {
 					hideProgress();
 					updateStatus(`✅ Audio creation completed! File: ${data.output}`);
-					refreshOutputs(); // Refresh the outputs list
 				}, 3000);
 			} else if (data.status === 'error') {
 				clearInterval(fallbackInterval);
@@ -512,6 +512,20 @@ async function previewText() {
 
 async function refreshOutputs() {
 	try {
+		// Show refresh indicator
+		const refreshBtn = document.getElementById('refreshBtn');
+		if (refreshBtn) {
+			const originalText = refreshBtn.textContent;
+			refreshBtn.textContent = 'Refreshing...';
+			refreshBtn.disabled = true;
+			
+			// Reset button after a short delay
+			setTimeout(() => {
+				refreshBtn.textContent = originalText;
+				refreshBtn.disabled = false;
+			}, 1000);
+		}
+		
 		const res = await authenticatedFetch('/api/outputs');
 		if (!res) return;
 		
