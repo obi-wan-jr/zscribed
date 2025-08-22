@@ -1105,22 +1105,22 @@ async function handleBibleTtsJob(job, jobState = {}) {
 						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
 						const chapterText = `${book}, Chapter ${ch}.\n${cleanedText}`;
 						
-						// Create separate job for each chapter
-						const chapterJobId = uuidv4();
-						const chapterJob = {
-							id: chapterJobId,
-							type: job.type,
-							user: job.user,
-							payload: {
-								text: chapterText,
-								voiceModelId,
-								format,
-								sentencesPerChunk,
-								bibleReference: `${book}-${ch}`,
-								createVideo: job.payload?.createVideo || false,
-								videoSettings: job.payload?.videoSettings || null
-							}
-						};
+									// Create separate TTS job for each chapter
+			const chapterJobId = uuidv4();
+			const chapterJob = {
+				id: chapterJobId,
+				type: 'tts',
+				user: job.user,
+				data: {
+					text: chapterText,
+					voiceModelId,
+					format,
+					sentencesPerChunk,
+					bibleReference: `${book}-${ch}`,
+					createVideo: job.payload?.createVideo || false,
+					videoSettings: job.payload?.videoSettings || null
+				}
+			};
 						
 						// Add chapter job to queue
 						jobQueue.push(chapterJob);
@@ -1218,13 +1218,13 @@ async function handleBibleVideoJob(job, jobState = {}) {
 			const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
 			const chapterText = `${book}, Chapter ${ch}.\n${cleanedText}`;
 			
-			// Create separate video job for each chapter
+			// Create separate TTS job for each chapter with video creation
 			const chapterJobId = uuidv4();
 			const chapterJob = {
 				id: chapterJobId,
-				type: 'bible-video',
+				type: 'tts',
 				user: job.user,
-				payload: {
+				data: {
 					text: chapterText,
 					voiceModelId,
 					format,
