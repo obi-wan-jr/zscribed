@@ -621,13 +621,32 @@ function recoverInterruptedJobs() {
 		if (oldJobs.length > 0) {
 			broadcastLog('warning', 'system', `Found ${oldJobs.length} old jobs from previous session, removing them`);
 			
-			// Remove old jobs
+			// Remove old jobs and their states
 			jobQueue.splice(0, jobQueue.length, ...jobQueue.filter(job => (now - job.createdAt) <= maxJobAge));
-			saveQueue();
 			
+			// Clear job states for old jobs
 			for (const job of oldJobs) {
+				jobStates.delete(job.id);
 				broadcastLog('info', 'system', `Removed old job ${job.id}`, `User: ${job.user}, Age: ${Math.round((now - job.createdAt) / (60 * 60 * 1000))}h`);
 			}
+			
+			saveQueue();
+		}
+		
+		// Also clear any job states that are older than 24 hours
+		const oldJobStates = [];
+		for (const [jobId, state] of jobStates.entries()) {
+			if (state.startTime && (now - state.startTime) > maxJobAge) {
+				oldJobStates.push(jobId);
+			}
+		}
+		
+		if (oldJobStates.length > 0) {
+			broadcastLog('warning', 'system', `Found ${oldJobStates.length} old job states, clearing them`);
+			for (const jobId of oldJobStates) {
+				jobStates.delete(jobId);
+			}
+			saveQueue();
 		}
 		
 		broadcastLog('info', 'system', `Job recovery completed`, `Queue: ${jobQueue.length} jobs, Active: ${activeJobs.size} jobs`);
@@ -1473,6 +1492,30 @@ app.post('/api/jobs/cancel-current', (req, res) => {
 	logger.log(user, { event: 'job_cancelled', jobId: userJob.jobId });
 	
 	res.json({ success: true, message: 'Current job cancelled successfully' });
+});
+
+// Clear all job states endpoint
+app.post('/api/jobs/clear-all', (req, res) => {
+	try {
+		// Clear all job states
+		jobStates.clear();
+		
+		// Clear all active jobs
+		activeJobs.clear();
+		
+		// Clear job queue
+		jobQueue.splice(0, jobQueue.length);
+		
+		// Save empty state
+		saveQueue();
+		
+		broadcastLog('info', 'system', 'All jobs and job states cleared manually');
+		
+		res.json({ success: true, message: 'All jobs and job states cleared successfully' });
+	} catch (error) {
+		console.error('Error clearing jobs:', error);
+		res.status(500).json({ error: 'Failed to clear jobs' });
+	}
 });
 
 // Job recovery and management endpoints
