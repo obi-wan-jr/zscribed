@@ -1,4 +1,4 @@
-import { getActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError, fetchUserJobs, displayActiveJobs } from './common.js';
+import { getActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
 // Bible audio creation functionality
 let currentMode = 'book';
@@ -23,14 +23,12 @@ function init() {
 	// Load outputs
 	refreshOutputs();
 	
-	// Load jobs
-	refreshJobs();
+
 	
 	// Set initial state
 	selectMode('book');
 	
-	// Auto-refresh jobs every 10 seconds
-	setInterval(refreshJobs, 10000);
+
 }
 
 function setupEventListeners() {
@@ -105,11 +103,7 @@ function setupEventListeners() {
 		refreshBtn.addEventListener('click', refreshOutputs);
 	}
 	
-	// Refresh jobs button
-	const refreshJobsBtn = document.getElementById('refreshJobsBtn');
-	if (refreshJobsBtn) {
-		refreshJobsBtn.addEventListener('click', refreshJobs);
-	}
+
 }
 
 function selectMode(mode) {
@@ -625,17 +619,7 @@ async function refreshOutputs() {
 	}
 }
 
-async function refreshJobs() {
-	try {
-		const jobsData = await fetchUserJobs();
-		if (jobsData) {
-			displayActiveJobs(jobsData);
-		}
-	} catch (e) {
-		if (handleUnauthorizedError(e)) return; // Redirect happened
-		console.error('Failed to load jobs:', e);
-	}
-}
+
 
 // Global functions for file operations
 window.renameFile = async (oldName) => {

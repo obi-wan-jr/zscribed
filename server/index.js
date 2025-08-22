@@ -1418,69 +1418,7 @@ app.post('/api/upload/background', (req, res) => {
 	}
 });
 
-// Job management endpoints
-app.post('/api/jobs/cancel', (req, res) => {
-	const { jobId } = req.body || {};
-	const user = req.user; // from auth middleware
-	
-	if (!jobId) {
-		return res.status(400).json({ error: 'Job ID required' });
-	}
-	
-	// Check if job exists and belongs to user
-	const jobInfo = activeJobs.get(jobId);
-	if (!jobInfo) {
-		return res.status(404).json({ error: 'Job not found or not active' });
-	}
-	
-	if (jobInfo.job.user !== user) {
-		return res.status(403).json({ error: 'Cannot cancel another user\'s job' });
-	}
-	
-	// Cancel the job
-	activeJobs.delete(jobId);
-	broadcastLog('info', 'job', `Job ${jobId} cancelled by user`, `User: ${user}`);
-	
-	// Emit cancellation progress
-	emitProgress(jobId, { 
-		status: 'cancelled', 
-		message: 'Job cancelled by user' 
-	});
-	
-	logger.log(user, { event: 'job_cancelled', jobId });
-	
-	res.json({ success: true, message: 'Job cancelled successfully' });
-});
 
-app.get('/api/jobs/my', (req, res) => {
-	const user = req.user; // from auth middleware
-	
-	// Get user's active jobs
-	const userActiveJobs = Array.from(activeJobs.values())
-		.filter(jobInfo => jobInfo.job.user === user)
-		.map(jobInfo => ({
-			id: jobInfo.job.id,
-			type: jobInfo.job.type,
-			startTime: jobInfo.startTime,
-			duration: Math.round((Date.now() - jobInfo.startTime) / 1000),
-			status: jobInfo.status
-		}));
-	
-	// Get user's pending jobs
-	const userPendingJobs = jobQueue
-		.filter(job => job.user === user)
-		.map(job => ({
-			id: job.id,
-			type: job.type,
-			createdAt: job.createdAt,
-			queuePosition: jobQueue.findIndex(j => j.id === job.id) + 1
-		}));
-	
-	res.json({
-		active: userActiveJobs,
-		pending: userPendingJobs
-	});
-});
 
 // Job recovery and management endpoints
 app.post('/api/jobs/recover', (req, res) => {
