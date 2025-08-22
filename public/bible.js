@@ -51,6 +51,24 @@ function setupEventListeners() {
 		createAudioBtn.addEventListener('click', createAudio);
 	}
 	
+	// Create video button
+	const createVideoBtn = document.getElementById('createVideoBtn');
+	if (createVideoBtn) {
+		createVideoBtn.addEventListener('click', createVideo);
+	}
+	
+	// Video creation options
+	const createVideoCheckbox = document.getElementById('createVideo');
+	if (createVideoCheckbox) {
+		createVideoCheckbox.addEventListener('change', toggleVideoOptions);
+	}
+	
+	// Background type selector
+	const backgroundType = document.getElementById('backgroundType');
+	if (backgroundType) {
+		backgroundType.addEventListener('change', toggleBackgroundUpload);
+	}
+	
 	// Refresh button
 	const refreshBtn = document.getElementById('refreshBtn');
 	if (refreshBtn) {
@@ -512,30 +530,15 @@ async function previewText() {
 
 async function refreshOutputs() {
 	try {
-		// Show refresh indicator
-		const refreshBtn = document.getElementById('refreshBtn');
-		if (refreshBtn) {
-			const originalText = refreshBtn.textContent;
-			refreshBtn.textContent = 'Refreshing...';
-			refreshBtn.disabled = true;
-			
-			// Reset button after a short delay
-			setTimeout(() => {
-				refreshBtn.textContent = originalText;
-				refreshBtn.disabled = false;
-			}, 1000);
-		}
-		
 		const res = await authenticatedFetch('/api/outputs');
-		if (!res) return;
+		if (!res) return; // Redirect happened
 		
 		const data = await res.json();
 		const outputsList = document.getElementById('outputsList');
 		if (!outputsList) return;
 		
 		outputsList.innerHTML = '';
-		
-		for (const file of data.files || []) {
+		for (const f of data.files || []) {
 			const div = document.createElement('div');
 			div.className = 'p-4 bg-[#0a0f1a] rounded border border-slate-600 space-y-3';
 			
@@ -550,14 +553,14 @@ async function refreshOutputs() {
 						</svg>
 					</div>
 					<div>
-						<div class="text-indigo-300 font-medium">${file.name.replace(/\.[^/.]+$/, '')}</div>
+						<div class="text-indigo-300 font-medium">${f.name.replace(/\.[^/.]+$/, '')}</div>
 						<div class="text-xs text-slate-400">Click play to listen</div>
 					</div>
 				</div>
 				<div class="flex gap-2">
-					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${file.name}')">Delete</button>
-					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${file.name}')">Rename</button>
-					<button class="px-2 py-1 text-xs bg-green-600 hover:bg-green-500 rounded" onclick="downloadFile('${file.url}', '${file.name}')">Download</button>
+					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${f.name}')">Delete</button>
+					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${f.name}')">Rename</button>
+					<button class="px-2 py-1 text-xs bg-green-600 hover:bg-green-500 rounded" onclick="downloadFile('${f.url}', '${f.name}')">Download</button>
 				</div>
 			`;
 			
@@ -566,7 +569,7 @@ async function refreshOutputs() {
 			audioDiv.className = 'w-full';
 			audioDiv.innerHTML = `
 				<audio controls class="w-full" style="height: 40px;">
-					<source src="${file.url}" type="audio/mpeg">
+					<source src="${f.url}" type="audio/mpeg">
 					Your browser does not support the audio element.
 				</audio>
 			`;
@@ -576,7 +579,7 @@ async function refreshOutputs() {
 			outputsList.appendChild(div);
 		}
 	} catch (e) {
-		if (handleUnauthorizedError(e)) return;
+		if (handleUnauthorizedError(e)) return; // Redirect happened
 		console.error('Failed to load outputs:', e);
 	}
 }
@@ -646,3 +649,99 @@ window.downloadFile = async (url, filename) => {
 		}
 	}
 };
+
+// Video creation functions
+function toggleVideoOptions() {
+	const createVideoCheckbox = document.getElementById('createVideo');
+	const videoOptions = document.getElementById('videoOptions');
+	const createVideoBtn = document.getElementById('createVideoBtn');
+	
+	if (createVideoCheckbox.checked) {
+		videoOptions.classList.remove('hidden');
+		createVideoBtn.classList.remove('hidden');
+	} else {
+		videoOptions.classList.add('hidden');
+		createVideoBtn.classList.add('hidden');
+	}
+}
+
+function toggleBackgroundUpload() {
+	const backgroundType = document.getElementById('backgroundType');
+	const imageUploadSection = document.getElementById('imageUploadSection');
+	const videoUploadSection = document.getElementById('videoUploadSection');
+	
+	if (backgroundType.value === 'image') {
+		imageUploadSection.classList.remove('hidden');
+		videoUploadSection.classList.add('hidden');
+	} else {
+		imageUploadSection.classList.add('hidden');
+		videoUploadSection.classList.remove('hidden');
+	}
+}
+
+async function createVideo() {
+	if (!validateSelection()) return;
+	
+	const createVideoCheckbox = document.getElementById('createVideo');
+	if (!createVideoCheckbox.checked) {
+		alert('Please enable video creation first');
+		return;
+	}
+	
+	const backgroundType = document.getElementById('backgroundType').value;
+	const videoResolution = document.getElementById('videoResolution').value;
+	
+	// Check if background file is uploaded
+	let backgroundFile = null;
+	if (backgroundType === 'image') {
+		const imageInput = document.getElementById('backgroundImage');
+		backgroundFile = imageInput.files[0];
+		if (!backgroundFile) {
+			alert('Please upload a background image');
+			return;
+		}
+	} else {
+		const videoInput = document.getElementById('backgroundVideo');
+		backgroundFile = videoInput.files[0];
+		if (!backgroundFile) {
+			alert('Please upload a background video');
+			return;
+		}
+	}
+	
+	updateStatus('Creating video...');
+	showProgress();
+	updateProgressStatus('Initializing video creation...');
+	
+	try {
+		// First create the audio
+		const audioData = buildRequestData();
+		const audioRes = await authenticatedFetch('/api/jobs/bible', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				...audioData,
+				voiceModelId: document.getElementById('voiceModel').value,
+				createVideo: true,
+				videoSettings: {
+					backgroundType,
+					videoResolution,
+					backgroundFile: backgroundFile.name
+				}
+			})
+		});
+		
+		if (!audioRes) return;
+		
+		const result = await audioRes.json();
+		if (result.error) throw new Error(result.error);
+		
+		updateStatus(`Video creation started! Job ID: ${result.id}`);
+		startProgressTracking(result.id);
+		
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return;
+		updateStatus(`Error: ${error.message}`);
+		hideProgress();
+	}
+}
