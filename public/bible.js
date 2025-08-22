@@ -159,20 +159,15 @@ function setupAllChaptersButton() {
 		
 		const maxChapters = getMaxChapters(selectedBook);
 		
-		// Add debugging and use multiple attempts to access the element
-		console.log('Setting chapter range for book:', selectedBook, 'maxChapters:', maxChapters);
-		
 		const setChapterRange = () => {
 			const chaptersRangeInput = document.getElementById('chaptersRange');
-			console.log('Looking for chaptersRange element:', chaptersRangeInput);
 			
 			if (chaptersRangeInput) {
-				console.log('Found chaptersRange element, setting value');
 				chaptersRangeInput.value = `1-${maxChapters}`;
 				updateStatus(`Set chapter range to 1-${maxChapters} for ${selectedBook}`);
 				return true;
 			} else {
-				console.error('Chapters range input not found, element is null');
+				console.error('Chapters range input not found');
 				return false;
 			}
 		};
@@ -302,9 +297,6 @@ async function createAudio() {
 		
 		if (response.ok) {
 			const result = await response.json();
-			console.log('Bible job response:', result);
-			console.log('Result id:', result.id);
-			console.log('Result jobId:', result.jobId);
 			updateStatus(`Audio creation started! Job ID: ${result.id}`);
 		} else {
 			const error = await response.text();
