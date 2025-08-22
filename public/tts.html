@@ -42,6 +42,15 @@
 			
 			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
 				<div class="flex items-center justify-between mb-4">
+					<h2 class="text-lg font-medium text-indigo-200">Active Jobs</h2>
+					<button id="refreshJobsBtn" class="px-3 py-2 rounded bg-slate-600 hover:bg-slate-500">Refresh</button>
+				</div>
+				<div id="activeJobsList" class="space-y-2"></div>
+				<div id="jobsStatus" class="mt-4 text-sm text-slate-400"></div>
+			</section>
+			
+			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
+				<div class="flex items-center justify-between mb-4">
 					<h2 class="text-lg font-medium text-indigo-200">Generated Outputs</h2>
 					<button id="refreshOutputsBtn" class="px-3 py-2 rounded bg-slate-600 hover:bg-slate-500">Refresh</button>
 				</div>

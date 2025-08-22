@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError, fetchUserJobs, displayActiveJobs } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -32,8 +32,14 @@ async function init() {
 	// Load outputs
 	refreshOutputs();
 	
+	// Load jobs
+	refreshJobs();
+	
 	// Start polling queue status
 	setInterval(pollQueueStatus, 2000);
+	
+	// Auto-refresh jobs every 10 seconds
+	setInterval(refreshJobs, 10000);
 }
 
 async function loadVoiceModels() {
@@ -120,6 +126,18 @@ async function pollQueueStatus() {
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
 		// Silently ignore other errors for queue status
+	}
+}
+
+async function refreshJobs() {
+	try {
+		const jobsData = await fetchUserJobs();
+		if (jobsData) {
+			displayActiveJobs(jobsData);
+		}
+	} catch (e) {
+		if (handleUnauthorizedError(e)) return; // Redirect happened
+		console.error('Failed to load jobs:', e);
 	}
 }
 
@@ -232,6 +250,12 @@ ttsBtn?.addEventListener('click', async () => {
 });
 
 refreshOutputsBtn?.addEventListener('click', refreshOutputs);
+
+// Refresh jobs button
+const refreshJobsBtn = document.getElementById('refreshJobsBtn');
+if (refreshJobsBtn) {
+	refreshJobsBtn.addEventListener('click', refreshJobs);
+}
 
 // Global functions for file operations
 window.renameFile = async (oldName) => {
