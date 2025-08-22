@@ -555,8 +555,8 @@ async function refreshOutputs() {
 					</div>
 				</div>
 				<div class="flex gap-2">
-					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${file.name}')">Rename</button>
 					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${file.name}')">Delete</button>
+					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${file.name}')">Rename</button>
 					<button class="px-2 py-1 text-xs bg-green-600 hover:bg-green-500 rounded" onclick="downloadFile('${file.url}', '${file.name}')">Download</button>
 				</div>
 			`;
@@ -615,11 +615,27 @@ window.deleteFile = async (name) => {
 	}
 };
 
-window.downloadFile = (url, filename) => {
+window.downloadFile = async (url, filename) => {
 	const link = document.createElement('a');
 	link.href = url;
 	link.download = filename;
 	document.body.appendChild(link);
 	link.click();
 	document.body.removeChild(link);
+	
+	// Ask user if they want to delete the file after download
+	const shouldDelete = confirm(`File "${filename.replace(/\.[^/.]+$/, '')}" has been downloaded. Would you like to delete it from the server?`);
+	if (shouldDelete) {
+		try {
+			const res = await authenticatedFetch('/api/outputs/delete', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name: filename })
+			});
+			if (res) refreshOutputs();
+		} catch (e) {
+			if (handleUnauthorizedError(e)) return;
+			alert('Failed to delete file');
+		}
+	}
 };
