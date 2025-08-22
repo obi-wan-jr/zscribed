@@ -831,7 +831,7 @@ async function processTTSJob(job, jobState = {}) {
 	const segmentFiles = [];
 	
 	try {
-		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3, bibleReference = null } = job.data;
+		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3, bibleReference = null } = job.payload || job.data || {};
 		const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
 		
 		// Check for checkpoint to resume from
@@ -868,7 +868,7 @@ async function processTTSJob(job, jobState = {}) {
 			jobId: job.id, 
 			format,
 			user: job.user,
-			voiceModelId: job.data.voiceModelId,
+			voiceModelId: (job.payload || job.data || {}).voiceModelId,
 			bibleReference
 		});
 		
@@ -878,12 +878,13 @@ async function processTTSJob(job, jobState = {}) {
 		await cleanupSegmentFiles(segmentFiles);
 		
 		// Check if video creation is requested
-		if (job.data.createVideo && job.data.videoSettings) {
+		const jobData = job.payload || job.data || {};
+		if (jobData.createVideo && jobData.videoSettings) {
 			broadcastLog('info', 'video', `Starting video creation`, `Job: ${job.id}, Audio: ${path.basename(stitched)}`);
 			emitProgress(job.id, { status: 'progress', step: 'video', message: 'Creating video with audio...' });
 			
 			try {
-				const videoOutput = await createVideoFromAudio(stitched, job.data.videoSettings, job.id);
+				const videoOutput = await createVideoFromAudio(stitched, jobData.videoSettings, job.id);
 				broadcastLog('success', 'video', `Video creation completed`, `Job: ${job.id}, File: ${path.basename(videoOutput)}`);
 				emitProgress(job.id, { status: 'completed', output: videoOutput.replace(OUTPUTS_DIR, '/outputs') });
 			} catch (videoError) {
@@ -1050,7 +1051,7 @@ async function handleBibleTtsJob(job, jobState = {}) {
 				id: chapterJobId,
 				type: 'tts',
 				user: job.user,
-				data: {
+				payload: {
 					text: chapterText,
 					voiceModelId,
 					format,
@@ -1123,7 +1124,7 @@ async function handleBibleTtsJob(job, jobState = {}) {
 	await processTTSJob({ 
 		id: job.id, 
 		user: job.user, 
-		data: { 
+		payload: { 
 			text: allText, 
 			voiceModelId, 
 			format, 
