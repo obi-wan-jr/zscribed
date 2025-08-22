@@ -20,12 +20,12 @@ export class VideoGenerator {
 		broadcastLog('info', 'video', `Starting video generation with ${backgroundType}`, `Job: ${jobId}`);
 		
 		try {
-			// Try multiple approaches in order of preference
-			const approaches = [
-				() => this.createVideoWithFluentFFmpeg(audioFile, videoSettings, jobId, broadcastLog),
-				() => this.createVideoWithCanvas(audioFile, videoSettings, jobId, broadcastLog),
-				() => this.createVideoWithNativeFFmpeg(audioFile, videoSettings, jobId, broadcastLog)
-			];
+					// Try multiple approaches in order of preference
+		const approaches = [
+			() => this.createVideoWithNativeFFmpeg(audioFile, videoSettings, jobId, broadcastLog),
+			() => this.createVideoWithFluentFFmpeg(audioFile, videoSettings, jobId, broadcastLog),
+			() => this.createVideoWithCanvas(audioFile, videoSettings, jobId, broadcastLog)
+		];
 
 			for (let i = 0; i < approaches.length; i++) {
 				try {
