@@ -518,9 +518,8 @@ async function previewText() {
 		const result = await res.json();
 		if (result.error) throw new Error(result.error);
 		
-		// Show preview in status area
-		const preview = result.text.substring(0, 500) + (result.text.length > 500 ? '...' : '');
-		updateStatus(`Preview: ${preview}`);
+		// Show full text in status area
+		updateStatus(`Full Text (${result.text.length} characters): ${result.text}`);
 		
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return;

@@ -1319,7 +1319,17 @@ app.post('/api/outputs/delete', (req, res) => {
 
 // File upload for video backgrounds
 app.post('/api/upload/background', (req, res) => {
+	console.log('[Upload] Background upload request received');
+	console.log('[Upload] Headers:', req.headers);
+	console.log('[Upload] Body keys:', Object.keys(req.body || {}));
+	
 	const user = req.user; // from auth middleware
+	console.log('[Upload] User:', user);
+	
+	if (!user) {
+		console.log('[Upload] No user found, returning 401');
+		return res.status(401).json({ error: 'Authentication required' });
+	}
 	
 	// Ensure uploads directory exists
 	const uploadsDir = path.join(STORAGE_DIR, 'uploads');
@@ -1332,6 +1342,7 @@ app.post('/api/upload/background', (req, res) => {
 	const { file, filename, fileType } = req.body || {};
 	
 	if (!file || !filename) {
+		console.log('[Upload] Missing file data');
 		return res.status(400).json({ error: 'Missing file data' });
 	}
 	
@@ -1343,10 +1354,12 @@ app.post('/api/upload/background', (req, res) => {
 		// Write file
 		fs.writeFileSync(filePath, fileData);
 		
+		console.log('[Upload] File saved successfully:', filename);
 		broadcastLog('info', 'upload', `Background file uploaded`, `User: ${user}, File: ${filename}`);
 		
 		res.json({ success: true, filename });
 	} catch (error) {
+		console.log('[Upload] Error saving file:', error.message);
 		broadcastLog('error', 'upload', `Upload failed`, `User: ${user}, File: ${filename}, Error: ${error.message}`);
 		res.status(500).json({ error: error.message });
 	}
