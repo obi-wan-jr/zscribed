@@ -82,6 +82,51 @@ function getMaxChapters(book) {
 let config = loadConfig(ROOT);
 const logger = new UserLogger(LOGS_DIR);
 
+// Logging system - initialize before TTS service
+const logSubscribers = new Map();
+const recentLogs = [];
+const MAX_RECENT_LOGS = 100;
+
+function broadcastLog(level, category, message, details = null) {
+	const logEntry = {
+		timestamp: new Date().toISOString(),
+		level,
+		category,
+		message,
+		details
+	};
+
+	// Add to recent logs
+	recentLogs.unshift(logEntry);
+	if (recentLogs.length > MAX_RECENT_LOGS) {
+		recentLogs.pop();
+	}
+
+	// Broadcast to all connected clients
+	const logData = `data: ${JSON.stringify(logEntry)}\n\n`;
+	logSubscribers.forEach((res) => {
+		try {
+			res.write(logData);
+		} catch (error) {
+			// Client disconnected, will be cleaned up on next iteration
+		}
+	});
+
+	// Also log to console for debugging
+	console.log(`[${level.toUpperCase()}] [${category}] ${message}${details ? ` - ${details}` : ''}`);
+}
+
+function sendRecentLogs(res) {
+	recentLogs.forEach(logEntry => {
+		const logData = `data: ${JSON.stringify(logEntry)}\n\n`;
+		try {
+			res.write(logData);
+		} catch (error) {
+			// Client disconnected
+		}
+	});
+}
+
 // Initialize TTS service with error handling
 let ttsService = null;
 try {
@@ -418,51 +463,6 @@ function emitProgress(jobId, data) {
 // In-memory queue with persistence
 const jobQueue = [];
 let isProcessing = false;
-
-// Logging system
-const logSubscribers = new Map();
-const recentLogs = [];
-const MAX_RECENT_LOGS = 100;
-
-function broadcastLog(level, category, message, details = null) {
-	const logEntry = {
-		timestamp: new Date().toISOString(),
-		level,
-		category,
-		message,
-		details
-	};
-
-	// Add to recent logs
-	recentLogs.unshift(logEntry);
-	if (recentLogs.length > MAX_RECENT_LOGS) {
-		recentLogs.pop();
-	}
-
-	// Broadcast to all connected clients
-	const logData = `data: ${JSON.stringify(logEntry)}\n\n`;
-	logSubscribers.forEach((res) => {
-		try {
-			res.write(logData);
-		} catch (error) {
-			// Client disconnected, will be cleaned up on next iteration
-		}
-	});
-
-	// Also log to console for debugging
-	console.log(`[${level.toUpperCase()}] [${category}] ${message}${details ? ` - ${details}` : ''}`);
-}
-
-function sendRecentLogs(res) {
-	recentLogs.forEach(logEntry => {
-		const logData = `data: ${JSON.stringify(logEntry)}\n\n`;
-		try {
-			res.write(logData);
-		} catch (error) {
-			// Client disconnected
-		}
-	});
-}
 
 function saveQueue() {
 	try {
