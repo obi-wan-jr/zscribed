@@ -285,6 +285,13 @@ async function createAudio() {
 	};
 	
 	try {
+		// Disable the create button during processing
+		const createAudioBtn = document.getElementById('createAudioBtn');
+		if (createAudioBtn) {
+			createAudioBtn.disabled = true;
+			createAudioBtn.textContent = 'Creating...';
+		}
+		
 		updateStatus('Creating audio...');
 		
 		const response = await authenticatedFetch('/api/jobs/bible', {
@@ -298,6 +305,7 @@ async function createAudio() {
 		if (response.ok) {
 			const result = await response.json();
 			updateStatus(`Audio creation started! Job ID: ${result.id}`);
+			startProgressTracking(result.id);
 		} else {
 			const error = await response.text();
 			updateStatus(`Error: ${error}`);
@@ -305,6 +313,13 @@ async function createAudio() {
 	} catch (error) {
 		console.error('Failed to create audio:', error);
 		updateStatus('Failed to create audio. Please try again.');
+	} finally {
+		// Re-enable the create button
+		const createAudioBtn = document.getElementById('createAudioBtn');
+		if (createAudioBtn) {
+			createAudioBtn.disabled = false;
+			createAudioBtn.textContent = 'Create Audio';
+		}
 	}
 }
 
@@ -313,6 +328,130 @@ function updateStatus(message) {
 	if (statusElement) {
 		statusElement.textContent = message;
 	}
+}
+
+function showProgress() {
+	const progressContainer = document.getElementById('progressContainer');
+	if (progressContainer) {
+		progressContainer.classList.remove('hidden');
+	}
+}
+
+function hideProgress() {
+	const progressContainer = document.getElementById('progressContainer');
+	if (progressContainer) {
+		progressContainer.classList.add('hidden');
+	}
+}
+
+function updateProgressStatus(status) {
+	const progressStatus = document.getElementById('progressStatus');
+	if (progressStatus) {
+		progressStatus.textContent = status;
+	}
+}
+
+function updateProgressBar(percentage) {
+	const progressBar = document.getElementById('progressBar');
+	if (progressBar) {
+		progressBar.style.width = `${percentage}%`;
+	}
+}
+
+function addProgressLog(message) {
+	const progressLog = document.getElementById('progressLog');
+	if (progressLog) {
+		const timestamp = new Date().toLocaleTimeString();
+		const logEntry = document.createElement('div');
+		logEntry.className = 'flex justify-between';
+		logEntry.innerHTML = `
+			<span>${message}</span>
+			<span class="text-slate-500">${timestamp}</span>
+		`;
+		progressLog.appendChild(logEntry);
+		
+		// Auto-scroll to bottom
+		progressLog.scrollTop = progressLog.scrollHeight;
+		
+		// Keep only last 20 entries
+		while (progressLog.children.length > 20) {
+			progressLog.removeChild(progressLog.firstChild);
+		}
+	}
+}
+
+function startProgressTracking(jobId) {
+	showProgress();
+	updateProgressStatus('Starting audio creation...');
+	updateProgressBar(0);
+	addProgressLog(`Job ${jobId} started`);
+	
+	// Fallback progress indicator (in case server doesn't provide detailed progress)
+	let fallbackProgress = 0;
+	const fallbackInterval = setInterval(() => {
+		fallbackProgress += Math.random() * 5; // Random progress increment
+		if (fallbackProgress < 90) { // Don't go to 100% until we get completion
+			updateProgressBar(fallbackProgress);
+			updateProgressStatus('Processing audio...');
+		}
+	}, 2000);
+	
+	// Start polling for progress updates
+	const eventSource = new EventSource(`/api/progress/${jobId}`);
+	
+	eventSource.onmessage = (event) => {
+		try {
+			const data = JSON.parse(event.data);
+			
+			if (data.status === 'progress') {
+				const percentage = Math.round((data.chunk / data.total) * 100);
+				updateProgressStatus(`Processing chunk ${data.chunk}/${data.total}...`);
+				updateProgressBar(percentage);
+				addProgressLog(`Processing chunk ${data.chunk} of ${data.total}`);
+			} else if (data.status === 'completed') {
+				clearInterval(fallbackInterval);
+				updateProgressStatus('Completed!');
+				updateProgressBar(100);
+				addProgressLog(`✅ Audio creation completed successfully`);
+				addProgressLog(`📁 File: ${data.output}`);
+				eventSource.close();
+				
+				// Hide progress after a delay
+				setTimeout(() => {
+					hideProgress();
+					updateStatus(`✅ Audio creation completed! File: ${data.output}`);
+					refreshOutputs(); // Refresh the outputs list
+				}, 3000);
+			} else if (data.status === 'error') {
+				clearInterval(fallbackInterval);
+				updateProgressStatus('Error occurred');
+				updateProgressBar(0);
+				addProgressLog(`❌ Error: ${data.error}`);
+				eventSource.close();
+				
+				// Hide progress after a delay
+				setTimeout(() => {
+					hideProgress();
+					updateStatus(`❌ Error: ${data.error}`);
+				}, 5000);
+			}
+		} catch (error) {
+			console.error('Error parsing progress data:', error);
+			addProgressLog(`⚠️ Error parsing progress update`);
+		}
+	};
+	
+	eventSource.onerror = (error) => {
+		console.error('Progress tracking error:', error);
+		clearInterval(fallbackInterval);
+		addProgressLog(`⚠️ Progress tracking connection lost`);
+		eventSource.close();
+		
+		// Fallback: hide progress after a delay
+		setTimeout(() => {
+			hideProgress();
+		}, 10000);
+	};
 }
 
 function buildRequestData() {

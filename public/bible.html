@@ -186,8 +186,18 @@
 						<button id="createAudioBtn" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-medium">Create Audio</button>
 					</div>
 
-					<!-- Status -->
+					<!-- Status and Progress -->
 					<div id="status" class="text-sm text-slate-300"></div>
+					<div id="progressContainer" class="hidden mt-4 p-4 border border-slate-600 rounded-lg bg-[#0b1020]">
+						<div class="flex items-center justify-between mb-2">
+							<span class="text-sm font-medium text-indigo-300">Processing Audio</span>
+							<span id="progressStatus" class="text-xs text-slate-400">Initializing...</span>
+						</div>
+						<div class="w-full bg-slate-700 rounded-full h-2 mb-2">
+							<div id="progressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+						</div>
+						<div id="progressLog" class="text-xs text-slate-400 max-h-32 overflow-y-auto space-y-1"></div>
+					</div>
 				</div>
 			</section>
 			
