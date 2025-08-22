@@ -633,16 +633,19 @@ function recoverInterruptedJobs() {
 			saveQueue();
 		}
 		
-		// Also clear any job states that are older than 24 hours
+		// Clear any job states that are older than 24 hours OR don't have a corresponding job in the queue
 		const oldJobStates = [];
 		for (const [jobId, state] of jobStates.entries()) {
-			if (state.startTime && (now - state.startTime) > maxJobAge) {
+			const isOld = state.startTime && (now - state.startTime) > maxJobAge;
+			const hasNoJob = !jobQueue.find(job => job.id === jobId);
+			
+			if (isOld || hasNoJob) {
 				oldJobStates.push(jobId);
 			}
 		}
 		
 		if (oldJobStates.length > 0) {
-			broadcastLog('warning', 'system', `Found ${oldJobStates.length} old job states, clearing them`);
+			broadcastLog('warning', 'system', `Found ${oldJobStates.length} orphaned job states, clearing them`);
 			for (const jobId of oldJobStates) {
 				jobStates.delete(jobId);
 			}
