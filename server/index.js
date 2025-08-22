@@ -87,8 +87,10 @@ let ttsService = null;
 try {
 	ttsService = createTTSService(config);
 	console.log('[Server] TTS service initialized successfully');
+	broadcastLog('success', 'system', 'TTS service initialized successfully');
 } catch (error) {
 	console.error('[Server] TTS service initialization failed:', error.message);
+	broadcastLog('error', 'system', 'TTS service initialization failed', error.message);
 	// Continue without TTS service - will show errors in UI
 }
 
@@ -417,6 +419,51 @@ function emitProgress(jobId, data) {
 const jobQueue = [];
 let isProcessing = false;
 
+// Logging system
+const logSubscribers = new Map();
+const recentLogs = [];
+const MAX_RECENT_LOGS = 100;
+
+function broadcastLog(level, category, message, details = null) {
+	const logEntry = {
+		timestamp: new Date().toISOString(),
+		level,
+		category,
+		message,
+		details
+	};
+
+	// Add to recent logs
+	recentLogs.unshift(logEntry);
+	if (recentLogs.length > MAX_RECENT_LOGS) {
+		recentLogs.pop();
+	}
+
+	// Broadcast to all connected clients
+	const logData = `data: ${JSON.stringify(logEntry)}\n\n`;
+	logSubscribers.forEach((res) => {
+		try {
+			res.write(logData);
+		} catch (error) {
+			// Client disconnected, will be cleaned up on next iteration
+		}
+	});
+
+	// Also log to console for debugging
+	console.log(`[${level.toUpperCase()}] [${category}] ${message}${details ? ` - ${details}` : ''}`);
+}
+
+function sendRecentLogs(res) {
+	recentLogs.forEach(logEntry => {
+		const logData = `data: ${JSON.stringify(logEntry)}\n\n`;
+		try {
+			res.write(logData);
+		} catch (error) {
+			// Client disconnected
+		}
+	});
+}
+
 function saveQueue() {
 	try {
 		fs.writeFileSync(QUEUE_FILE, JSON.stringify({ jobQueue }, null, 2));
@@ -442,6 +489,7 @@ async function processQueue() {
 		const job = jobQueue[0];
 		try {
 			logger.log(job.user, { event: 'job_start', jobId: job.id, type: job.type });
+			broadcastLog('info', 'job', `Job ${job.id} started`, `Type: ${job.type}, User: ${job.user}`);
 			emitProgress(job.id, { status: 'started', step: 'init' });
 
 			if (job.type === 'tts') {
@@ -458,8 +506,10 @@ async function processQueue() {
 			}
 
 			logger.log(job.user, { event: 'job_complete', jobId: job.id });
+			broadcastLog('success', 'job', `Job ${job.id} completed successfully`);
 		} catch (err) {
 			console.error(err);
+			broadcastLog('error', 'job', `Job ${job.id} failed`, `Error: ${err.message}`);
 			emitProgress(job.id, { status: 'error', message: String(err) });
 			logger.log(job.user, { event: 'job_error', jobId: job.id, error: String(err) });
 		}
@@ -496,9 +546,11 @@ async function processTTSJob(job) {
 		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3, bibleReference = null } = job.data;
 		const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
 		
+		broadcastLog('info', 'audio', `Starting TTS processing`, `Job: ${job.id}, Chunks: ${chunks.length}, Voice: ${voiceModelId}`);
 		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
 		
 		for (let i = 0; i < chunks.length; i++) {
+			broadcastLog('info', 'audio', `Processing chunk ${i + 1}/${chunks.length}`, `Job: ${job.id}`);
 			emitProgress(job.id, { status: 'progress', step: 'tts', chunk: i + 1, total: chunks.length });
 			const file = await ttsService.synthesizeChunkToFile({ 
 				chunkText: chunks[i], 
@@ -513,6 +565,7 @@ async function processTTSJob(job) {
 			segmentFiles.push(file);
 		}
 		
+		broadcastLog('info', 'audio', `Stitching ${segmentFiles.length} audio segments`, `Job: ${job.id}`);
 		const stitched = await ttsService.stitchSegments({ 
 			segmentFiles, 
 			outputsDir: OUTPUTS_DIR, 
@@ -569,6 +622,8 @@ async function cleanupSegmentFiles(segmentFiles) {
 
 async function handleBibleTtsJob(job) {
 	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '' } = job.payload;
+	
+	broadcastLog('info', 'audio', `Starting Bible TTS job`, `Job: ${job.id}, Book: ${book}, Type: ${type}, Voice: ${voiceModelId}`);
 	
 	let allText = '';
 	let bibleReference = '';
@@ -680,6 +735,38 @@ app.post('/api/jobs/bible', (req, res) => {
 	res.json({ id });
 });
 
+// Logs streaming endpoint
+app.get('/api/logs/stream', (req, res) => {
+	res.writeHead(200, {
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		'Connection': 'keep-alive',
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Allow-Headers': 'Cache-Control'
+	});
+
+	// Send initial connection message
+	const initialMessage = {
+		timestamp: new Date().toISOString(),
+		level: 'info',
+		category: 'system',
+		message: 'Log stream connected'
+	};
+	res.write(`data: ${JSON.stringify(initialMessage)}\n\n`);
+
+	// Add this client to the log subscribers
+	const clientId = Date.now() + Math.random();
+	logSubscribers.set(clientId, res);
+
+	// Send recent logs
+	sendRecentLogs(res);
+
+	// Handle client disconnect
+	req.on('close', () => {
+		logSubscribers.delete(clientId);
+	});
+});
+
 // Outputs list
 app.get('/api/outputs', (_req, res) => {
 	const files = fs.readdirSync(OUTPUTS_DIR)
@@ -773,4 +860,5 @@ process.on('SIGTERM', () => { saveQueue(); process.exit(0); });
 
 app.listen(PORT, () => {
 	console.log(`Server listening on http://localhost:${PORT}`);
+	broadcastLog('info', 'system', `Server started`, `Port: ${PORT}, Environment: ${process.env.NODE_ENV || 'development'}`);
 });
