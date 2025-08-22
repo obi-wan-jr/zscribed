@@ -65,41 +65,53 @@ async function refreshOutputs() {
 		const data = await res.json();
 		outputsList.innerHTML = '';
 		for (const f of data.files || []) {
-			const row = document.createElement('div');
-			row.className = 'flex items-center gap-3';
-			const a = document.createElement('a');
-			a.href = f.url;
-			a.textContent = f.name;
-			a.className = 'text-indigo-300 hover:underline';
-			const renameBtn = document.createElement('button');
-			renameBtn.textContent = 'Rename';
-			renameBtn.className = 'px-2 py-1 text-xs rounded bg-slate-700 hover:bg-slate-600';
-			renameBtn.onclick = async () => {
-				const newName = prompt('New name:', f.name);
-				if (!newName || newName === f.name) return;
-				const renameRes = await authenticatedFetch('/api/outputs/rename', { 
-					method: 'POST', 
-					headers: { 'Content-Type': 'application/json' }, 
-					body: JSON.stringify({ oldName: f.name, newName }) 
-				});
-				if (!renameRes) return; // Redirect happened
-				refreshOutputs();
-			};
-			const delBtn = document.createElement('button');
-			delBtn.textContent = 'Delete';
-			delBtn.className = 'px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600';
-			delBtn.onclick = async () => {
-				if (!confirm('Delete ' + f.name + '?')) return;
-				const deleteRes = await authenticatedFetch('/api/outputs/delete', { 
-					method: 'POST', 
-					headers: { 'Content-Type': 'application/json' }, 
-					body: JSON.stringify({ name: f.name }) 
-				});
-				if (!deleteRes) return; // Redirect happened
-				refreshOutputs();
-			};
-			row.append(a, renameBtn, delBtn);
-			outputsList.appendChild(row);
+			const div = document.createElement('div');
+			div.className = 'p-4 bg-[#0a0f1a] rounded border border-slate-600 space-y-3';
+			
+			// File info header
+			const headerDiv = document.createElement('div');
+			headerDiv.className = 'flex items-center justify-between';
+			headerDiv.innerHTML = `
+				<div class="flex items-center space-x-3">
+					<div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+						<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+						</svg>
+					</div>
+					<div>
+						<div class="text-indigo-300 font-medium">${f.name}</div>
+						<div class="text-xs text-slate-400">Click play to listen</div>
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${f.name}')">Rename</button>
+					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${f.name}')">Delete</button>
+				</div>
+			`;
+			
+			// Audio player
+			const audioDiv = document.createElement('div');
+			audioDiv.className = 'w-full';
+			audioDiv.innerHTML = `
+				<audio controls class="w-full" style="height: 40px;">
+					<source src="${f.url}" type="audio/mpeg">
+					Your browser does not support the audio element.
+				</audio>
+			`;
+			
+			// Download link
+			const downloadDiv = document.createElement('div');
+			downloadDiv.className = 'flex justify-end';
+			downloadDiv.innerHTML = `
+				<a href="${f.url}" download="${f.name}" class="text-xs text-indigo-400 hover:text-indigo-300 underline">
+					📥 Download file
+				</a>
+			`;
+			
+			div.appendChild(headerDiv);
+			div.appendChild(audioDiv);
+			div.appendChild(downloadDiv);
+			outputsList.appendChild(div);
 		}
 	} catch (e) {
 		if (handleUnauthorizedError(e)) return; // Redirect happened
@@ -127,7 +139,26 @@ function listenToProgress(jobId) {
 		if (data.status === 'progress') {
 			ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
 		} else if (data.status === 'completed') {
-			ttsProgress.innerHTML = `✅ Complete! <a href="${data.output}" class="text-indigo-300 hover:underline">Download</a>`;
+			ttsProgress.innerHTML = `
+				<div class="space-y-3">
+					<div class="text-green-400">✅ Audio creation completed!</div>
+					<div class="bg-[#0a0f1a] p-3 rounded border border-slate-600">
+						<div class="text-sm text-slate-300 mb-2">Preview your audio:</div>
+						<audio controls class="w-full" style="height: 40px;">
+							<source src="${data.output}" type="audio/mpeg">
+							Your browser does not support the audio element.
+						</audio>
+						<div class="mt-2 flex justify-between items-center">
+							<a href="${data.output}" download class="text-xs text-indigo-400 hover:text-indigo-300 underline">
+								📥 Download file
+							</a>
+							<button onclick="refreshOutputs()" class="text-xs text-slate-400 hover:text-slate-300 underline">
+								🔄 View all files
+							</button>
+						</div>
+					</div>
+				</div>
+			`;
 			ttsBtn.disabled = false;
 			ttsBtn.textContent = 'Convert';
 			// Refresh outputs list to show new file
@@ -213,3 +244,37 @@ ttsBtn?.addEventListener('click', async () => {
 });
 
 refreshOutputsBtn?.addEventListener('click', refreshOutputs);
+
+// Global functions for file operations
+window.renameFile = async (oldName) => {
+	const newName = prompt('New name:', oldName);
+	if (!newName || newName === oldName) return;
+	
+	try {
+		const res = await authenticatedFetch('/api/outputs/rename', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ oldName, newName })
+		});
+		if (res) refreshOutputs();
+	} catch (e) {
+		if (handleUnauthorizedError(e)) return;
+		alert('Failed to rename file');
+	}
+};
+
+window.deleteFile = async (name) => {
+	if (!confirm(`Delete ${name}?`)) return;
+	
+	try {
+		const res = await authenticatedFetch('/api/outputs/delete', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ name })
+		});
+		if (res) refreshOutputs();
+	} catch (e) {
+		if (handleUnauthorizedError(e)) return;
+		alert('Failed to delete file');
+	}
+};

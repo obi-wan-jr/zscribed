@@ -420,7 +420,7 @@ function startProgressTracking(jobId) {
 				refreshOutputs(); // Refresh the outputs list immediately
 				setTimeout(() => {
 					hideProgress();
-					updateStatus(`✅ Audio creation completed! File: ${data.output}`);
+					updateStatus(`✅ Audio creation completed! Check the Generated Audio Files section below to play your audio.`);
 				}, 3000);
 			} else if (data.status === 'error') {
 				clearInterval(fallbackInterval);
@@ -537,14 +537,51 @@ async function refreshOutputs() {
 		
 		for (const file of data.files || []) {
 			const div = document.createElement('div');
-			div.className = 'flex items-center justify-between p-3 bg-[#0a0f1a] rounded border border-slate-600';
-			div.innerHTML = `
-				<a href="${file.url}" class="text-indigo-300 hover:underline font-medium">${file.name}</a>
+			div.className = 'p-4 bg-[#0a0f1a] rounded border border-slate-600 space-y-3';
+			
+			// File info header
+			const headerDiv = document.createElement('div');
+			headerDiv.className = 'flex items-center justify-between';
+			headerDiv.innerHTML = `
+				<div class="flex items-center space-x-3">
+					<div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+						<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+						</svg>
+					</div>
+					<div>
+						<div class="text-indigo-300 font-medium">${file.name}</div>
+						<div class="text-xs text-slate-400">Click play to listen</div>
+					</div>
+				</div>
 				<div class="flex gap-2">
 					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${file.name}')">Rename</button>
 					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${file.name}')">Delete</button>
 				</div>
 			`;
+			
+			// Audio player
+			const audioDiv = document.createElement('div');
+			audioDiv.className = 'w-full';
+			audioDiv.innerHTML = `
+				<audio controls class="w-full" style="height: 40px;">
+					<source src="${file.url}" type="audio/mpeg">
+					Your browser does not support the audio element.
+				</audio>
+			`;
+			
+			// Download link
+			const downloadDiv = document.createElement('div');
+			downloadDiv.className = 'flex justify-end';
+			downloadDiv.innerHTML = `
+				<a href="${file.url}" download="${file.name}" class="text-xs text-indigo-400 hover:text-indigo-300 underline">
+					📥 Download file
+				</a>
+			`;
+			
+			div.appendChild(headerDiv);
+			div.appendChild(audioDiv);
+			div.appendChild(downloadDiv);
 			outputsList.appendChild(div);
 		}
 	} catch (e) {
