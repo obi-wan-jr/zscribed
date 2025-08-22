@@ -59,6 +59,26 @@ function ensureDir(dirPath) {
 	if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
 }
 
+function getMaxChapters(book) {
+	const chapterCounts = {
+		'Genesis': 50, 'Exodus': 40, 'Leviticus': 27, 'Numbers': 36, 'Deuteronomy': 34,
+		'Joshua': 24, 'Judges': 21, 'Ruth': 4, '1 Samuel': 31, '2 Samuel': 24,
+		'1 Kings': 22, '2 Kings': 25, '1 Chronicles': 29, '2 Chronicles': 36,
+		'Ezra': 10, 'Nehemiah': 13, 'Esther': 10, 'Job': 42, 'Psalms': 150,
+		'Proverbs': 31, 'Ecclesiastes': 12, 'Song of Solomon': 8, 'Isaiah': 66,
+		'Jeremiah': 52, 'Lamentations': 5, 'Ezekiel': 48, 'Daniel': 12,
+		'Hosea': 14, 'Joel': 3, 'Amos': 9, 'Obadiah': 1, 'Jonah': 4, 'Micah': 7,
+		'Nahum': 3, 'Habakkuk': 3, 'Zephaniah': 3, 'Haggai': 2, 'Zechariah': 14, 'Malachi': 4,
+		'Matthew': 28, 'Mark': 16, 'Luke': 24, 'John': 21, 'Acts': 28,
+		'Romans': 16, '1 Corinthians': 16, '2 Corinthians': 13, 'Galatians': 6,
+		'Ephesians': 6, 'Philippians': 4, 'Colossians': 4, '1 Thessalonians': 5,
+		'2 Thessalonians': 3, '1 Timothy': 6, '2 Timothy': 4, 'Titus': 3, 'Philemon': 1,
+		'Hebrews': 13, 'James': 5, '1 Peter': 5, '2 Peter': 3, '1 John': 5,
+		'2 John': 1, '3 John': 1, 'Jude': 1, 'Revelation': 22
+	};
+	return chapterCounts[book] || 1;
+}
+
 let config = loadConfig(ROOT);
 const logger = new UserLogger(LOGS_DIR);
 
@@ -220,35 +240,82 @@ app.post('/api/memory/preferences', (req, res) => {
 // Bible fetch endpoint
 app.post('/api/bible/fetch', async (req, res) => {
 	try {
-		const { translation = 'web', book = 'John', chapter = 1, verseRanges = '', excludeNumbers = true, excludeFootnotes = true } = req.body;
+		const { translation = 'web', book = 'John', chapter = 1, verseRanges = '', excludeNumbers = true, excludeFootnotes = true, type = 'chapter', chapters = '' } = req.body;
 		
-		// Validate the Bible reference first
-		const chapterNum = parseInt(chapter);
-		if (isNaN(chapterNum)) {
-			return res.status(400).json({ error: 'Chapter must be a number' });
-		}
+		let allText = '';
 		
-		const chapterValidation = validateChapter(book, chapterNum);
-		if (!chapterValidation.valid) {
-			return res.status(400).json({ error: chapterValidation.error });
-		}
-		
-		// Validate verse ranges if provided
-		if (verseRanges && verseRanges.trim()) {
-			const verseValidation = validateVerseRanges(book, chapterNum, verseRanges);
-			if (!verseValidation.valid) {
-				return res.status(400).json({ error: verseValidation.error });
+		if (type === 'book') {
+			// Handle entire book
+			const maxChapters = getMaxChapters(book);
+			for (let ch = 1; ch <= maxChapters; ch++) {
+				const chapterValidation = validateChapter(book, ch);
+				if (!chapterValidation.valid) {
+					continue; // Skip invalid chapters
+				}
+				
+				const rawText = await fetchBibleText({ translation, book, chapter: ch });
+				const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+				allText += cleanedText + '\n\n';
 			}
+		} else if (type === 'chapters' && chapters) {
+			// Handle multiple chapters
+			const chapterRanges = chapters.split(',').map(range => range.trim());
+			for (const range of chapterRanges) {
+				if (range.includes('-')) {
+					const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+					if (!isNaN(start) && !isNaN(end)) {
+						for (let ch = start; ch <= end; ch++) {
+							const chapterValidation = validateChapter(book, ch);
+							if (!chapterValidation.valid) {
+								continue;
+							}
+							
+							const rawText = await fetchBibleText({ translation, book, chapter: ch });
+							const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+							allText += cleanedText + '\n\n';
+						}
+					}
+				} else {
+					const ch = parseInt(range);
+					if (!isNaN(ch)) {
+						const chapterValidation = validateChapter(book, ch);
+						if (chapterValidation.valid) {
+							const rawText = await fetchBibleText({ translation, book, chapter: ch });
+							const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+							allText += cleanedText + '\n\n';
+						}
+					}
+				}
+			}
+		} else {
+			// Handle single chapter (original logic)
+			const chapterNum = parseInt(chapter);
+			if (isNaN(chapterNum)) {
+				return res.status(400).json({ error: 'Chapter must be a number' });
+			}
+			
+			const chapterValidation = validateChapter(book, chapterNum);
+			if (!chapterValidation.valid) {
+				return res.status(400).json({ error: chapterValidation.error });
+			}
+			
+			// Validate verse ranges if provided
+			if (verseRanges && verseRanges.trim()) {
+				const verseValidation = validateVerseRanges(book, chapterNum, verseRanges);
+				if (!verseValidation.valid) {
+					return res.status(400).json({ error: verseValidation.error });
+				}
+			}
+			
+			// Parse verse ranges
+			const verses = verseRanges ? parseVerseRanges(verseRanges) : null;
+			
+			// Fetch Bible text
+			const rawText = await fetchBibleText({ translation, book, chapter: chapterNum, verses });
+			allText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
 		}
 		
-		// Parse verse ranges
-		const verses = verseRanges ? parseVerseRanges(verseRanges) : null;
-		
-		// Fetch Bible text
-		const rawText = await fetchBibleText({ translation, book, chapter: chapterNum, verses });
-		const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-		
-		res.json({ text: cleanedText });
+		res.json({ text: allText });
 		
 	} catch (error) {
 		console.error('[API] Bible fetch error:', error.message);
@@ -501,19 +568,69 @@ async function cleanupSegmentFiles(segmentFiles) {
 }
 
 async function handleBibleTtsJob(job) {
-	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3 } = job.payload;
-	const verses = parseVerseRanges(String(verseRanges || ''));
-	const raw = await fetchBibleText({ translation, book, chapter, verses });
-	const text = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '' } = job.payload;
 	
-	// Create Bible reference for file naming
-	const bibleReference = `${book}-${chapter}-${verses.join('-')}`;
+	let allText = '';
+	let bibleReference = '';
+	
+	if (type === 'book') {
+		// Handle entire book
+		const maxChapters = getMaxChapters(book);
+		for (let ch = 1; ch <= maxChapters; ch++) {
+			const chapterValidation = validateChapter(book, ch);
+			if (!chapterValidation.valid) {
+				continue; // Skip invalid chapters
+			}
+			
+			const rawText = await fetchBibleText({ translation, book, chapter: ch });
+			const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+			allText += cleanedText + '\n\n';
+		}
+		bibleReference = `${book}-entire`;
+	} else if (type === 'chapters' && chapters) {
+		// Handle multiple chapters
+		const chapterRanges = chapters.split(',').map(range => range.trim());
+		for (const range of chapterRanges) {
+			if (range.includes('-')) {
+				const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+				if (!isNaN(start) && !isNaN(end)) {
+					for (let ch = start; ch <= end; ch++) {
+						const chapterValidation = validateChapter(book, ch);
+						if (!chapterValidation.valid) {
+							continue;
+						}
+						
+						const rawText = await fetchBibleText({ translation, book, chapter: ch });
+						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+						allText += cleanedText + '\n\n';
+					}
+				}
+			} else {
+				const ch = parseInt(range);
+				if (!isNaN(ch)) {
+					const chapterValidation = validateChapter(book, ch);
+					if (chapterValidation.valid) {
+						const rawText = await fetchBibleText({ translation, book, chapter: ch });
+						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+						allText += cleanedText + '\n\n';
+					}
+				}
+			}
+		}
+		bibleReference = `${book}-${chapters}`;
+	} else {
+		// Handle single chapter (original logic)
+		const verses = parseVerseRanges(String(verseRanges || ''));
+		const raw = await fetchBibleText({ translation, book, chapter, verses });
+		allText = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		bibleReference = `${book}-${chapter}-${verses.join('-')}`;
+	}
 	
 	await processTTSJob({ 
 		id: job.id, 
 		user: job.user, 
 		data: { 
-			text, 
+			text: allText, 
 			voiceModelId, 
 			format, 
 			sentencesPerChunk,
@@ -552,7 +669,9 @@ app.post('/api/jobs/bible', (req, res) => {
 		excludeFootnotes: Boolean(req.body?.excludeFootnotes ?? true),
 		voiceModelId: req.body?.voiceModelId || (config.voiceModels?.[0]?.id || 'default'),
 		format: req.body?.format || 'mp3',
-		sentencesPerChunk: Number(req.body?.sentencesPerChunk || 3)
+		sentencesPerChunk: Number(req.body?.sentencesPerChunk || 3),
+		type: req.body?.type || 'chapter',
+		chapters: req.body?.chapters || ''
 	};
 	const job = { id, type: 'bible-tts', user, createdAt: Date.now(), payload };
 	jobQueue.push(job);

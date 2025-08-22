@@ -281,24 +281,13 @@ async function createAudio() {
 		return;
 	}
 	
-	const book = document.getElementById('book').value;
 	const voiceModel = document.getElementById('voiceModel').value;
 	
+	// Use the same data structure as preview, but add voice model
 	let requestBody = {
-		book: book,
-		voiceModel: voiceModel
+		...buildRequestData(),
+		voiceModelId: voiceModel
 	};
-	
-	if (currentMode === 'chapters') {
-		const chaptersRangeElement = document.getElementById('chaptersRange');
-		if (chaptersRangeElement) {
-			requestBody.chapters = convertToRanges(chaptersRangeElement.value);
-		} else {
-			console.error('Chapters range element not found in createAudio');
-			updateStatus('Error: Chapter range input not available');
-			return;
-		}
-	}
 	
 	try {
 		updateStatus('Creating audio...');
@@ -313,7 +302,7 @@ async function createAudio() {
 		
 		if (response.ok) {
 			const result = await response.json();
-			updateStatus(`Audio creation started! Job ID: ${result.jobId}`);
+			updateStatus(`Audio creation started! Job ID: ${result.id}`);
 		} else {
 			const error = await response.text();
 			updateStatus(`Error: ${error}`);
