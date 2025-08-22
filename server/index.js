@@ -54,6 +54,9 @@ const QUEUE_FILE = path.join(STORAGE_DIR, 'queue.json');
 const MAX_CONCURRENT_JOBS = 3; // Allow up to 3 jobs to run simultaneously
 const JOB_TIMEOUT = 30 * 60 * 1000; // 30 minutes timeout per job
 const RECOVERY_CHECK_INTERVAL = 5 * 60 * 1000; // Check for stuck jobs every 5 minutes
+const MAX_RETRY_ATTEMPTS = 3; // Maximum retry attempts for failed jobs
+const RETRY_DELAY_BASE = 5000; // Base delay for retries (5 seconds)
+const RETRY_DELAY_MULTIPLIER = 2; // Exponential backoff multiplier
 
 ensureDir(STORAGE_DIR);
 ensureDir(OUTPUTS_DIR);
@@ -545,11 +548,19 @@ function emitProgress(jobId, data) {
 // Multi-job processing system with recovery
 const jobQueue = [];
 const activeJobs = new Map(); // Track currently processing jobs
+const jobStates = new Map(); // Track job state for resumption
 
 function saveQueue() {
 	try {
-		fs.writeFileSync(QUEUE_FILE, JSON.stringify({ jobQueue }, null, 2));
-	} catch {}
+		const queueData = {
+			jobQueue,
+			jobStates: Array.from(jobStates.entries()),
+			timestamp: Date.now()
+		};
+		fs.writeFileSync(QUEUE_FILE, JSON.stringify(queueData, null, 2));
+	} catch (error) {
+		console.error('[Queue] Failed to save queue:', error);
+	}
 }
 
 function loadQueue() {
@@ -559,7 +570,15 @@ function loadQueue() {
 		if (Array.isArray(raw.jobQueue)) {
 			jobQueue.splice(0, jobQueue.length, ...raw.jobQueue);
 		}
-	} catch {}
+		if (Array.isArray(raw.jobStates)) {
+			jobStates.clear();
+			for (const [jobId, state] of raw.jobStates) {
+				jobStates.set(jobId, state);
+			}
+		}
+	} catch (error) {
+		console.error('[Queue] Failed to load queue:', error);
+	}
 }
 
 loadQueue();
@@ -629,24 +648,33 @@ async function processQueue() {
 }
 
 async function processJob(job) {
+	// Initialize or get job state
+	let jobState = jobStates.get(job.id) || {
+		retryCount: 0,
+		lastError: null,
+		checkpoint: null,
+		startTime: Date.now()
+	};
+
 	// Mark job as active
 	activeJobs.set(job.id, {
 		job,
 		startTime: Date.now(),
-		status: 'processing'
+		status: 'processing',
+		retryCount: jobState.retryCount
 	});
 
-	broadcastLog('info', 'job', `Job ${job.id} started processing`, `Type: ${job.type}, User: ${job.user}, Active jobs: ${activeJobs.size}`);
+	broadcastLog('info', 'job', `Job ${job.id} started processing`, `Type: ${job.type}, User: ${job.user}, Active jobs: ${activeJobs.size}, Retry: ${jobState.retryCount}`);
 
 	try {
-		logger.log(job.user, { event: 'job_start', jobId: job.id, type: job.type });
-		emitProgress(job.id, { status: 'started', step: 'init' });
+		logger.log(job.user, { event: 'job_start', jobId: job.id, type: job.type, retryCount: jobState.retryCount });
+		emitProgress(job.id, { status: 'started', step: 'init', retryCount: jobState.retryCount });
 
 		// Process the job based on type
 		if (job.type === 'tts') {
-			await processTTSJob(job);
+			await processTTSJob(job, jobState);
 		} else if (job.type === 'bible-tts') {
-			await handleBibleTtsJob(job);
+			await handleBibleTtsJob(job, jobState);
 		} else {
 			await new Promise(r => setTimeout(r, 500));
 			emitProgress(job.id, { status: 'progress', step: 'processing', progress: 50 });
@@ -656,18 +684,40 @@ async function processJob(job) {
 			emitProgress(job.id, { status: 'completed', output: `/outputs/${job.id}.txt` });
 		}
 
+		// Job completed successfully
 		logger.log(job.user, { event: 'job_complete', jobId: job.id });
-		broadcastLog('success', 'job', `Job ${job.id} completed successfully`, `Duration: ${Math.round((Date.now() - activeJobs.get(job.id).startTime) / 1000)}s`);
+		broadcastLog('success', 'job', `Job ${job.id} completed successfully`, `Duration: ${Math.round((Date.now() - activeJobs.get(job.id).startTime) / 1000)}s, Retries: ${jobState.retryCount}`);
+		
+		// Clean up job state
+		jobStates.delete(job.id);
 
 	} catch (err) {
 		console.error(`[Job ${job.id}] Error:`, err);
-		broadcastLog('error', 'job', `Job ${job.id} failed`, `Error: ${err.message}, Duration: ${Math.round((Date.now() - activeJobs.get(job.id).startTime) / 1000)}s`);
-		emitProgress(job.id, { status: 'error', message: String(err) });
-		logger.log(job.user, { event: 'job_error', jobId: job.id, error: String(err) });
+		
+		// Update job state
+		jobState.lastError = err.message;
+		jobState.retryCount++;
+		jobStates.set(job.id, jobState);
 
-		// For recoverable errors, we could potentially retry the job
-		if (isRecoverableError(err)) {
-			broadcastLog('warning', 'job', `Job ${job.id} failed with recoverable error, may retry later`, err.message);
+		broadcastLog('error', 'job', `Job ${job.id} failed`, `Error: ${err.message}, Duration: ${Math.round((Date.now() - activeJobs.get(job.id).startTime) / 1000)}s, Retry: ${jobState.retryCount}/${MAX_RETRY_ATTEMPTS}`);
+		emitProgress(job.id, { status: 'error', message: String(err), retryCount: jobState.retryCount });
+		logger.log(job.user, { event: 'job_error', jobId: job.id, error: String(err), retryCount: jobState.retryCount });
+
+		// Handle retry logic
+		if (isRecoverableError(err) && jobState.retryCount < MAX_RETRY_ATTEMPTS) {
+			const retryDelay = RETRY_DELAY_BASE * Math.pow(RETRY_DELAY_MULTIPLIER, jobState.retryCount - 1);
+			broadcastLog('warning', 'job', `Job ${job.id} will retry in ${Math.round(retryDelay / 1000)}s`, `Attempt ${jobState.retryCount}/${MAX_RETRY_ATTEMPTS}, Error: ${err.message}`);
+			
+			// Re-queue the job for retry
+			setTimeout(() => {
+				jobQueue.unshift(job); // Add to front of queue for priority
+				saveQueue();
+				processQueue();
+			}, retryDelay);
+		} else {
+			// Job failed permanently
+			broadcastLog('error', 'job', `Job ${job.id} failed permanently`, `Max retries reached (${MAX_RETRY_ATTEMPTS}) or non-recoverable error`);
+			jobStates.delete(job.id); // Clean up failed job state
 		}
 	} finally {
 		// Remove from active jobs
@@ -712,7 +762,7 @@ app.get('/api/queue/status', (_req, res) => {
 	});
 });
 
-async function processTTSJob(job) {
+async function processTTSJob(job, jobState = {}) {
 	if (!ttsService) {
 		const error = 'TTS service not available. Please check your Fish.Audio API key configuration.';
 		emitProgress(job.id, { 
@@ -733,12 +783,20 @@ async function processTTSJob(job) {
 		const { text, voiceModelId, format = 'mp3', sentencesPerChunk = 3, bibleReference = null } = job.data;
 		const chunks = groupSentences(splitIntoSentences(text), sentencesPerChunk);
 		
-		broadcastLog('info', 'audio', `Starting TTS processing`, `Job: ${job.id}, Chunks: ${chunks.length}, Voice: ${voiceModelId}`);
-		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
+		// Check for checkpoint to resume from
+		const startChunk = jobState.checkpoint?.chunkIndex || 0;
 		
-		for (let i = 0; i < chunks.length; i++) {
+		broadcastLog('info', 'audio', `Starting TTS processing`, `Job: ${job.id}, Chunks: ${chunks.length}, Voice: ${voiceModelId}, Resume from: ${startChunk}`);
+		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: startChunk, total: chunks.length });
+		
+		for (let i = startChunk; i < chunks.length; i++) {
+			// Update checkpoint
+			jobState.checkpoint = { chunkIndex: i, totalChunks: chunks.length };
+			jobStates.set(job.id, jobState);
+			
 			broadcastLog('info', 'audio', `Processing chunk ${i + 1}/${chunks.length}`, `Job: ${job.id}, Voice: ${voiceModelId}`);
 			emitProgress(job.id, { status: 'progress', step: 'tts', chunk: i + 1, total: chunks.length });
+			
 			const file = await ttsService.synthesizeChunkToFile({ 
 				chunkText: chunks[i], 
 				voiceModelId, 
@@ -791,28 +849,48 @@ async function processTTSJob(job) {
 
 async function cleanupSegmentFiles(segmentFiles) {
 	try {
-		console.log(`[TTS Job] Cleaning up ${segmentFiles.length} segment files after error`);
+		console.log(`[TTS Job] Cleaning up ${segmentFiles.length} segment files`);
+		broadcastLog('info', 'cleanup', `Starting cleanup of ${segmentFiles.length} segment files`);
+		
+		let deletedCount = 0;
+		let failedCount = 0;
 		
 		for (const file of segmentFiles) {
 			try {
 				if (fs.existsSync(file)) {
 					fs.unlinkSync(file);
+					deletedCount++;
 					console.log(`[TTS Job] Deleted segment file: ${path.basename(file)}`);
+					broadcastLog('debug', 'cleanup', `Deleted segment file: ${path.basename(file)}`);
+				} else {
+					console.log(`[TTS Job] Segment file already deleted: ${path.basename(file)}`);
 				}
 			} catch (deleteError) {
+				failedCount++;
 				console.warn(`[TTS Job] Failed to delete segment file ${file}:`, deleteError.message);
-				// Don't throw error for cleanup failures - continue with other files
+				broadcastLog('warning', 'cleanup', `Failed to delete segment file: ${path.basename(file)}`, deleteError.message);
 			}
 		}
 		
-		console.log(`[TTS Job] Segment cleanup completed`);
+		// Verify cleanup
+		const remainingFiles = segmentFiles.filter(file => fs.existsSync(file));
+		if (remainingFiles.length > 0) {
+			broadcastLog('warning', 'cleanup', `${remainingFiles.length} segment files still exist after cleanup`, remainingFiles.map(f => path.basename(f)).join(', '));
+		}
+		
+		console.log(`[TTS Job] Segment cleanup completed - Deleted: ${deletedCount}, Failed: ${failedCount}, Remaining: ${remainingFiles.length}`);
+		broadcastLog('success', 'cleanup', `Segment cleanup completed`, `Deleted: ${deletedCount}, Failed: ${failedCount}, Remaining: ${remainingFiles.length}`);
+		
+		return { deletedCount, failedCount, remainingCount: remainingFiles.length };
 	} catch (error) {
 		console.error(`[TTS Job] Error during segment cleanup:`, error);
+		broadcastLog('error', 'cleanup', 'Error during segment cleanup', error.message);
 		// Don't throw error for cleanup failures
+		return { deletedCount: 0, failedCount: segmentFiles.length, remainingCount: segmentFiles.length };
 	}
 }
 
-async function handleBibleTtsJob(job) {
+async function handleBibleTtsJob(job, jobState = {}) {
 	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '' } = job.payload;
 	
 	broadcastLog('info', 'audio', `Starting Bible TTS job`, `Job: ${job.id}, Book: ${book}, Type: ${type}, Voice: ${voiceModelId}`);
@@ -1067,6 +1145,67 @@ app.get('/api/jobs/my', (req, res) => {
 	});
 });
 
+// Job recovery and management endpoints
+app.post('/api/jobs/recover', (req, res) => {
+	const { jobId } = req.body || {};
+	const user = req.user; // from auth middleware
+	
+	if (!jobId) {
+		return res.status(400).json({ error: 'Job ID required' });
+	}
+	
+	// Check if job state exists
+	const jobState = jobStates.get(jobId);
+	if (!jobState) {
+		return res.status(404).json({ error: 'Job state not found' });
+	}
+	
+	// Check if job belongs to user
+	const job = jobQueue.find(j => j.id === jobId) || Array.from(activeJobs.values()).find(jobInfo => jobInfo.job.id === jobId)?.job;
+	if (!job || job.user !== user) {
+		return res.status(403).json({ error: 'Cannot recover another user\'s job' });
+	}
+	
+	// Reset retry count and re-queue
+	jobState.retryCount = 0;
+	jobState.lastError = null;
+	jobStates.set(jobId, jobState);
+	
+	// Add to front of queue for priority
+	if (!jobQueue.find(j => j.id === jobId)) {
+		jobQueue.unshift(job);
+	}
+	
+	saveQueue();
+	broadcastLog('info', 'job', `Job ${jobId} manually recovered by user`, `User: ${user}, Retry count reset`);
+	
+	res.json({ success: true, message: 'Job recovered and queued for retry' });
+});
+
+app.get('/api/jobs/state/:jobId', (req, res) => {
+	const { jobId } = req.params;
+	const user = req.user; // from auth middleware
+	
+	const jobState = jobStates.get(jobId);
+	if (!jobState) {
+		return res.status(404).json({ error: 'Job state not found' });
+	}
+	
+	// Check if job belongs to user
+	const job = jobQueue.find(j => j.id === jobId) || Array.from(activeJobs.values()).find(jobInfo => jobInfo.job.id === jobId)?.job;
+	if (!job || job.user !== user) {
+		return res.status(403).json({ error: 'Cannot access another user\'s job state' });
+	}
+	
+	res.json({
+		jobId,
+		retryCount: jobState.retryCount,
+		lastError: jobState.lastError,
+		checkpoint: jobState.checkpoint,
+		startTime: jobState.startTime
+	});
+});
+
 // Manual cleanup endpoint
 app.post('/api/cleanup/chunks', (req, res) => {
 	try {
@@ -1150,3 +1289,4 @@ app.listen(PORT, () => {
 	console.log(`Server listening on http://localhost:${PORT}`);
 	broadcastLog('info', 'system', `Server started`, `Port: ${PORT}, Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
