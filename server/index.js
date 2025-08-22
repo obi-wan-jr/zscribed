@@ -52,6 +52,9 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const CONFIG_DIR = path.join(ROOT, 'config');
 const QUEUE_FILE = path.join(STORAGE_DIR, 'queue.json');
 
+// Initialize video generator
+const videoGenerator = new VideoGenerator(OUTPUTS_DIR, STORAGE_DIR);
+
 // Multi-job processing system constants
 const MAX_CONCURRENT_JOBS = 3; // Allow up to 3 jobs to run simultaneously
 const JOB_TIMEOUT = 30 * 60 * 1000; // 30 minutes timeout per job
@@ -910,125 +913,10 @@ async function cleanupSegmentFiles(segmentFiles) {
 }
 
 async function createVideoFromAudio(audioFile, videoSettings, jobId) {
-	const { backgroundType, videoResolution, backgroundFile } = videoSettings;
-	
-	broadcastLog('info', 'video', `Creating video with ${backgroundType} background`, `Job: ${jobId}, Resolution: ${videoResolution}`);
-	
-	// Get audio duration using ffprobe
-	const audioDuration = await getAudioDuration(audioFile);
-	
-	// Create video output filename
-	const audioBasename = path.basename(audioFile, '.mp3');
-	const videoOutput = path.join(OUTPUTS_DIR, `${audioBasename}-video.mp4`);
-	
-	// Build FFmpeg command based on background type
-	let ffmpegCommand;
-	
-	if (backgroundType === 'image') {
-		// Use static image as background
-		const imagePath = path.join(STORAGE_DIR, 'uploads', backgroundFile);
-		if (!fs.existsSync(imagePath)) {
-			throw new Error(`Background image not found: ${backgroundFile}`);
-		}
-		
-		ffmpegCommand = [
-			'-loop', '1',
-			'-i', imagePath,
-			'-i', audioFile,
-			'-c:v', 'libx264',
-			'-c:a', 'aac',
-			'-shortest',
-			'-pix_fmt', 'yuv420p',
-			'-vf', `scale=${getResolutionScale(videoResolution)}`,
-			'-y', videoOutput
-		];
-	} else {
-		// Use looping video as background
-		const videoPath = path.join(STORAGE_DIR, 'uploads', backgroundFile);
-		if (!fs.existsSync(videoPath)) {
-			throw new Error(`Background video not found: ${backgroundFile}`);
-		}
-		
-		ffmpegCommand = [
-			'-stream_loop', '-1',
-			'-i', videoPath,
-			'-i', audioFile,
-			'-c:v', 'libx264',
-			'-c:a', 'aac',
-			'-shortest',
-			'-pix_fmt', 'yuv420p',
-			'-vf', `scale=${getResolutionScale(videoResolution)}`,
-			'-y', videoOutput
-		];
-	}
-	
-	// Execute FFmpeg command
-	broadcastLog('info', 'video', `Executing FFmpeg command`, `Job: ${jobId}, Duration: ${audioDuration}s`);
-	
-	return new Promise((resolve, reject) => {
-		const ffmpeg = spawn('ffmpeg', ffmpegCommand);
-		
-		let stderr = '';
-		
-		ffmpeg.stderr.on('data', (data) => {
-			stderr += data.toString();
-		});
-		
-		ffmpeg.on('close', (code) => {
-			if (code === 0) {
-				broadcastLog('success', 'video', `FFmpeg completed successfully`, `Job: ${jobId}, Output: ${path.basename(videoOutput)}`);
-				resolve(videoOutput);
-			} else {
-				broadcastLog('error', 'video', `FFmpeg failed`, `Job: ${jobId}, Code: ${code}, Error: ${stderr}`);
-				reject(new Error(`FFmpeg failed with code ${code}: ${stderr}`));
-			}
-		});
-		
-		ffmpeg.on('error', (error) => {
-			broadcastLog('error', 'video', `FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
-			reject(error);
-		});
-	});
+	return await videoGenerator.createVideo(audioFile, videoSettings, jobId, broadcastLog);
 }
 
-function getAudioDuration(audioFile) {
-	return new Promise((resolve, reject) => {
-		const ffprobe = spawn('ffprobe', [
-			'-v', 'quiet',
-			'-show_entries', 'format=duration',
-			'-of', 'csv=p=0',
-			audioFile
-		]);
-		
-		let output = '';
-		
-		ffprobe.stdout.on('data', (data) => {
-			output += data.toString();
-		});
-		
-		ffprobe.on('close', (code) => {
-			if (code === 0) {
-				const duration = parseFloat(output.trim());
-				resolve(duration);
-			} else {
-				reject(new Error(`ffprobe failed with code ${code}`));
-			}
-		});
-		
-		ffprobe.on('error', (error) => {
-			reject(error);
-		});
-	});
-}
 
-function getResolutionScale(resolution) {
-	switch (resolution) {
-		case '720p': return '1280:720';
-		case '1080p': return '1920:1080';
-		case '4k': return '3840:2160';
-		default: return '1920:1080';
-	}
-}
 
 async function handleBibleTtsJob(job, jobState = {}) {
 	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '' } = job.payload;
