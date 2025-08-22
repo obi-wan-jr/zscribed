@@ -550,13 +550,14 @@ async function refreshOutputs() {
 						</svg>
 					</div>
 					<div>
-						<div class="text-indigo-300 font-medium">${file.name}</div>
+						<div class="text-indigo-300 font-medium">${file.name.replace(/\.[^/.]+$/, '')}</div>
 						<div class="text-xs text-slate-400">Click play to listen</div>
 					</div>
 				</div>
 				<div class="flex gap-2">
 					<button class="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 rounded" onclick="renameFile('${file.name}')">Rename</button>
 					<button class="px-2 py-1 text-xs bg-red-600 hover:bg-red-500 rounded" onclick="deleteFile('${file.name}')">Delete</button>
+					<button class="px-2 py-1 text-xs bg-green-600 hover:bg-green-500 rounded" onclick="downloadFile('${file.url}', '${file.name}')">Download</button>
 				</div>
 			`;
 			
@@ -570,18 +571,8 @@ async function refreshOutputs() {
 				</audio>
 			`;
 			
-			// Download link
-			const downloadDiv = document.createElement('div');
-			downloadDiv.className = 'flex justify-end';
-			downloadDiv.innerHTML = `
-				<a href="${file.url}" download="${file.name}" class="text-xs text-indigo-400 hover:text-indigo-300 underline">
-					📥 Download file
-				</a>
-			`;
-			
 			div.appendChild(headerDiv);
 			div.appendChild(audioDiv);
-			div.appendChild(downloadDiv);
 			outputsList.appendChild(div);
 		}
 	} catch (e) {
@@ -622,4 +613,13 @@ window.deleteFile = async (name) => {
 		if (handleUnauthorizedError(e)) return;
 		alert('Failed to delete file');
 	}
+};
+
+window.downloadFile = (url, filename) => {
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = filename;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
 };
