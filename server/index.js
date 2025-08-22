@@ -1060,7 +1060,7 @@ async function handleBibleTtsJob(job, jobState = {}) {
 				id: chapterJobId,
 				type: job.type,
 				user: job.user,
-				data: {
+				payload: {
 					text: chapterText,
 					voiceModelId,
 					format,
@@ -1111,14 +1111,14 @@ async function handleBibleTtsJob(job, jobState = {}) {
 							id: chapterJobId,
 							type: job.type,
 							user: job.user,
-							data: {
+							payload: {
 								text: chapterText,
 								voiceModelId,
 								format,
 								sentencesPerChunk,
 								bibleReference: `${book}-${ch}`,
-								createVideo: job.data?.createVideo || false,
-								videoSettings: job.data?.videoSettings || null
+								createVideo: job.payload?.createVideo || false,
+								videoSettings: job.payload?.videoSettings || null
 							}
 						};
 						
@@ -1130,30 +1130,30 @@ async function handleBibleTtsJob(job, jobState = {}) {
 				}
 			} else {
 				const ch = parseInt(range);
-				if (!isNaN(ch)) {
-					const chapterValidation = validateChapter(book, ch);
-					if (chapterValidation.valid) {
-						broadcastLog('debug', 'audio', `Processing chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
-						const rawText = await fetchBibleText({ translation, book, chapter: ch });
-						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
-						const chapterText = `${book}, Chapter ${ch}.\n${cleanedText}`;
-						
-						// Create separate job for each chapter
-						const chapterJobId = uuidv4();
-						const chapterJob = {
-							id: chapterJobId,
-							type: job.type,
-							user: job.user,
-							data: {
-								text: chapterText,
-								voiceModelId,
-								format,
-								sentencesPerChunk,
-								bibleReference: `${book}-${ch}`,
-								createVideo: job.data?.createVideo || false,
-								videoSettings: job.data?.videoSettings || null
-							}
-						};
+									if (!isNaN(ch)) {
+						const chapterValidation = validateChapter(book, ch);
+						if (chapterValidation.valid) {
+							broadcastLog('debug', 'audio', `Processing chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
+							const rawText = await fetchBibleText({ translation, book, chapter: ch });
+							const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+							const chapterText = `${book}, Chapter ${ch}.\n${cleanedText}`;
+							
+							// Create separate job for each chapter
+							const chapterJobId = uuidv4();
+							const chapterJob = {
+								id: chapterJobId,
+								type: job.type,
+								user: job.user,
+								payload: {
+									text: chapterText,
+									voiceModelId,
+									format,
+									sentencesPerChunk,
+									bibleReference: `${book}-${ch}`,
+									createVideo: job.data?.createVideo || false,
+									videoSettings: job.data?.videoSettings || null
+								}
+							};
 						
 						// Add chapter job to queue
 						jobQueue.push(chapterJob);
@@ -1224,7 +1224,7 @@ async function handleBibleVideoJob(job, jobState = {}) {
 				id: chapterJobId,
 				type: 'bible-video',
 				user: job.user,
-				data: {
+				payload: {
 					text: chapterText,
 					voiceModelId,
 					format,
@@ -1275,7 +1275,7 @@ async function handleBibleVideoJob(job, jobState = {}) {
 							id: chapterJobId,
 							type: 'bible-video',
 							user: job.user,
-							data: {
+							payload: {
 								text: chapterText,
 								voiceModelId,
 								format,
@@ -1308,7 +1308,7 @@ async function handleBibleVideoJob(job, jobState = {}) {
 							id: chapterJobId,
 							type: 'bible-video',
 							user: job.user,
-							data: {
+							payload: {
 								text: chapterText,
 								voiceModelId,
 								format,
