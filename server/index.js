@@ -171,6 +171,54 @@ async function cleanupOrphanedChunkFiles() {
 // Run cleanup every hour
 setInterval(cleanupOrphanedChunkFiles, 60 * 60 * 1000);
 
+// Job recovery and monitoring system
+async function checkForStuckJobs() {
+	try {
+		const now = Date.now();
+		const stuckJobs = [];
+
+		for (const [jobId, jobInfo] of activeJobs.entries()) {
+			const duration = now - jobInfo.startTime;
+			
+			if (duration > JOB_TIMEOUT) {
+				stuckJobs.push({ jobId, jobInfo, duration });
+			}
+		}
+
+		if (stuckJobs.length > 0) {
+			broadcastLog('warning', 'system', `Found ${stuckJobs.length} stuck jobs, attempting recovery`);
+			
+			for (const { jobId, jobInfo, duration } of stuckJobs) {
+				broadcastLog('warning', 'job', `Job ${jobId} appears stuck`, `Duration: ${Math.round(duration / 1000)}s, User: ${jobInfo.job.user}`);
+				
+				// Force terminate the stuck job
+				activeJobs.delete(jobId);
+				
+				// Emit error progress
+				emitProgress(jobId, { 
+					status: 'error', 
+					message: `Job timed out after ${Math.round(duration / 1000)} seconds` 
+				});
+				
+				// Log the timeout
+				logger.log(jobInfo.job.user, { 
+					event: 'job_timeout', 
+					jobId, 
+					duration: Math.round(duration / 1000) 
+				});
+			}
+			
+			// Try to process more jobs after cleanup
+			setTimeout(() => processQueue(), 1000);
+		}
+	} catch (error) {
+		broadcastLog('error', 'system', 'Error during stuck job check', error.message);
+	}
+}
+
+// Check for stuck jobs every 5 minutes
+setInterval(checkForStuckJobs, RECOVERY_CHECK_INTERVAL);
+
 // Public Bible endpoints (no auth required)
 app.get('/api/bible/books', (_req, res) => {
 	res.json({ books: BIBLE_BOOKS });
@@ -489,9 +537,12 @@ function emitProgress(jobId, data) {
 	}
 }
 
-// In-memory queue with persistence
+// Multi-job processing system with recovery
 const jobQueue = [];
-let isProcessing = false;
+const activeJobs = new Map(); // Track currently processing jobs
+const MAX_CONCURRENT_JOBS = 3; // Allow up to 3 jobs to run simultaneously
+const JOB_TIMEOUT = 30 * 60 * 1000; // 30 minutes timeout per job
+const RECOVERY_CHECK_INTERVAL = 5 * 60 * 1000; // Check for stuck jobs every 5 minutes
 
 function saveQueue() {
 	try {
@@ -511,47 +562,152 @@ function loadQueue() {
 
 loadQueue();
 
-async function processQueue() {
-	if (isProcessing) return;
-	isProcessing = true;
-	while (jobQueue.length > 0) {
-		const job = jobQueue[0];
-		try {
-			logger.log(job.user, { event: 'job_start', jobId: job.id, type: job.type });
-			broadcastLog('info', 'job', `Job ${job.id} started`, `Type: ${job.type}, User: ${job.user}`);
-			emitProgress(job.id, { status: 'started', step: 'init' });
-
-			if (job.type === 'tts') {
-				await processTTSJob(job);
-			} else if (job.type === 'bible-tts') {
-				await handleBibleTtsJob(job);
-			} else {
-				await new Promise(r => setTimeout(r, 500));
-				emitProgress(job.id, { status: 'progress', step: 'processing', progress: 50 });
-				await new Promise(r => setTimeout(r, 700));
-				const outPath = path.join(OUTPUTS_DIR, `${job.id}.txt`);
-				fs.writeFileSync(outPath, `Job ${job.id} placeholder output`);
-				emitProgress(job.id, { status: 'completed', output: `/outputs/${job.id}.txt` });
-			}
-
-			logger.log(job.user, { event: 'job_complete', jobId: job.id });
-			broadcastLog('success', 'job', `Job ${job.id} completed successfully`);
-		} catch (err) {
-			console.error(err);
-			broadcastLog('error', 'job', `Job ${job.id} failed`, `Error: ${err.message}`);
-			emitProgress(job.id, { status: 'error', message: String(err) });
-			logger.log(job.user, { event: 'job_error', jobId: job.id, error: String(err) });
-		}
-		finally {
-			jobQueue.shift();
+// Server startup recovery - check for any jobs that might have been interrupted
+function recoverInterruptedJobs() {
+	try {
+		// Check if there are any jobs in the queue that might be from a previous server session
+		const now = Date.now();
+		const maxJobAge = 24 * 60 * 60 * 1000; // 24 hours
+		
+		const oldJobs = jobQueue.filter(job => (now - job.createdAt) > maxJobAge);
+		if (oldJobs.length > 0) {
+			broadcastLog('warning', 'system', `Found ${oldJobs.length} old jobs from previous session, removing them`);
+			
+			// Remove old jobs
+			jobQueue.splice(0, jobQueue.length, ...jobQueue.filter(job => (now - job.createdAt) <= maxJobAge));
 			saveQueue();
+			
+			for (const job of oldJobs) {
+				broadcastLog('info', 'system', `Removed old job ${job.id}`, `User: ${job.user}, Age: ${Math.round((now - job.createdAt) / (60 * 60 * 1000))}h`);
+			}
 		}
+		
+		broadcastLog('info', 'system', `Job recovery completed`, `Queue: ${jobQueue.length} jobs, Active: ${activeJobs.size} jobs`);
+	} catch (error) {
+		broadcastLog('error', 'system', 'Error during job recovery', error.message);
 	}
-	isProcessing = false;
+}
+
+// Run recovery on startup
+setTimeout(recoverInterruptedJobs, 5000); // Wait 5 seconds after startup
+
+async function processQueue() {
+	// Don't start new jobs if we're at capacity
+	if (activeJobs.size >= MAX_CONCURRENT_JOBS) {
+		return;
+	}
+
+	// Process jobs from the queue with fair scheduling
+	while (jobQueue.length > 0 && activeJobs.size < MAX_CONCURRENT_JOBS) {
+		// Get active users to implement fair scheduling
+		const activeUsers = new Set(Array.from(activeJobs.values()).map(jobInfo => jobInfo.job.user));
+		
+		// Find the next job from a user who doesn't have an active job (fair scheduling)
+		let jobIndex = -1;
+		for (let i = 0; i < jobQueue.length; i++) {
+			if (!activeUsers.has(jobQueue[i].user)) {
+				jobIndex = i;
+				break;
+			}
+		}
+		
+		// If no fair job found, take the first one
+		if (jobIndex === -1) {
+			jobIndex = 0;
+		}
+		
+		const job = jobQueue.splice(jobIndex, 1)[0];
+		if (!job) break;
+
+		// Start processing this job
+		processJob(job);
+	}
+
+	saveQueue();
+}
+
+async function processJob(job) {
+	// Mark job as active
+	activeJobs.set(job.id, {
+		job,
+		startTime: Date.now(),
+		status: 'processing'
+	});
+
+	broadcastLog('info', 'job', `Job ${job.id} started processing`, `Type: ${job.type}, User: ${job.user}, Active jobs: ${activeJobs.size}`);
+
+	try {
+		logger.log(job.user, { event: 'job_start', jobId: job.id, type: job.type });
+		emitProgress(job.id, { status: 'started', step: 'init' });
+
+		// Process the job based on type
+		if (job.type === 'tts') {
+			await processTTSJob(job);
+		} else if (job.type === 'bible-tts') {
+			await handleBibleTtsJob(job);
+		} else {
+			await new Promise(r => setTimeout(r, 500));
+			emitProgress(job.id, { status: 'progress', step: 'processing', progress: 50 });
+			await new Promise(r => setTimeout(r, 700));
+			const outPath = path.join(OUTPUTS_DIR, `${job.id}.txt`);
+			fs.writeFileSync(outPath, `Job ${job.id} placeholder output`);
+			emitProgress(job.id, { status: 'completed', output: `/outputs/${job.id}.txt` });
+		}
+
+		logger.log(job.user, { event: 'job_complete', jobId: job.id });
+		broadcastLog('success', 'job', `Job ${job.id} completed successfully`, `Duration: ${Math.round((Date.now() - activeJobs.get(job.id).startTime) / 1000)}s`);
+
+	} catch (err) {
+		console.error(`[Job ${job.id}] Error:`, err);
+		broadcastLog('error', 'job', `Job ${job.id} failed`, `Error: ${err.message}, Duration: ${Math.round((Date.now() - activeJobs.get(job.id).startTime) / 1000)}s`);
+		emitProgress(job.id, { status: 'error', message: String(err) });
+		logger.log(job.user, { event: 'job_error', jobId: job.id, error: String(err) });
+
+		// For recoverable errors, we could potentially retry the job
+		if (isRecoverableError(err)) {
+			broadcastLog('warning', 'job', `Job ${job.id} failed with recoverable error, may retry later`, err.message);
+		}
+	} finally {
+		// Remove from active jobs
+		activeJobs.delete(job.id);
+		
+		// Try to process more jobs
+		setTimeout(() => processQueue(), 100);
+	}
+}
+
+function isRecoverableError(error) {
+	// Define which errors are recoverable (network issues, temporary API failures, etc.)
+	const recoverablePatterns = [
+		/network/i,
+		/timeout/i,
+		/connection/i,
+		/rate limit/i,
+		/temporary/i,
+		/503/i,
+		/502/i,
+		/504/i
+	];
+	
+	return recoverablePatterns.some(pattern => pattern.test(error.message));
 }
 
 app.get('/api/queue/status', (_req, res) => {
-	res.json({ pending: jobQueue.length, processing: isProcessing });
+	const activeJobDetails = Array.from(activeJobs.values()).map(jobInfo => ({
+		id: jobInfo.job.id,
+		type: jobInfo.job.type,
+		user: jobInfo.job.user,
+		startTime: jobInfo.startTime,
+		duration: Math.round((Date.now() - jobInfo.startTime) / 1000),
+		status: jobInfo.status
+	}));
+
+	res.json({ 
+		pending: jobQueue.length, 
+		processing: activeJobs.size,
+		maxConcurrent: MAX_CONCURRENT_JOBS,
+		activeJobs: activeJobDetails
+	});
 });
 
 async function processTTSJob(job) {
@@ -843,6 +999,70 @@ app.post('/api/outputs/delete', (req, res) => {
 	if (!fs.existsSync(p)) return res.status(404).json({ error: 'Not found' });
 	fs.unlinkSync(p);
 	res.json({ ok: true });
+});
+
+// Job management endpoints
+app.post('/api/jobs/cancel', (req, res) => {
+	const { jobId } = req.body || {};
+	const user = req.user; // from auth middleware
+	
+	if (!jobId) {
+		return res.status(400).json({ error: 'Job ID required' });
+	}
+	
+	// Check if job exists and belongs to user
+	const jobInfo = activeJobs.get(jobId);
+	if (!jobInfo) {
+		return res.status(404).json({ error: 'Job not found or not active' });
+	}
+	
+	if (jobInfo.job.user !== user) {
+		return res.status(403).json({ error: 'Cannot cancel another user\'s job' });
+	}
+	
+	// Cancel the job
+	activeJobs.delete(jobId);
+	broadcastLog('info', 'job', `Job ${jobId} cancelled by user`, `User: ${user}`);
+	
+	// Emit cancellation progress
+	emitProgress(jobId, { 
+		status: 'cancelled', 
+		message: 'Job cancelled by user' 
+	});
+	
+	logger.log(user, { event: 'job_cancelled', jobId });
+	
+	res.json({ success: true, message: 'Job cancelled successfully' });
+});
+
+app.get('/api/jobs/my', (req, res) => {
+	const user = req.user; // from auth middleware
+	
+	// Get user's active jobs
+	const userActiveJobs = Array.from(activeJobs.values())
+		.filter(jobInfo => jobInfo.job.user === user)
+		.map(jobInfo => ({
+			id: jobInfo.job.id,
+			type: jobInfo.job.type,
+			startTime: jobInfo.startTime,
+			duration: Math.round((Date.now() - jobInfo.startTime) / 1000),
+			status: jobInfo.status
+		}));
+	
+	// Get user's pending jobs
+	const userPendingJobs = jobQueue
+		.filter(job => job.user === user)
+		.map(job => ({
+			id: job.id,
+			type: job.type,
+			createdAt: job.createdAt,
+			queuePosition: jobQueue.findIndex(j => j.id === job.id) + 1
+		}));
+	
+	res.json({
+		active: userActiveJobs,
+		pending: userPendingJobs
+	});
 });
 
 // Manual cleanup endpoint
