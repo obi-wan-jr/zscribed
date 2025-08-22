@@ -684,12 +684,13 @@ app.post('/api/jobs/bible', (req, res) => {
 app.get('/api/outputs', (_req, res) => {
 	const files = fs.readdirSync(OUTPUTS_DIR)
 		.filter(f => !f.startsWith('.'))
-		// Filter out temporary chunk files (they have format like "Inggo-bible-2-Peter-entire-3eda9064-08-26-20-12.mp3")
+		// Filter out temporary chunk files
 		.filter(f => {
-			// Exclude files that are temporary chunks (they have numbers at the end before the timestamp)
 			// Final files have format: {user}-{type}-{reference}-{voiceId}-{timestamp}.mp3
 			// Chunk files have format: {user}-{type}-{reference}-{voiceId}-{chunkNumber}-{timestamp}.mp3
-			const isChunkFile = /\d+-\d+\.mp3$/.test(f);
+			// The key difference is that chunk files end with -{single digit}.mp3
+			// Pattern: ends with -{single digit}.mp3
+			const isChunkFile = /-\d\.mp3$/.test(f);
 			return !isChunkFile;
 		})
 		.map(name => ({ name, url: `/outputs/${name}` }));
