@@ -465,6 +465,12 @@ function startProgressTracking(jobId) {
 	updateProgressBar(0);
 	addProgressLog(`Job ${jobId} started`);
 	
+	// Ensure cancel button is visible during processing
+	const cancelBibleBtn = document.getElementById('cancelBibleBtn');
+	if (cancelBibleBtn) {
+		cancelBibleBtn.classList.remove('hidden');
+	}
+	
 	// Fallback progress indicator (in case server doesn't provide detailed progress)
 	let fallbackProgress = 0;
 	const fallbackInterval = setInterval(() => {
@@ -487,6 +493,12 @@ function startProgressTracking(jobId) {
 				updateProgressStatus(`Processing chunk ${data.chunk}/${data.total}...`);
 				updateProgressBar(percentage);
 				addProgressLog(`Processing chunk ${data.chunk} of ${data.total}`);
+				
+				// Ensure cancel button stays visible during processing
+				const cancelBibleBtn = document.getElementById('cancelBibleBtn');
+				if (cancelBibleBtn) {
+					cancelBibleBtn.classList.remove('hidden');
+				}
 			} else if (data.status === 'completed') {
 				clearInterval(fallbackInterval);
 				updateProgressStatus('Completed!');
@@ -797,6 +809,17 @@ async function createVideo() {
 		}
 	}
 	
+	// Disable the create button during processing
+	const createVideoBtn = document.getElementById('createVideoBtn');
+	const cancelBibleBtn = document.getElementById('cancelBibleBtn');
+	if (createVideoBtn) {
+		createVideoBtn.disabled = true;
+		createVideoBtn.textContent = 'Creating...';
+	}
+	if (cancelBibleBtn) {
+		cancelBibleBtn.classList.remove('hidden');
+	}
+	
 	updateStatus('Creating video...');
 	showProgress();
 	updateProgressStatus('Uploading background file...');
@@ -850,6 +873,15 @@ async function createVideo() {
 		if (handleUnauthorizedError(error)) return;
 		updateStatus(`Error: ${error.message}`);
 		hideProgress();
+		
+		// Re-enable the create button
+		if (createVideoBtn) {
+			createVideoBtn.disabled = false;
+			createVideoBtn.textContent = 'Create Video';
+		}
+		if (cancelBibleBtn) {
+			cancelBibleBtn.classList.add('hidden');
+		}
 	}
 }
 
