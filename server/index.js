@@ -224,8 +224,7 @@ async function checkForStuckJobs() {
 	}
 }
 
-// Check for stuck jobs every 5 minutes
-setInterval(checkForStuckJobs, RECOVERY_CHECK_INTERVAL);
+
 
 // Public Bible endpoints (no auth required)
 app.get('/api/bible/books', (_req, res) => {
@@ -1572,5 +1571,8 @@ process.on('SIGTERM', () => { saveQueue(); process.exit(0); });
 app.listen(PORT, () => {
 	console.log(`Server listening on http://localhost:${PORT}`);
 	broadcastLog('info', 'system', `Server started`, `Port: ${PORT}, Environment: ${process.env.NODE_ENV || 'development'}`);
+	
+	// Start the stuck job checker after server is running
+	setInterval(checkForStuckJobs, RECOVERY_CHECK_INTERVAL);
 });
 
