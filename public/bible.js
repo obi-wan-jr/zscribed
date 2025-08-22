@@ -711,10 +711,29 @@ async function createVideo() {
 	
 	updateStatus('Creating video...');
 	showProgress();
-	updateProgressStatus('Initializing video creation...');
+	updateProgressStatus('Uploading background file...');
 	
 	try {
-		// First create the audio
+		// First upload the background file
+		const fileData = await readFileAsBase64(backgroundFile);
+		const uploadRes = await authenticatedFetch('/api/upload/background', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				file: fileData,
+				filename: backgroundFile.name,
+				fileType: backgroundFile.type
+			})
+		});
+		
+		if (!uploadRes) return;
+		
+		const uploadResult = await uploadRes.json();
+		if (uploadResult.error) throw new Error(uploadResult.error);
+		
+		updateProgressStatus('Background file uploaded, creating video...');
+		
+		// Now create the video
 		const audioData = buildRequestData();
 		const audioRes = await authenticatedFetch('/api/jobs/bible', {
 			method: 'POST',
@@ -744,4 +763,16 @@ async function createVideo() {
 		updateStatus(`Error: ${error.message}`);
 		hideProgress();
 	}
+}
+
+function readFileAsBase64(file) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => {
+			const base64 = reader.result.split(',')[1]; // Remove data URL prefix
+			resolve(base64);
+		};
+		reader.onerror = reject;
+		reader.readAsDataURL(file);
+	});
 }

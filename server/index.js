@@ -675,6 +675,8 @@ async function processJob(job) {
 			await processTTSJob(job, jobState);
 		} else if (job.type === 'bible-tts') {
 			await handleBibleTtsJob(job, jobState);
+		} else if (job.type === 'bible-video') {
+			await handleBibleVideoJob(job, jobState);
 		} else {
 			await new Promise(r => setTimeout(r, 500));
 			emitProgress(job.id, { status: 'progress', step: 'processing', progress: 50 });
@@ -826,7 +828,23 @@ async function processTTSJob(job, jobState = {}) {
 		// Clean up any remaining segment files that might not have been cleaned up
 		await cleanupSegmentFiles(segmentFiles);
 		
-		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
+		// Check if video creation is requested
+		if (job.data.createVideo && job.data.videoSettings) {
+			broadcastLog('info', 'video', `Starting video creation`, `Job: ${job.id}, Audio: ${path.basename(stitched)}`);
+			emitProgress(job.id, { status: 'progress', step: 'video', message: 'Creating video with audio...' });
+			
+			try {
+				const videoOutput = await createVideoFromAudio(stitched, job.data.videoSettings, job.id);
+				broadcastLog('success', 'video', `Video creation completed`, `Job: ${job.id}, File: ${path.basename(videoOutput)}`);
+				emitProgress(job.id, { status: 'completed', output: videoOutput.replace(OUTPUTS_DIR, '/outputs') });
+			} catch (videoError) {
+				broadcastLog('error', 'video', `Video creation failed`, `Job: ${job.id}, Error: ${videoError.message}`);
+				// Still return the audio file even if video creation failed
+				emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs'), warning: 'Video creation failed, audio file available' });
+			}
+		} else {
+			emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
+		}
 	} catch (error) {
 		console.error('[TTS Job] Error processing TTS job:', error);
 		
@@ -887,6 +905,129 @@ async function cleanupSegmentFiles(segmentFiles) {
 		broadcastLog('error', 'cleanup', 'Error during segment cleanup', error.message);
 		// Don't throw error for cleanup failures
 		return { deletedCount: 0, failedCount: segmentFiles.length, remainingCount: segmentFiles.length };
+	}
+}
+
+async function createVideoFromAudio(audioFile, videoSettings, jobId) {
+	const { backgroundType, videoResolution, backgroundFile } = videoSettings;
+	
+	broadcastLog('info', 'video', `Creating video with ${backgroundType} background`, `Job: ${jobId}, Resolution: ${videoResolution}`);
+	
+	// Get audio duration using ffprobe
+	const audioDuration = await getAudioDuration(audioFile);
+	
+	// Create video output filename
+	const audioBasename = path.basename(audioFile, '.mp3');
+	const videoOutput = path.join(OUTPUTS_DIR, `${audioBasename}-video.mp4`);
+	
+	// Build FFmpeg command based on background type
+	let ffmpegCommand;
+	
+	if (backgroundType === 'image') {
+		// Use static image as background
+		const imagePath = path.join(STORAGE_DIR, 'uploads', backgroundFile);
+		if (!fs.existsSync(imagePath)) {
+			throw new Error(`Background image not found: ${backgroundFile}`);
+		}
+		
+		ffmpegCommand = [
+			'-loop', '1',
+			'-i', imagePath,
+			'-i', audioFile,
+			'-c:v', 'libx264',
+			'-c:a', 'aac',
+			'-shortest',
+			'-pix_fmt', 'yuv420p',
+			'-vf', `scale=${getResolutionScale(videoResolution)}`,
+			'-y', videoOutput
+		];
+	} else {
+		// Use looping video as background
+		const videoPath = path.join(STORAGE_DIR, 'uploads', backgroundFile);
+		if (!fs.existsSync(videoPath)) {
+			throw new Error(`Background video not found: ${backgroundFile}`);
+		}
+		
+		ffmpegCommand = [
+			'-stream_loop', '-1',
+			'-i', videoPath,
+			'-i', audioFile,
+			'-c:v', 'libx264',
+			'-c:a', 'aac',
+			'-shortest',
+			'-pix_fmt', 'yuv420p',
+			'-vf', `scale=${getResolutionScale(videoResolution)}`,
+			'-y', videoOutput
+		];
+	}
+	
+	// Execute FFmpeg command
+	broadcastLog('info', 'video', `Executing FFmpeg command`, `Job: ${jobId}, Duration: ${audioDuration}s`);
+	
+	return new Promise((resolve, reject) => {
+		const { spawn } = require('child_process');
+		const ffmpeg = spawn('ffmpeg', ffmpegCommand);
+		
+		let stderr = '';
+		
+		ffmpeg.stderr.on('data', (data) => {
+			stderr += data.toString();
+		});
+		
+		ffmpeg.on('close', (code) => {
+			if (code === 0) {
+				broadcastLog('success', 'video', `FFmpeg completed successfully`, `Job: ${jobId}, Output: ${path.basename(videoOutput)}`);
+				resolve(videoOutput);
+			} else {
+				broadcastLog('error', 'video', `FFmpeg failed`, `Job: ${jobId}, Code: ${code}, Error: ${stderr}`);
+				reject(new Error(`FFmpeg failed with code ${code}: ${stderr}`));
+			}
+		});
+		
+		ffmpeg.on('error', (error) => {
+			broadcastLog('error', 'video', `FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
+			reject(error);
+		});
+	});
+}
+
+function getAudioDuration(audioFile) {
+	return new Promise((resolve, reject) => {
+		const { spawn } = require('child_process');
+		const ffprobe = spawn('ffprobe', [
+			'-v', 'quiet',
+			'-show_entries', 'format=duration',
+			'-of', 'csv=p=0',
+			audioFile
+		]);
+		
+		let output = '';
+		
+		ffprobe.stdout.on('data', (data) => {
+			output += data.toString();
+		});
+		
+		ffprobe.on('close', (code) => {
+			if (code === 0) {
+				const duration = parseFloat(output.trim());
+				resolve(duration);
+			} else {
+				reject(new Error(`ffprobe failed with code ${code}`));
+			}
+		});
+		
+		ffprobe.on('error', (error) => {
+			reject(error);
+		});
+	});
+}
+
+function getResolutionScale(resolution) {
+	switch (resolution) {
+		case '720p': return '1280:720';
+		case '1080p': return '1920:1080';
+		case '4k': return '3840:2160';
+		default: return '1920:1080';
 	}
 }
 
@@ -970,6 +1111,95 @@ async function handleBibleTtsJob(job, jobState = {}) {
 	});
 }
 
+async function handleBibleVideoJob(job, jobState = {}) {
+	const { translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, voiceModelId, format = 'mp3', sentencesPerChunk = 3, type = 'chapter', chapters = '', videoSettings } = job.payload;
+	
+	broadcastLog('info', 'video', `Starting Bible video job`, `Job: ${job.id}, Book: ${book}, Type: ${type}, Voice: ${voiceModelId}`);
+	
+	// First, create the audio using the existing Bible TTS logic
+	let allText = '';
+	let bibleReference = '';
+	
+	if (type === 'book') {
+		// Handle entire book
+		const maxChapters = getMaxChapters(book);
+		broadcastLog('info', 'video', `Processing entire book: ${book}`, `Job: ${job.id}, Chapters: 1-${maxChapters}`);
+		for (let ch = 1; ch <= maxChapters; ch++) {
+			const chapterValidation = validateChapter(book, ch);
+			if (!chapterValidation.valid) {
+				broadcastLog('warning', 'video', `Skipping invalid chapter ${ch}`, `Job: ${job.id}, Book: ${book}, Reason: ${chapterValidation.reason}`);
+				continue; // Skip invalid chapters
+			}
+			
+			broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
+			const rawText = await fetchBibleText({ translation, book, chapter: ch });
+			const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+			allText += cleanedText + '\n\n';
+		}
+		bibleReference = `${book}-entire`;
+	} else if (type === 'chapters' && chapters) {
+		// Handle multiple chapters
+		const chapterRanges = chapters.split(',').map(range => range.trim());
+		broadcastLog('info', 'video', `Processing multiple chapters: ${chapters}`, `Job: ${job.id}, Book: ${book}`);
+		for (const range of chapterRanges) {
+			if (range.includes('-')) {
+				const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+				if (!isNaN(start) && !isNaN(end)) {
+					broadcastLog('debug', 'video', `Processing chapter range ${start}-${end}`, `Job: ${job.id}, Book: ${book}`);
+					for (let ch = start; ch <= end; ch++) {
+						const chapterValidation = validateChapter(book, ch);
+						if (!chapterValidation.valid) {
+							broadcastLog('warning', 'video', `Skipping invalid chapter ${ch}`, `Job: ${job.id}, Book: ${book}, Reason: ${chapterValidation.reason}`);
+							continue;
+						}
+						
+						broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
+						const rawText = await fetchBibleText({ translation, book, chapter: ch });
+						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+						allText += cleanedText + '\n\n';
+					}
+				}
+			} else {
+				const ch = parseInt(range);
+				if (!isNaN(ch)) {
+					const chapterValidation = validateChapter(book, ch);
+					if (chapterValidation.valid) {
+						broadcastLog('debug', 'video', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
+						const rawText = await fetchBibleText({ translation, book, chapter: ch });
+						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
+						allText += cleanedText + '\n\n';
+					}
+				}
+			}
+		}
+		bibleReference = `${book}-${chapters}`;
+	} else {
+		// Handle single chapter (original logic)
+		const verses = parseVerseRanges(String(verseRanges || ''));
+		const raw = await fetchBibleText({ translation, book, chapter, verses });
+		allText = cleanupBibleText(raw, { excludeNumbers, excludeFootnotes });
+		bibleReference = `${book}-${chapter}-${verses.join('-')}`;
+	}
+	
+	// Create audio first
+	broadcastLog('info', 'video', `Creating audio for video`, `Job: ${job.id}, Text length: ${allText.length}`);
+	emitProgress(job.id, { status: 'progress', step: 'audio', message: 'Creating audio track...' });
+	
+	await processTTSJob({ 
+		id: job.id, 
+		user: job.user, 
+		data: { 
+			text: allText, 
+			voiceModelId, 
+			format, 
+			sentencesPerChunk,
+			bibleReference,
+			createVideo: true,
+			videoSettings
+		} 
+	});
+}
+
 // Start TTS job
 app.post('/api/jobs/tts', (req, res) => {
 	const id = uuidv4();
@@ -1002,9 +1232,15 @@ app.post('/api/jobs/bible', (req, res) => {
 		format: req.body?.format || 'mp3',
 		sentencesPerChunk: Number(req.body?.sentencesPerChunk || 3),
 		type: req.body?.type || 'chapter',
-		chapters: req.body?.chapters || ''
+		chapters: req.body?.chapters || '',
+		createVideo: Boolean(req.body?.createVideo || false),
+		videoSettings: req.body?.videoSettings || null
 	};
-	const job = { id, type: 'bible-tts', user, createdAt: Date.now(), payload };
+	
+	// Determine job type based on whether video is requested
+	const jobType = payload.createVideo ? 'bible-video' : 'bible-tts';
+	const job = { id, type: jobType, user, createdAt: Date.now(), payload };
+	
 	jobQueue.push(job);
 	saveQueue();
 	processQueue();
@@ -1079,6 +1315,41 @@ app.post('/api/outputs/delete', (req, res) => {
 	if (!fs.existsSync(p)) return res.status(404).json({ error: 'Not found' });
 	fs.unlinkSync(p);
 	res.json({ ok: true });
+});
+
+// File upload for video backgrounds
+app.post('/api/upload/background', (req, res) => {
+	const user = req.user; // from auth middleware
+	
+	// Ensure uploads directory exists
+	const uploadsDir = path.join(STORAGE_DIR, 'uploads');
+	if (!fs.existsSync(uploadsDir)) {
+		fs.mkdirSync(uploadsDir, { recursive: true });
+	}
+	
+	// Handle file upload using multer or similar
+	// For now, we'll use a simple approach with base64 encoding
+	const { file, filename, fileType } = req.body || {};
+	
+	if (!file || !filename) {
+		return res.status(400).json({ error: 'Missing file data' });
+	}
+	
+	try {
+		// Decode base64 file data
+		const fileData = Buffer.from(file, 'base64');
+		const filePath = path.join(uploadsDir, filename);
+		
+		// Write file
+		fs.writeFileSync(filePath, fileData);
+		
+		broadcastLog('info', 'upload', `Background file uploaded`, `User: ${user}, File: ${filename}`);
+		
+		res.json({ success: true, filename });
+	} catch (error) {
+		broadcastLog('error', 'upload', `Upload failed`, `User: ${user}, File: ${filename}, Error: ${error.message}`);
+		res.status(500).json({ error: error.message });
+	}
 });
 
 // Job management endpoints
