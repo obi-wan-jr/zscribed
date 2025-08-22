@@ -142,6 +142,35 @@ try {
 logger.prune();
 setInterval(() => logger.prune(), 24 * 60 * 60 * 1000);
 
+// Periodic cleanup of orphaned chunk files
+async function cleanupOrphanedChunkFiles() {
+	try {
+		const files = fs.readdirSync(OUTPUTS_DIR);
+		const chunkFiles = files.filter(f => /-\d\.mp3$/.test(f));
+		
+		if (chunkFiles.length > 0) {
+			broadcastLog('info', 'system', `Cleaning up ${chunkFiles.length} orphaned chunk files`);
+			
+			for (const file of chunkFiles) {
+				try {
+					const filePath = path.join(OUTPUTS_DIR, file);
+					fs.unlinkSync(filePath);
+					broadcastLog('debug', 'system', `Deleted orphaned chunk file: ${file}`);
+				} catch (error) {
+					broadcastLog('warning', 'system', `Failed to delete orphaned chunk file: ${file}`, error.message);
+				}
+			}
+			
+			broadcastLog('success', 'system', `Cleanup completed - removed ${chunkFiles.length} orphaned chunk files`);
+		}
+	} catch (error) {
+		broadcastLog('error', 'system', 'Error during orphaned chunk cleanup', error.message);
+	}
+}
+
+// Run cleanup every hour
+setInterval(cleanupOrphanedChunkFiles, 60 * 60 * 1000);
+
 // Public Bible endpoints (no auth required)
 app.get('/api/bible/books', (_req, res) => {
 	res.json({ books: BIBLE_BOOKS });
@@ -578,6 +607,9 @@ async function processTTSJob(job) {
 		
 		broadcastLog('success', 'audio', `Audio creation completed`, `Job: ${job.id}, File: ${path.basename(stitched)}`);
 		
+		// Clean up any remaining segment files that might not have been cleaned up
+		await cleanupSegmentFiles(segmentFiles);
+		
 		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
 	} catch (error) {
 		console.error('[TTS Job] Error processing TTS job:', error);
@@ -811,6 +843,32 @@ app.post('/api/outputs/delete', (req, res) => {
 	if (!fs.existsSync(p)) return res.status(404).json({ error: 'Not found' });
 	fs.unlinkSync(p);
 	res.json({ ok: true });
+});
+
+// Manual cleanup endpoint
+app.post('/api/cleanup/chunks', (req, res) => {
+	try {
+		const files = fs.readdirSync(OUTPUTS_DIR);
+		const chunkFiles = files.filter(f => /-\d\.mp3$/.test(f));
+		
+		let deletedCount = 0;
+		for (const file of chunkFiles) {
+			try {
+				const filePath = path.join(OUTPUTS_DIR, file);
+				fs.unlinkSync(filePath);
+				deletedCount++;
+				broadcastLog('info', 'system', `Manually deleted chunk file: ${file}`);
+			} catch (error) {
+				broadcastLog('warning', 'system', `Failed to delete chunk file: ${file}`, error.message);
+			}
+		}
+		
+		broadcastLog('success', 'system', `Manual cleanup completed - removed ${deletedCount} chunk files`);
+		res.json({ success: true, deletedCount });
+	} catch (error) {
+		broadcastLog('error', 'system', 'Error during manual cleanup', error.message);
+		res.status(500).json({ error: error.message });
+	}
 });
 
 // Serve stored outputs
