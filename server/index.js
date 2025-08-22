@@ -959,7 +959,25 @@ async function cleanupSegmentFiles(segmentFiles) {
 }
 
 async function createVideoFromAudio(audioFile, videoSettings, jobId) {
-	return await videoGenerator.createVideo(audioFile, videoSettings, jobId, broadcastLog);
+	// Extract book name and chapter number from the job data if available
+	const job = activeJobs.get(jobId);
+	let bookName = null;
+	let chapterNumber = null;
+	
+	if (job && job.job) {
+		const jobData = job.job.payload || job.job.data || {};
+		bookName = jobData.book || jobData.bibleReference?.split('-')[0];
+		chapterNumber = jobData.chapter || jobData.bibleReference?.split('-')[1];
+	}
+	
+	// Add book name and chapter number to video settings
+	const enhancedVideoSettings = {
+		...videoSettings,
+		bookName,
+		chapterNumber
+	};
+	
+	return await videoGenerator.createVideo(audioFile, enhancedVideoSettings, jobId, broadcastLog);
 }
 
 
