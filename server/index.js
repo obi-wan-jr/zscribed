@@ -50,6 +50,11 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const CONFIG_DIR = path.join(ROOT, 'config');
 const QUEUE_FILE = path.join(STORAGE_DIR, 'queue.json');
 
+// Multi-job processing system constants
+const MAX_CONCURRENT_JOBS = 3; // Allow up to 3 jobs to run simultaneously
+const JOB_TIMEOUT = 30 * 60 * 1000; // 30 minutes timeout per job
+const RECOVERY_CHECK_INTERVAL = 5 * 60 * 1000; // Check for stuck jobs every 5 minutes
+
 ensureDir(STORAGE_DIR);
 ensureDir(OUTPUTS_DIR);
 ensureDir(LOGS_DIR);
@@ -540,9 +545,6 @@ function emitProgress(jobId, data) {
 // Multi-job processing system with recovery
 const jobQueue = [];
 const activeJobs = new Map(); // Track currently processing jobs
-const MAX_CONCURRENT_JOBS = 3; // Allow up to 3 jobs to run simultaneously
-const JOB_TIMEOUT = 30 * 60 * 1000; // 30 minutes timeout per job
-const RECOVERY_CHECK_INTERVAL = 5 * 60 * 1000; // Check for stuck jobs every 5 minutes
 
 function saveQueue() {
 	try {
