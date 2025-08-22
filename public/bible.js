@@ -197,40 +197,24 @@ function setupAllChaptersButton() {
 async function loadModels() {
 	try {
 		const response = await authenticatedFetch('/api/models');
-		const data = await response.json();
+		if (!response) return; // Redirect happened
 		
-		console.log('API response for models:', data);
+		const data = await response.json();
 		
 		const modelSelect = document.getElementById('voiceModel');
 		if (modelSelect) {
 			modelSelect.innerHTML = '<option value="">Select voice model</option>';
 			
-			// Handle different response formats
-			let models = [];
-			if (Array.isArray(data)) {
-				models = data;
-			} else if (data.models && Array.isArray(data.models)) {
-				models = data.models;
-			} else if (data.voiceModels && Array.isArray(data.voiceModels)) {
-				models = data.voiceModels;
-			} else {
-				console.error('Expected array of models, got:', typeof data, data);
-				updateStatus('No voice models available');
-				return;
-			}
-			
-			console.log('Processing models:', models);
-			
-			models.forEach(model => {
+			for (const m of data.voiceModels || []) {
 				const option = document.createElement('option');
-				option.value = model.id || model.value || model;
-				option.textContent = model.name || model.label || model.id || model;
+				option.value = m.id;
+				option.textContent = m.name || m.id;
 				modelSelect.appendChild(option);
-			});
-			
-			console.log('Loaded', models.length, 'voice models');
+			}
 		}
 	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		
 		console.error('Failed to load models:', error);
 		updateStatus('Failed to load voice models');
 	}
