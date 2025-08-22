@@ -998,9 +998,9 @@ async function handleBibleTtsJob(job, jobState = {}) {
 			const chapterJobId = uuidv4();
 			const chapterJob = {
 				id: chapterJobId,
-				type: job.type,
+				type: 'tts',
 				user: job.user,
-				payload: {
+				data: {
 					text: chapterText,
 					voiceModelId,
 					format,
@@ -1082,16 +1082,16 @@ async function handleBibleTtsJob(job, jobState = {}) {
 							const chapterJobId = uuidv4();
 							const chapterJob = {
 								id: chapterJobId,
-								type: job.type,
+								type: 'tts',
 								user: job.user,
-								payload: {
+								data: {
 									text: chapterText,
 									voiceModelId,
 									format,
 									sentencesPerChunk,
 									bibleReference: `${book}-${ch}`,
-														createVideo: job.payload?.createVideo || false,
-					videoSettings: job.payload?.videoSettings || null
+									createVideo: job.payload?.createVideo || false,
+									videoSettings: job.payload?.videoSettings || null
 								}
 							};
 						
@@ -1124,7 +1124,7 @@ async function handleBibleTtsJob(job, jobState = {}) {
 	await processTTSJob({ 
 		id: job.id, 
 		user: job.user, 
-		payload: { 
+		data: { 
 			text: allText, 
 			voiceModelId, 
 			format, 
