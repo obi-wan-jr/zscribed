@@ -302,6 +302,9 @@ async function createAudio() {
 		
 		if (response.ok) {
 			const result = await response.json();
+			console.log('Bible job response:', result);
+			console.log('Result id:', result.id);
+			console.log('Result jobId:', result.jobId);
 			updateStatus(`Audio creation started! Job ID: ${result.id}`);
 		} else {
 			const error = await response.text();
