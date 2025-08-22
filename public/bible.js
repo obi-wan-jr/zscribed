@@ -583,14 +583,21 @@ async function refreshOutputs() {
 
 // Global functions for file operations
 window.renameFile = async (oldName) => {
-	const newName = prompt('New name:', oldName);
-	if (!newName || newName === oldName) return;
+	// Extract the original extension
+	const originalExtension = oldName.split('.').pop();
+	const nameWithoutExtension = oldName.replace(/\.[^/.]+$/, '');
+	
+	const newName = prompt(`New name (extension will remain .${originalExtension}):`, nameWithoutExtension);
+	if (!newName || newName === nameWithoutExtension) return;
+	
+	// Ensure the extension is preserved
+	const finalName = newName.endsWith(`.${originalExtension}`) ? newName : `${newName}.${originalExtension}`;
 	
 	try {
 		const res = await authenticatedFetch('/api/outputs/rename', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ oldName, newName })
+			body: JSON.stringify({ oldName, newName: finalName })
 		});
 		if (res) refreshOutputs();
 	} catch (e) {
