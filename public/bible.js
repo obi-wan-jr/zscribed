@@ -474,7 +474,7 @@ function startProgressTracking(jobId) {
 				refreshOutputs(); // Refresh the outputs list immediately
 				setTimeout(() => {
 					hideProgress();
-					updateStatus(`✅ Audio creation completed! Check the Generated Audio Files section below to play your audio.`);
+					updateStatus(`✅ Audio creation completed!`);
 				}, 3000);
 			} else if (data.status === 'error') {
 				clearInterval(fallbackInterval);

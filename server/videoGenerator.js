@@ -1,4 +1,3 @@
-import { createCanvas, loadImage, registerFont } from 'canvas';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
@@ -115,9 +114,8 @@ export class VideoGenerator {
 	}
 
 	async createVideoWithCanvas(audioFile, videoSettings, jobId, broadcastLog) {
-		// This is a simplified canvas-based approach for creating video frames
-		// In a full implementation, you'd generate multiple frames and combine them
-		broadcastLog('info', 'video', `Canvas video generation not fully implemented`, `Job: ${jobId}`);
+		// Canvas-based video generation not implemented yet
+		broadcastLog('info', 'video', `Canvas video generation not implemented`, `Job: ${jobId}`);
 		throw new Error('Canvas video generation not implemented yet');
 	}
 

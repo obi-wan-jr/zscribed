@@ -149,21 +149,7 @@ function listenToProgress(jobId) {
 			ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
 		} else if (data.status === 'completed') {
 			ttsProgress.innerHTML = `
-				<div class="space-y-3">
-					<div class="text-green-400">✅ Audio creation completed!</div>
-					<div class="bg-[#0a0f1a] p-3 rounded border border-slate-600">
-						<div class="text-sm text-slate-300 mb-2">Preview your audio:</div>
-						<audio controls class="w-full" style="height: 40px;">
-							<source src="${data.output}" type="audio/mpeg">
-							Your browser does not support the audio element.
-						</audio>
-						<div class="mt-2 flex justify-end">
-							<button onclick="refreshOutputs()" class="text-xs text-slate-400 hover:text-slate-300 underline">
-								🔄 View all files
-							</button>
-						</div>
-					</div>
-				</div>
+				<div class="text-green-400">✅ Audio creation completed!</div>
 			`;
 			ttsBtn.disabled = false;
 			ttsBtn.textContent = 'Convert';
