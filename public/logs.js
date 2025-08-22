@@ -189,7 +189,7 @@ function createLogElement(log) {
 	const category = log.category || 'general';
 	
 	const logElement = document.createElement('div');
-	logElement.className = `log-entry p-3 border-l-4 bg-[#0f141f] hover:bg-[#1a1f2e] transition-colors ${level}`;
+	logElement.className = `log-entry p-3 border-l-4 bg-[#0b1020] hover:bg-[#0f141f] transition-colors ${level}`;
 	
 	logElement.innerHTML = `
 		<div class="flex items-start justify-between">

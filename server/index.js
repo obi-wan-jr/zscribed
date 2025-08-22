@@ -550,7 +550,7 @@ async function processTTSJob(job) {
 		emitProgress(job.id, { status: 'progress', step: 'tts', chunk: 0, total: chunks.length });
 		
 		for (let i = 0; i < chunks.length; i++) {
-			broadcastLog('info', 'audio', `Processing chunk ${i + 1}/${chunks.length}`, `Job: ${job.id}`);
+			broadcastLog('info', 'audio', `Processing chunk ${i + 1}/${chunks.length}`, `Job: ${job.id}, Voice: ${voiceModelId}`);
 			emitProgress(job.id, { status: 'progress', step: 'tts', chunk: i + 1, total: chunks.length });
 			const file = await ttsService.synthesizeChunkToFile({ 
 				chunkText: chunks[i], 
@@ -565,7 +565,7 @@ async function processTTSJob(job) {
 			segmentFiles.push(file);
 		}
 		
-		broadcastLog('info', 'audio', `Stitching ${segmentFiles.length} audio segments`, `Job: ${job.id}`);
+		broadcastLog('info', 'audio', `Stitching ${segmentFiles.length} audio segments`, `Job: ${job.id}, User: ${job.user}`);
 		const stitched = await ttsService.stitchSegments({ 
 			segmentFiles, 
 			outputsDir: OUTPUTS_DIR, 
@@ -575,6 +575,8 @@ async function processTTSJob(job) {
 			voiceModelId: job.data.voiceModelId,
 			bibleReference
 		});
+		
+		broadcastLog('success', 'audio', `Audio creation completed`, `Job: ${job.id}, File: ${path.basename(stitched)}`);
 		
 		emitProgress(job.id, { status: 'completed', output: stitched.replace(OUTPUTS_DIR, '/outputs') });
 	} catch (error) {
@@ -631,12 +633,14 @@ async function handleBibleTtsJob(job) {
 	if (type === 'book') {
 		// Handle entire book
 		const maxChapters = getMaxChapters(book);
+		broadcastLog('info', 'audio', `Processing entire book: ${book}`, `Job: ${job.id}, Chapters: 1-${maxChapters}`);
 		for (let ch = 1; ch <= maxChapters; ch++) {
 			const chapterValidation = validateChapter(book, ch);
 			if (!chapterValidation.valid) {
 				continue; // Skip invalid chapters
 			}
 			
+			broadcastLog('debug', 'audio', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 			const rawText = await fetchBibleText({ translation, book, chapter: ch });
 			const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
 			allText += cleanedText + '\n\n';
@@ -645,16 +649,19 @@ async function handleBibleTtsJob(job) {
 	} else if (type === 'chapters' && chapters) {
 		// Handle multiple chapters
 		const chapterRanges = chapters.split(',').map(range => range.trim());
+		broadcastLog('info', 'audio', `Processing multiple chapters: ${chapters}`, `Job: ${job.id}, Book: ${book}`);
 		for (const range of chapterRanges) {
 			if (range.includes('-')) {
 				const [start, end] = range.split('-').map(n => parseInt(n.trim()));
 				if (!isNaN(start) && !isNaN(end)) {
+					broadcastLog('debug', 'audio', `Processing chapter range ${start}-${end}`, `Job: ${job.id}, Book: ${book}`);
 					for (let ch = start; ch <= end; ch++) {
 						const chapterValidation = validateChapter(book, ch);
 						if (!chapterValidation.valid) {
 							continue;
 						}
 						
+						broadcastLog('debug', 'audio', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 						const rawText = await fetchBibleText({ translation, book, chapter: ch });
 						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
 						allText += cleanedText + '\n\n';
@@ -665,6 +672,7 @@ async function handleBibleTtsJob(job) {
 				if (!isNaN(ch)) {
 					const chapterValidation = validateChapter(book, ch);
 					if (chapterValidation.valid) {
+						broadcastLog('debug', 'audio', `Fetching chapter ${ch}`, `Job: ${job.id}, Book: ${book}`);
 						const rawText = await fetchBibleText({ translation, book, chapter: ch });
 						const cleanedText = cleanupBibleText(rawText, { excludeNumbers, excludeFootnotes });
 						allText += cleanedText + '\n\n';
