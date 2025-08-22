@@ -573,7 +573,15 @@ async function refreshOutputs() {
 		if (!outputsList) return;
 		
 		outputsList.innerHTML = '';
-		for (const f of data.files || []) {
+		
+		// Sort files by modification time, newest first
+		const sortedFiles = (data.files || []).sort((a, b) => {
+			const timeA = new Date(a.mtime || a.modified || 0).getTime();
+			const timeB = new Date(b.mtime || b.modified || 0).getTime();
+			return timeB - timeA; // Newest first
+		});
+		
+		for (const f of sortedFiles) {
 			const div = document.createElement('div');
 			div.className = 'p-4 bg-[#0a0f1a] rounded border border-slate-600 space-y-3';
 			
