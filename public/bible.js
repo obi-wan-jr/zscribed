@@ -45,6 +45,30 @@ function setupEventListeners() {
 		previewBtn.addEventListener('click', previewText);
 	}
 	
+	// Preview section controls
+	const collapsePreviewBtn = document.getElementById('collapsePreviewBtn');
+	const closePreviewBtn = document.getElementById('closePreviewBtn');
+	const previewSection = document.getElementById('previewSection');
+	
+	if (collapsePreviewBtn) {
+		collapsePreviewBtn.addEventListener('click', () => {
+			const previewText = document.getElementById('previewText');
+			if (previewText.style.maxHeight === '0px' || previewText.style.maxHeight === '') {
+				previewText.style.maxHeight = '160px';
+				collapsePreviewBtn.textContent = 'Collapse';
+			} else {
+				previewText.style.maxHeight = '0px';
+				collapsePreviewBtn.textContent = 'Expand';
+			}
+		});
+	}
+	
+	if (closePreviewBtn) {
+		closePreviewBtn.addEventListener('click', () => {
+			previewSection.classList.add('hidden');
+		});
+	}
+	
 	// Create audio button
 	const createAudioBtn = document.getElementById('createAudioBtn');
 	if (createAudioBtn) {
@@ -518,8 +542,14 @@ async function previewText() {
 		const result = await res.json();
 		if (result.error) throw new Error(result.error);
 		
-		// Show full text in status area
-		updateStatus(`Full Text (${result.text.length} characters): ${result.text}`);
+		// Show preview section with full text
+		const previewSection = document.getElementById('previewSection');
+		const previewText = document.getElementById('previewText');
+		if (previewSection && previewText) {
+			previewSection.classList.remove('hidden');
+			previewText.textContent = result.text;
+			updateStatus(`Bible text loaded (${result.text.length} characters)`);
+		}
 		
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return;
