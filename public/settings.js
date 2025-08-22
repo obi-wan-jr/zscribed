@@ -8,9 +8,7 @@ requireAuth().then(isAuthenticated => {
 	init();
 });
 
-const autoRefresh = document.getElementById('autoRefresh');
 const showNotifications = document.getElementById('showNotifications');
-const autoCleanup = document.getElementById('autoCleanup');
 const savePrefsBtn = document.getElementById('savePrefsBtn');
 const addModelBtn = document.getElementById('addModelBtn');
 const modelsList = document.getElementById('modelsList');
@@ -42,9 +40,7 @@ async function loadPreferencesIntoUI() {
 		const prefs = await res.json();
 		const user = getActiveUser();
 		const p = (prefs.users && prefs.users[user]) || {};
-		autoRefresh.checked = p.autoRefresh || false;
 		showNotifications.checked = p.showNotifications || false;
-		autoCleanup.checked = p.autoCleanup || false;
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to load preferences:', error);
@@ -165,9 +161,7 @@ savePrefsBtn?.addEventListener('click', async () => {
 	const user = getActiveUser();
 	const body = { users: {} };
 	body.users[user] = {
-		autoRefresh: autoRefresh.checked,
-		showNotifications: showNotifications.checked,
-		autoCleanup: autoCleanup.checked
+		showNotifications: showNotifications.checked
 	};
 	
 	try {

@@ -15,7 +15,6 @@
 					<a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
 					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
 					<a href="/logs.html" class="hover:text-white">Server Logs</a>
-					<a href="/outputs.html" class="hover:text-white">Outputs</a>
 					<a href="/settings.html" class="text-white">Settings</a>
 					<a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
 				</div>
@@ -44,33 +43,7 @@
 				<div id="modelsList" class="space-y-2"></div>
 			</section>
 			
-			<section class="bg-[#121733] border border-slate-700 rounded-lg p-4">
-				<h2 class="text-lg font-medium text-indigo-200 mb-4">Output Management</h2>
-				<div class="space-y-3">
-					<div class="flex items-center justify-between">
-						<span class="text-sm text-slate-300">Auto-refresh outputs</span>
-						<label class="flex items-center gap-2 text-sm">
-							<input id="autoRefresh" type="checkbox" />
-						</label>
-					</div>
-					<div class="flex items-center justify-between">
-						<span class="text-sm text-slate-300">Show notifications</span>
-						<label class="flex items-center gap-2 text-sm">
-							<input id="showNotifications" type="checkbox" />
-						</label>
-					</div>
-					<div class="flex items-center justify-between">
-						<span class="text-sm text-slate-300">Auto-cleanup chunks</span>
-						<label class="flex items-center gap-2 text-sm">
-							<input id="autoCleanup" type="checkbox" />
-						</label>
-					</div>
-				</div>
-				<div class="mt-4 flex space-x-2">
-					<button id="savePrefsBtn" class="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500">Save Preferences</button>
-					<a href="/outputs.html" class="px-4 py-2 rounded bg-slate-600 hover:bg-slate-500 text-center">Manage Outputs</a>
-				</div>
-			</section>
+			
 		</main>
 	</div>
 	<script type="module" src="/common.js"></script>
