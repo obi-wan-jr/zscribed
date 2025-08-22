@@ -27,6 +27,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
+// Generate cache buster based on deployment time
+const CACHE_BUSTER = Date.now().toString();
+
 // Cookie parsing for sessions
 app.use((req, res, next) => {
 	const cookies = {};
@@ -242,6 +245,26 @@ app.get('/api/bible/translations', (_req, res) => {
 
 // Auth middleware for all routes
 app.use(getAuthMiddleware());
+
+// Cache buster middleware for HTML files
+app.use((req, res, next) => {
+	if (req.path.endsWith('.html')) {
+		// Store original send function
+		const originalSend = res.send;
+		
+		res.send = function(data) {
+			if (typeof data === 'string') {
+				// Replace manual cache buster versions with automatic one
+				data = data.replace(/\.js\?v=\d+\.\d+/g, `.js?v=${CACHE_BUSTER}`);
+				// Also handle cases where no cache buster exists
+				data = data.replace(/\.js"/g, `.js?v=${CACHE_BUSTER}"`);
+				data = data.replace(/\.js'/g, `.js?v=${CACHE_BUSTER}'`);
+			}
+			return originalSend.call(this, data);
+		};
+	}
+	next();
+});
 
 // Static assets (no auth required)
 app.use('/', express.static(PUBLIC_DIR));
