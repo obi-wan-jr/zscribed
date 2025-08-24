@@ -1,11 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-
-// Set ffmpeg path
-ffmpeg.setFfmpegPath(ffmpegPath.path);
 
 export class VideoGenerator {
 	constructor(outputsDir, storageDir) {
@@ -14,241 +9,166 @@ export class VideoGenerator {
 		this.uploadDir = path.join(storageDir, 'uploads');
 	}
 
-	async createVideo(audioFile, videoSettings, jobId, broadcastLog) {
-		const { backgroundType, videoResolution, backgroundFile, bookName, chapterNumber } = videoSettings;
+	async createVideo(audioFile, videoSettings, jobId, broadcastLog, emitProgress) {
+		const { backgroundType, videoResolution, backgroundFile, bookName, chapterNumber, enableTitle = true } = videoSettings;
+		const audioBasename = path.basename(audioFile, '.mp3');
+		const videoOutput = path.join(this.outputsDir, `${audioBasename}-video.mp4`);
 		
-		broadcastLog('info', 'video', `Starting video generation with ${backgroundType}`, `Job: ${jobId}`);
+		broadcastLog('progress', 'video', 'video_init', `Starting video creation: ${videoResolution}, ${backgroundType}`, `Job: ${jobId}`);
 		
-		try {
-					// Try multiple approaches in order of preference
-		const approaches = [
-			() => this.createVideoWithNativeFFmpeg(audioFile, videoSettings, jobId, broadcastLog),
-			() => this.createVideoWithFluentFFmpeg(audioFile, videoSettings, jobId, broadcastLog),
-			() => this.createVideoWithCanvas(audioFile, videoSettings, jobId, broadcastLog)
-		];
+		// Validate inputs
+		if (!fs.existsSync(audioFile)) {
+			throw new Error(`Audio file not found: ${audioFile}`);
+		}
+		
+		// Validate background file
+		if (!backgroundFile) {
+			throw new Error(`Background file is required but not provided. Background type: ${backgroundType}`);
+		}
 
-			for (let i = 0; i < approaches.length; i++) {
-				try {
-					broadcastLog('info', 'video', `Trying approach ${i + 1}`, `Job: ${jobId}`);
-					const result = await approaches[i]();
-					broadcastLog('success', 'video', `Video created successfully with approach ${i + 1}`, `Job: ${jobId}`);
-					return result;
-				} catch (error) {
-					broadcastLog('warning', 'video', `Approach ${i + 1} failed`, `Job: ${jobId}, Error: ${error.message}`);
-					if (i === approaches.length - 1) {
-						throw error; // All approaches failed
-					}
-				}
+		// Get audio duration early for accurate timing
+		const audioDurationMs = await this.getAudioDurationMs(audioFile);
+		if (!audioDurationMs) {
+			broadcastLog('warning', 'video', 'Could not determine audio duration, using default timing', `Job: ${jobId}`);
+		}
+
+		try {
+			// Create video with static title (if enabled)
+			if (bookName && chapterNumber && enableTitle) {
+				broadcastLog('info', 'video', `Creating video with static title overlay`, `Job: ${jobId}`);
+				const ffmpegArgs = await this.buildBasicVideoWithTitleCommand(backgroundType, backgroundFile, audioFile, videoResolution, videoOutput, bookName, chapterNumber, audioDurationMs);
+				
+				await this.runFFmpegCommand(ffmpegArgs, videoOutput, jobId, broadcastLog, emitProgress);
+				broadcastLog('success', 'video', `Video with title created successfully`, `Job: ${jobId}`);
+			} else {
+				// No title needed, create basic video
+				broadcastLog('info', 'video', `Creating basic video without title`, `Job: ${jobId}`);
+				const ffmpegArgs = await this.buildBasicVideoCommand(backgroundType, backgroundFile, audioFile, videoResolution, videoOutput, audioDurationMs);
+				await this.runFFmpegCommand(ffmpegArgs, videoOutput, jobId, broadcastLog, emitProgress);
+				broadcastLog('success', 'video', `Basic video created successfully`, `Job: ${jobId}`);
 			}
+
+			return videoOutput;
 		} catch (error) {
-			broadcastLog('error', 'video', `All video generation approaches failed`, `Job: ${jobId}, Error: ${error.message}`);
+			broadcastLog('error', 'video', 'video_failed', error.message, `Job: ${jobId}`);
 			throw error;
 		}
 	}
 
-	async createVideoWithFluentFFmpeg(audioFile, videoSettings, jobId, broadcastLog) {
-		const { backgroundType, videoResolution, backgroundFile, bookName, chapterNumber } = videoSettings;
-		const audioBasename = path.basename(audioFile, '.mp3');
-		const videoOutput = path.join(this.outputsDir, `${audioBasename}-video.mp4`);
+	async buildBasicVideoCommand(backgroundType, backgroundFile, audioFile, videoResolution, videoOutput, audioDurationMs = 0) {
+		const scale = this.getResolutionScale(videoResolution);
 		
-		return new Promise((resolve, reject) => {
-			const command = ffmpeg();
-			
-			if (backgroundType === 'image') {
-				const imagePath = path.join(this.uploadDir, backgroundFile);
-				if (!fs.existsSync(imagePath)) {
-					reject(new Error(`Background image not found: ${backgroundFile}`));
-					return;
-				}
-				
-				// Build text overlay filter
-				const textOverlay = this.buildTextOverlayFilter(bookName, chapterNumber, videoResolution);
-				
-				command
-					.input(imagePath)
-					.inputOptions(['-loop 1'])
-					.input(audioFile)
-					.outputOptions([
-						'-c:v libx264',
-						'-c:a aac',
-						'-shortest',
-						'-pix_fmt yuv420p',
-						`-vf scale=${this.getResolutionScale(videoResolution)}${textOverlay}`
-					])
-					.output(videoOutput);
-			} else {
-				const videoPath = path.join(this.uploadDir, backgroundFile);
-				if (!fs.existsSync(videoPath)) {
-					reject(new Error(`Background video not found: ${backgroundFile}`));
-					return;
-				}
-				
-				// Build text overlay filter
-				const textOverlay = this.buildTextOverlayFilter(bookName, chapterNumber, videoResolution);
-				
-				command
-					.input(videoPath)
-					.inputOptions(['-stream_loop -1'])
-					.input(audioFile)
-					.outputOptions([
-						'-c:v libx264',
-						'-c:a aac',
-						'-shortest',
-						'-pix_fmt yuv420p',
-						`-vf scale=${this.getResolutionScale(videoResolution)}${textOverlay}`
-					])
-					.output(videoOutput);
-			}
-			
-			command
-				.on('start', (commandLine) => {
-					broadcastLog('info', 'video', `FFmpeg command started`, `Job: ${jobId}, Command: ${commandLine}`);
-				})
-				.on('progress', (progress) => {
-					broadcastLog('debug', 'video', `FFmpeg progress`, `Job: ${jobId}, ${progress.percent}%`);
-				})
-				.on('end', () => {
-					broadcastLog('success', 'video', `FFmpeg completed`, `Job: ${jobId}, Output: ${path.basename(videoOutput)}`);
-					resolve(videoOutput);
-				})
-				.on('error', (error) => {
-					broadcastLog('error', 'video', `FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
-					reject(error);
-				})
-				.run();
-		});
-	}
-
-	async createVideoWithCanvas(audioFile, videoSettings, jobId, broadcastLog) {
-		// Canvas-based video generation not implemented yet
-		broadcastLog('info', 'video', `Canvas video generation not implemented`, `Job: ${jobId}`);
-		throw new Error('Canvas video generation not implemented yet');
-	}
-
-	async createVideoWithNativeFFmpeg(audioFile, videoSettings, jobId, broadcastLog) {
-		const { backgroundType, videoResolution, backgroundFile, bookName, chapterNumber } = videoSettings;
-		const audioBasename = path.basename(audioFile, '.mp3');
-		const videoOutput = path.join(this.outputsDir, `${audioBasename}-video.mp4`);
-		
-		// Get audio duration
-		const audioDuration = await this.getAudioDuration(audioFile);
-		
-		// Build FFmpeg command
-		let ffmpegCommand;
+		// Calculate duration for -t parameter - use fallback if audio duration is 0
+		const durationSec = audioDurationMs > 0 ? (audioDurationMs / 1000).toFixed(6) : '30.0'; // 30 second fallback
 		
 		if (backgroundType === 'image') {
 			const imagePath = path.join(this.uploadDir, backgroundFile);
+			
 			if (!fs.existsSync(imagePath)) {
 				throw new Error(`Background image not found: ${backgroundFile}`);
 			}
 			
-			// Build text overlay filter
-			const textOverlay = this.buildTextOverlayFilter(bookName, chapterNumber, videoResolution);
-			
-			ffmpegCommand = [
+			const args = [
+				'-framerate', '30',
 				'-loop', '1',
 				'-i', imagePath,
 				'-i', audioFile,
 				'-c:v', 'libx264',
 				'-c:a', 'aac',
+				'-ar', '44100',
+				'-vf', `scale=${scale}`,
 				'-shortest',
 				'-pix_fmt', 'yuv420p',
-				'-vf', `scale=${this.getResolutionScale(videoResolution)}${textOverlay}`,
-				'-y', videoOutput
+				'-tune', 'stillimage',
+				'-preset', 'fast',
+				'-t', durationSec
 			];
+			
+			args.push('-y', videoOutput);
+			return args;
 		} else {
 			const videoPath = path.join(this.uploadDir, backgroundFile);
 			if (!fs.existsSync(videoPath)) {
 				throw new Error(`Background video not found: ${backgroundFile}`);
 			}
 			
-			// Build text overlay filter
-			const textOverlay = this.buildTextOverlayFilter(bookName, chapterNumber, videoResolution);
-			
-			ffmpegCommand = [
+			const args = [
 				'-stream_loop', '-1',
 				'-i', videoPath,
 				'-i', audioFile,
 				'-c:v', 'libx264',
 				'-c:a', 'aac',
+				'-ar', '44100',
+				'-vf', `scale=${scale}`,
 				'-shortest',
 				'-pix_fmt', 'yuv420p',
-				'-vf', `scale=${this.getResolutionScale(videoResolution)}${textOverlay}`,
-				'-y', videoOutput
+				'-preset', 'fast',
+				'-t', durationSec
 			];
+			
+			args.push('-y', videoOutput);
+			return args;
 		}
+	}
+
+	async buildBasicVideoWithTitleCommand(backgroundType, backgroundFile, audioFile, videoResolution, videoOutput, bookName, chapterNumber, audioDurationMs = 0) {
+		const scale = this.getResolutionScale(videoResolution);
+		const titleFilter = this.buildTitleFilter(bookName, chapterNumber, videoResolution);
 		
-		return new Promise((resolve, reject) => {
-			const ffmpeg = spawn(ffmpegPath.path, ffmpegCommand);
+		// Calculate duration for -t parameter - use fallback if audio duration is 0
+		const durationSec = audioDurationMs > 0 ? (audioDurationMs / 1000).toFixed(6) : '30.0'; // 30 second fallback
+		
+		if (backgroundType === 'image') {
+			const imagePath = path.join(this.uploadDir, backgroundFile);
 			
-			let stderr = '';
-			let stdout = '';
+			if (!fs.existsSync(imagePath)) {
+				throw new Error(`Background image not found: ${backgroundFile}`);
+			}
 			
-			ffmpeg.stdout.on('data', (data) => {
-				stdout += data.toString();
-			});
+			const args = [
+				'-framerate', '30',
+				'-loop', '1',
+				'-i', imagePath,
+				'-i', audioFile,
+				'-c:v', 'libx264',
+				'-c:a', 'aac',
+				'-ar', '44100',
+				'-vf', `scale=${scale}${titleFilter}`,
+				'-shortest',
+				'-pix_fmt', 'yuv420p',
+				'-tune', 'stillimage',
+				'-preset', 'fast',
+				'-t', durationSec
+			];
 			
-			ffmpeg.stderr.on('data', (data) => {
-				stderr += data.toString();
-			});
+			args.push('-y', videoOutput);
+			return args;
+		} else {
+			const videoPath = path.join(this.uploadDir, backgroundFile);
+			if (!fs.existsSync(videoPath)) {
+				throw new Error(`Background video not found: ${backgroundFile}`);
+			}
 			
-			ffmpeg.on('close', (code) => {
-				if (code === 0) {
-					broadcastLog('success', 'video', `Native FFmpeg completed`, `Job: ${jobId}, Output: ${path.basename(videoOutput)}`);
-					resolve(videoOutput);
-				} else {
-					broadcastLog('error', 'video', `Native FFmpeg failed`, `Job: ${jobId}, Code: ${code}, Error: ${stderr}`);
-					reject(new Error(`FFmpeg failed with code ${code}: ${stderr}`));
-				}
-			});
+			const args = [
+				'-stream_loop', '-1',
+				'-i', videoPath,
+				'-i', audioFile,
+				'-c:v', 'libx264',
+				'-c:a', 'aac',
+				'-ar', '44100',
+				'-vf', `scale=${scale}${titleFilter}`,
+				'-shortest',
+				'-pix_fmt', 'yuv420p',
+				'-preset', 'fast',
+				'-t', durationSec
+			];
 			
-			ffmpeg.on('error', (error) => {
-				broadcastLog('error', 'video', `Native FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
-				reject(error);
-			});
-		});
-	}
-
-	async getAudioDuration(audioFile) {
-		return new Promise((resolve, reject) => {
-			const ffprobe = spawn(ffmpegPath.path.replace('ffmpeg', 'ffprobe'), [
-				'-v', 'quiet',
-				'-show_entries', 'format=duration',
-				'-of', 'csv=p=0',
-				audioFile
-			]);
-			
-			let output = '';
-			
-			ffprobe.stdout.on('data', (data) => {
-				output += data.toString();
-			});
-			
-			ffprobe.on('close', (code) => {
-				if (code === 0) {
-					const duration = parseFloat(output.trim());
-					resolve(duration);
-				} else {
-					reject(new Error(`ffprobe failed with code ${code}`));
-				}
-			});
-			
-			ffprobe.on('error', (error) => {
-				reject(error);
-			});
-		});
-	}
-
-	getResolutionScale(resolution) {
-		switch (resolution) {
-			case '720p': return '1280:720';
-			case '1080p': return '1920:1080';
-			case '4k': return '3840:2160';
-			default: return '1920:1080';
+			args.push('-y', videoOutput);
+			return args;
 		}
 	}
 
-	buildTextOverlayFilter(bookName, chapterNumber, resolution) {
+	buildTitleFilter(bookName, chapterNumber, resolution) {
 		if (!bookName || !chapterNumber) {
 			return '';
 		}
@@ -298,5 +218,76 @@ export class VideoGenerator {
 		const filter = `,drawtext=text='${text}':fontcolor=white:fontsize=${fontSize}:x=${x}:y=${y}:box=1:boxcolor=black@0.5:boxborderw=5:line_spacing=10${fontfile}`;
 		
 		return filter;
+	}
+
+	async getAudioDurationMs(audioFile) {
+		return new Promise((resolve, reject) => {
+			const ffprobe = spawn('ffprobe', [
+				'-v', 'quiet',
+				'-show_entries', 'format=duration',
+				'-of', 'csv=p=0',
+				audioFile
+			]);
+			
+			let output = '';
+			
+			ffprobe.stdout.on('data', (data) => {
+				output += data.toString();
+			});
+			
+			ffprobe.on('close', (code) => {
+				if (code === 0) {
+					const duration = parseFloat(output.trim());
+					resolve(duration * 1000); // Convert to milliseconds
+				} else {
+					resolve(0); // Return 0 if we can't get duration
+				}
+			});
+			
+			ffprobe.on('error', (error) => {
+				resolve(0); // Return 0 if we can't get duration
+			});
+		});
+	}
+
+	getResolutionScale(resolution) {
+		switch (resolution) {
+			case '720p': return '1280:720';
+			case '1080p': return '1920:1080';
+			case '4k': return '3840:2160';
+			default: return '1920:1080';
+		}
+	}
+
+	async runFFmpegCommand(args, outputFile, jobId, broadcastLog, emitProgress) {
+		return new Promise((resolve, reject) => {
+			const ffmpeg = spawn('ffmpeg', args);
+			
+			let stderr = '';
+			let stdout = '';
+			
+			ffmpeg.stdout.on('data', (data) => {
+				stdout += data.toString();
+			});
+			
+			ffmpeg.stderr.on('data', (data) => {
+				stderr += data.toString();
+			});
+			
+			ffmpeg.on('close', (code) => {
+				if (code === 0 || (fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0)) {
+					broadcastLog('success', 'video', `FFmpeg completed successfully`, `Job: ${jobId}`);
+					resolve(outputFile);
+				} else {
+					broadcastLog('error', 'video', `FFmpeg failed`, `Job: ${jobId}, Code: ${code}, Error: ${stderr}`);
+					reject(new Error(`FFmpeg failed with code ${code}: ${stderr}`));
+				}
+			});
+			
+			ffmpeg.on('error', (error) => {
+				broadcastLog('error', 'video', `FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
+				reject(error);
+			});
+		});
 	}
 }
