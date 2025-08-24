@@ -554,8 +554,8 @@ function startProgressTracking(jobId) {
 
 function buildRequestData() {
 	const book = document.getElementById('book').value;
-	const excludeNumbers = document.getElementById('excludeNumbers').checked;
-	const excludeFootnotes = document.getElementById('excludeFootnotes').checked;
+	const excludeNumbers = document.getElementById('excludeNumbers')?.checked ?? false;
+	const excludeFootnotes = document.getElementById('excludeFootnotes')?.checked ?? false;
 	
 	const baseData = {
 		translation: 'web',
@@ -751,7 +751,7 @@ function toggleVideoOptions() {
 	const videoOptions = document.getElementById('videoOptions');
 	const createVideoBtn = document.getElementById('createVideoBtn');
 	
-	if (createVideoCheckbox.checked) {
+	if (createVideoCheckbox?.checked) {
 		videoOptions.classList.remove('hidden');
 		createVideoBtn.classList.remove('hidden');
 	} else {
