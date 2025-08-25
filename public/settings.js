@@ -104,6 +104,8 @@ async function refreshModels() {
 }
 
 function updateDefaultModelDropdown(models) {
+	console.log('Updating default model dropdown with models:', models);
+	
 	defaultModelSelect.innerHTML = '<option value="">Select default model...</option>';
 	
 	for (const model of models) {
@@ -117,7 +119,14 @@ function updateDefaultModelDropdown(models) {
 	}
 	
 	// Update button state
-	setDefaultBtn.disabled = !defaultModelSelect.value;
+	const hasSelection = defaultModelSelect.value && defaultModelSelect.value !== '';
+	console.log('Dropdown value:', defaultModelSelect.value, 'Has selection:', hasSelection);
+	setDefaultBtn.disabled = !hasSelection;
+	
+	// Force enable button if there's a selection (in case of UI issues)
+	if (hasSelection) {
+		setDefaultBtn.disabled = false;
+	}
 	
 	// Update status
 	const defaultModel = models.find(m => m.isDefault);
@@ -129,24 +138,38 @@ function updateDefaultModelDropdown(models) {
 }
 
 function setupDefaultModelSelection() {
+	console.log('Setting up default model selection');
+	
 	defaultModelSelect.addEventListener('change', () => {
-		setDefaultBtn.disabled = !defaultModelSelect.value;
+		console.log('Dropdown changed to:', defaultModelSelect.value);
+		const hasSelection = defaultModelSelect.value && defaultModelSelect.value !== '';
+		setDefaultBtn.disabled = !hasSelection;
 	});
 	
 	setDefaultBtn.addEventListener('click', async () => {
+		console.log('Set default button clicked!');
 		const selectedModelId = defaultModelSelect.value;
-		if (!selectedModelId) return;
+		console.log('Set default button clicked with model ID:', selectedModelId);
+		
+		if (!selectedModelId) {
+			console.log('No model selected, returning');
+			alert('Please select a model first');
+			return;
+		}
 		
 		try {
 			setDefaultBtn.disabled = true;
 			setDefaultBtn.textContent = 'Setting...';
 			
+			console.log('Sending request to set default model:', selectedModelId);
 			const res = await authenticatedFetch('/api/models/set-default', { 
 				method: 'POST', 
 				headers: { 'Content-Type': 'application/json' }, 
 				body: JSON.stringify({ id: selectedModelId }) 
 			});
 			if (!res) return; // Redirect happened
+			
+			console.log('Response received:', res.status);
 			
 			// Refresh the models to update the interface
 			await refreshModels();
