@@ -1433,6 +1433,60 @@ app.get('/api/logs/stream', (req, res) => {
 	});
 });
 
+// Logs API endpoints
+app.get('/api/logs', (req, res) => {
+	try {
+		// Check if user is authenticated
+		if (!req.user) {
+			return res.status(401).json({ error: 'Authentication required' });
+		}
+
+		// Return recent logs from memory
+		const recentLogs = Array.from(logBuffer).slice(-100); // Last 100 logs
+		res.json(recentLogs);
+	} catch (error) {
+		console.error('[API] Error fetching logs:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.delete('/api/logs', (req, res) => {
+	try {
+		// Check if user is authenticated
+		if (!req.user) {
+			return res.status(401).json({ error: 'Authentication required' });
+		}
+
+		// Clear log buffer
+		logBuffer.clear();
+		res.json({ success: true, message: 'Logs cleared' });
+	} catch (error) {
+		console.error('[API] Error clearing logs:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.get('/api/logs/download', (req, res) => {
+	try {
+		// Check if user is authenticated
+		if (!req.user) {
+			return res.status(401).json({ error: 'Authentication required' });
+		}
+
+		// Create log data
+		const logs = Array.from(logBuffer);
+		const logData = JSON.stringify(logs, null, 2);
+		
+		// Set headers for download
+		res.setHeader('Content-Type', 'application/json');
+		res.setHeader('Content-Disposition', `attachment; filename="dScribe-logs-${new Date().toISOString().split('T')[0]}.json"`);
+		res.send(logData);
+	} catch (error) {
+		console.error('[API] Error downloading logs:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
 // Outputs list
 app.get('/api/outputs', (_req, res) => {
 	const files = fs.readdirSync(OUTPUTS_DIR)

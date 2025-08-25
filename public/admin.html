@@ -3,25 +3,28 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Admin Panel - DScribe</title>
+    <title>Admin Panel - dScribe</title>
     <link rel="stylesheet" href="/styles.build.css" />
     <style>
-        .admin-tab { transition: all 0.3s ease; }
-        .admin-tab:hover { background-color: #374151; }
-        .admin-tab.active { background-color: #4f46e5; }
+        .admin-section { transition: all 0.3s ease; }
+        .admin-section:hover { background-color: #374151; }
+        .section-header { cursor: pointer; }
+        .section-content { transition: all 0.3s ease; }
         .debug-step { transition: all 0.3s ease; }
         .debug-step:hover { background-color: #f3f4f6; }
         .status-success { color: #059669; }
         .status-error { color: #dc2626; }
         .status-warning { color: #d97706; }
         .status-info { color: #2563eb; }
+        .chevron { transition: transform 0.3s ease; }
+        .chevron.rotated { transform: rotate(90deg); }
     </style>
 </head>
 <body class="h-full bg-[#0b1020] text-slate-200">
     <div class="min-h-full">
         <nav class="px-4 py-3 border-b border-slate-700 bg-[#0b1020]/90 sticky top-0 z-10">
             <div class="max-w-6xl mx-auto flex items-center justify-between">
-                <div class="text-xl font-semibold text-indigo-300">dscribe</div>
+                <div class="text-xl font-semibold text-indigo-300">dScribe</div>
                 <div class="space-x-4">
                     <a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
                     <a href="/bible.html" class="hover:text-white">Bible Transcription</a>
@@ -35,154 +38,160 @@
         <main class="max-w-7xl mx-auto p-4">
             <div class="bg-slate-800 rounded-lg shadow-lg p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl font-semibold text-indigo-200">Admin Panel</h1>
+                    <h1 class="text-2xl font-semibold text-indigo-200">dScribe Admin Panel</h1>
                     <div class="flex space-x-2">
-                        <button onclick="refreshCurrentTab()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Refresh
+                        <button onclick="refreshAllSections()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                            Refresh All
                         </button>
                     </div>
                 </div>
 
-                <!-- Tab Navigation -->
-                <div class="flex space-x-1 mb-6 bg-slate-700 rounded-lg p-1">
-                    <button onclick="showTab('logs')" id="tab-logs" class="admin-tab flex-1 py-2 px-4 rounded text-sm font-medium">
-                        Server Logs
-                    </button>
-                    <button onclick="showTab('debug')" id="tab-debug" class="admin-tab flex-1 py-2 px-4 rounded text-sm font-medium">
-                        Video Debug
-                    </button>
-                    <button onclick="showTab('users')" id="tab-users" class="admin-tab flex-1 py-2 px-4 rounded text-sm font-medium">
-                        User Management
-                    </button>
-                </div>
-
-                <!-- Tab Content -->
-                <div id="tab-content">
-                    <!-- Server Logs Tab -->
-                    <div id="logs-tab" class="tab-panel">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">Server Logs</h2>
+                <!-- Cascading Sections -->
+                <div class="space-y-4">
+                    <!-- Server Logs Section -->
+                    <div class="admin-section bg-slate-700 rounded-lg">
+                        <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection('logs')">
+                            <div class="flex items-center space-x-3">
+                                <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                                <h2 class="text-lg font-semibold">Server Logs</h2>
+                            </div>
                             <div class="flex space-x-2">
-                                <button onclick="clearLogs()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                <button onclick="event.stopPropagation(); clearLogs()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
                                     Clear Logs
                                 </button>
-                                <button onclick="downloadLogs()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                <button onclick="event.stopPropagation(); downloadLogs()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">
                                     Download
                                 </button>
                             </div>
                         </div>
-                        <div id="logs-container" class="bg-slate-900 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
-                            <!-- Logs will be loaded here -->
+                        <div id="logs-content" class="section-content hidden p-4 border-t border-slate-600">
+                            <div id="logs-container" class="bg-slate-900 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
+                                <!-- Logs will be loaded here -->
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Video Debug Tab -->
-                    <div id="debug-tab" class="tab-panel hidden">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">Video Generation Debug</h2>
+                    <!-- Video Debug Section -->
+                    <div class="admin-section bg-slate-700 rounded-lg">
+                        <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection('debug')">
+                            <div class="flex items-center space-x-3">
+                                <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                                <h2 class="text-lg font-semibold">Video Generation Debug</h2>
+                            </div>
                             <div class="flex space-x-2">
-                                <button onclick="cleanupDebugSessions()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                <button onclick="event.stopPropagation(); cleanupDebugSessions()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
                                     Cleanup Old Sessions
                                 </button>
                             </div>
                         </div>
-                        
-                        <!-- Session List -->
-                        <div id="debug-session-list" class="mb-6">
-                            <h3 class="text-md font-semibold mb-3">Debug Sessions</h3>
-                            <div id="debug-sessions" class="space-y-2">
-                                <!-- Sessions will be loaded here -->
-                            </div>
-                        </div>
-
-                        <!-- Session Details -->
-                        <div id="debug-session-details" class="hidden">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-md font-semibold">Session Details</h3>
-                                <button onclick="hideDebugSessionDetails()" class="text-gray-500 hover:text-gray-700">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            
-                            <div id="debug-session-info" class="bg-gray-100 p-4 rounded-lg mb-4 text-gray-800">
-                                <!-- Session info will be loaded here -->
-                            </div>
-
-                            <!-- Summary -->
-                            <div id="debug-session-summary" class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
-                                <!-- Summary cards will be loaded here -->
-                            </div>
-
-                            <!-- Steps -->
-                            <div class="mb-4">
-                                <h4 class="text-sm font-semibold mb-2">Steps</h4>
-                                <div id="debug-session-steps" class="space-y-2">
-                                    <!-- Steps will be loaded here -->
+                        <div id="debug-content" class="section-content hidden p-4 border-t border-slate-600">
+                            <!-- Session List -->
+                            <div id="debug-session-list" class="mb-6">
+                                <h3 class="text-md font-semibold mb-3">Debug Sessions</h3>
+                                <div id="debug-sessions" class="space-y-2">
+                                    <!-- Sessions will be loaded here -->
                                 </div>
                             </div>
 
-                            <!-- Errors -->
-                            <div id="debug-session-errors" class="mb-4 hidden">
-                                <h4 class="text-sm font-semibold mb-2 text-red-600">Errors</h4>
-                                <div id="debug-errors" class="space-y-2">
-                                    <!-- Errors will be loaded here -->
+                            <!-- Session Details -->
+                            <div id="debug-session-details" class="hidden">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-md font-semibold">Session Details</h3>
+                                    <button onclick="hideDebugSessionDetails()" class="text-gray-500 hover:text-gray-700">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
                                 </div>
-                            </div>
-
-                            <!-- Warnings -->
-                            <div id="debug-session-warnings" class="mb-4 hidden">
-                                <h4 class="text-sm font-semibold mb-2 text-yellow-600">Warnings</h4>
-                                <div id="debug-warnings" class="space-y-2">
-                                    <!-- Warnings will be loaded here -->
+                                
+                                <div id="debug-session-info" class="bg-gray-100 p-4 rounded-lg mb-4 text-gray-800">
+                                    <!-- Session info will be loaded here -->
                                 </div>
-                            </div>
 
-                            <!-- File Checks -->
-                            <div class="mb-4">
-                                <h4 class="text-sm font-semibold mb-2">File Checks</h4>
-                                <div id="debug-file-checks" class="space-y-2">
-                                    <!-- File checks will be loaded here -->
+                                <!-- Summary -->
+                                <div id="debug-session-summary" class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
+                                    <!-- Summary cards will be loaded here -->
                                 </div>
-                            </div>
 
-                            <!-- FFmpeg Commands -->
-                            <div class="mb-4">
-                                <h4 class="text-sm font-semibold mb-2">FFmpeg Commands</h4>
-                                <div id="debug-ffmpeg-commands" class="space-y-2">
-                                    <!-- FFmpeg commands will be loaded here -->
+                                <!-- Steps -->
+                                <div class="mb-4">
+                                    <h4 class="text-sm font-semibold mb-2">Steps</h4>
+                                    <div id="debug-session-steps" class="space-y-2">
+                                        <!-- Steps will be loaded here -->
+                                    </div>
+                                </div>
+
+                                <!-- Errors -->
+                                <div id="debug-session-errors" class="mb-4 hidden">
+                                    <h4 class="text-sm font-semibold mb-2 text-red-600">Errors</h4>
+                                    <div id="debug-errors" class="space-y-2">
+                                        <!-- Errors will be loaded here -->
+                                    </div>
+                                </div>
+
+                                <!-- Warnings -->
+                                <div id="debug-session-warnings" class="mb-4 hidden">
+                                    <h4 class="text-sm font-semibold mb-2 text-yellow-600">Warnings</h4>
+                                    <div id="debug-warnings" class="space-y-2">
+                                        <!-- Warnings will be loaded here -->
+                                    </div>
+                                </div>
+
+                                <!-- File Checks -->
+                                <div class="mb-4">
+                                    <h4 class="text-sm font-semibold mb-2">File Checks</h4>
+                                    <div id="debug-file-checks" class="space-y-2">
+                                        <!-- File checks will be loaded here -->
+                                    </div>
+                                </div>
+
+                                <!-- FFmpeg Commands -->
+                                <div class="mb-4">
+                                    <h4 class="text-sm font-semibold mb-2">FFmpeg Commands</h4>
+                                    <div id="debug-ffmpeg-commands" class="space-y-2">
+                                        <!-- FFmpeg commands will be loaded here -->
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- User Management Tab -->
-                    <div id="users-tab" class="tab-panel hidden">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-semibold">User Management</h2>
-                        </div>
-
-                        <!-- Add User Form -->
-                        <div class="bg-slate-700 rounded-lg p-4 mb-6">
-                            <h3 class="text-md font-semibold mb-3">Add New User</h3>
-                            <div class="flex gap-4">
-                                <input type="text" id="newUsername" placeholder="Enter username" 
-                                       class="flex-1 bg-slate-600 border border-slate-500 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400">
-                                <button onclick="addUser()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                    Add User
-                                </button>
+                    <!-- User Management Section -->
+                    <div class="admin-section bg-slate-700 rounded-lg">
+                        <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection('users')">
+                            <div class="flex items-center space-x-3">
+                                <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                                <h2 class="text-lg font-semibold">User Management</h2>
                             </div>
-                            <div id="addUserMessage" class="mt-2 text-sm"></div>
                         </div>
-
-                        <!-- User List -->
-                        <div class="bg-slate-700 rounded-lg p-4">
-                            <h3 class="text-md font-semibold mb-3">Current Users</h3>
-                            <div id="userList" class="space-y-2">
-                                <!-- Users will be loaded here -->
+                        <div id="users-content" class="section-content hidden p-4 border-t border-slate-600">
+                            <!-- Add User Form -->
+                            <div class="bg-slate-600 rounded-lg p-4 mb-6">
+                                <h3 class="text-md font-semibold mb-3">Add New User</h3>
+                                <div class="flex gap-4">
+                                    <input type="text" id="newUsername" placeholder="Enter username" 
+                                           class="flex-1 bg-slate-500 border border-slate-400 rounded px-3 py-2 text-white placeholder-slate-300 focus:outline-none focus:border-indigo-400">
+                                    <button onclick="addUser()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                        Add User
+                                    </button>
+                                </div>
+                                <div id="addUserMessage" class="mt-2 text-sm"></div>
                             </div>
-                            <div id="userMessage" class="mt-4 text-sm"></div>
+
+                            <!-- User List -->
+                            <div class="bg-slate-600 rounded-lg p-4">
+                                <h3 class="text-md font-semibold mb-3">Current Users</h3>
+                                <div id="userList" class="space-y-2">
+                                    <!-- Users will be loaded here -->
+                                </div>
+                                <div id="userMessage" class="mt-4 text-sm"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -191,46 +200,55 @@
     </div>
 
     <script type="module">
-        let currentTab = 'logs';
         let currentDebugSession = null;
-        let logsWebSocket = null;
+        let expandedSections = new Set();
 
-        // Tab management
-        function showTab(tabName) {
-            // Hide all tab panels
-            document.querySelectorAll('.tab-panel').forEach(panel => {
-                panel.classList.add('hidden');
-            });
+        // Section management
+        function toggleSection(sectionName) {
+            const content = document.getElementById(`${sectionName}-content`);
+            const header = content.previousElementSibling;
+            const chevron = header.querySelector('.chevron');
             
-            // Remove active class from all tabs
-            document.querySelectorAll('.admin-tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Show selected tab panel
-            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
-            
-            // Add active class to selected tab
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-            
-            currentTab = tabName;
-            
-            // Load content for the selected tab
-            switch(tabName) {
-                case 'logs':
-                    loadLogs();
-                    break;
-                case 'debug':
-                    loadDebugSessions();
-                    break;
-                case 'users':
-                    loadUsers();
-                    break;
+            if (expandedSections.has(sectionName)) {
+                // Collapse
+                content.classList.add('hidden');
+                chevron.classList.remove('rotated');
+                expandedSections.delete(sectionName);
+            } else {
+                // Expand
+                content.classList.remove('hidden');
+                chevron.classList.add('rotated');
+                expandedSections.add(sectionName);
+                
+                // Load content for the section
+                switch(sectionName) {
+                    case 'logs':
+                        loadLogs();
+                        break;
+                    case 'debug':
+                        loadDebugSessions();
+                        break;
+                    case 'users':
+                        loadUsers();
+                        break;
+                }
             }
         }
 
-        function refreshCurrentTab() {
-            showTab(currentTab);
+        function refreshAllSections() {
+            expandedSections.forEach(section => {
+                switch(section) {
+                    case 'logs':
+                        loadLogs();
+                        break;
+                    case 'debug':
+                        loadDebugSessions();
+                        break;
+                    case 'users':
+                        loadUsers();
+                        break;
+                }
+            });
         }
 
         // Server Logs Functions
@@ -243,7 +261,7 @@
                 displayLogs(logs);
             } catch (error) {
                 console.error('Error loading logs:', error);
-                document.getElementById('logs-container').innerHTML = '<p class="text-red-400">Error loading logs</p>';
+                document.getElementById('logs-container').innerHTML = '<p class="text-red-400">Error loading logs: ' + error.message + '</p>';
             }
         }
 
@@ -291,7 +309,7 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `dscribe-logs-${new Date().toISOString().split('T')[0]}.json`;
+                a.download = `dScribe-logs-${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -311,7 +329,7 @@
                 displayDebugSessions(sessions);
             } catch (error) {
                 console.error('Error loading debug sessions:', error);
-                document.getElementById('debug-sessions').innerHTML = '<p class="text-red-400">Error loading debug sessions</p>';
+                document.getElementById('debug-sessions').innerHTML = '<p class="text-red-400">Error loading debug sessions: ' + error.message + '</p>';
             }
         }
 
@@ -528,7 +546,7 @@
                 displayUsers(users);
             } catch (error) {
                 console.error('Error loading users:', error);
-                document.getElementById('userList').innerHTML = '<p class="text-red-400">Error loading users</p>';
+                document.getElementById('userList').innerHTML = '<p class="text-red-400">Error loading users: ' + error.message + '</p>';
             }
         }
 
@@ -541,7 +559,7 @@
             }
 
             container.innerHTML = users.map(user => `
-                <div class="flex items-center justify-between bg-slate-600 rounded-lg p-3">
+                <div class="flex items-center justify-between bg-slate-500 rounded-lg p-3">
                     <div class="flex items-center space-x-3">
                         <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white font-semibold">
                             ${user.charAt(0).toUpperCase()}
@@ -628,8 +646,8 @@
             }
         });
 
-        // Initialize
-        showTab('logs');
+        // Initialize - expand logs section by default
+        toggleSection('logs');
     </script>
 </body>
 </html>
