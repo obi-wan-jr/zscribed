@@ -13,6 +13,10 @@ const savePrefsBtn = document.getElementById('savePrefsBtn');
 const addModelBtn = document.getElementById('addModelBtn');
 const modelsList = document.getElementById('modelsList');
 const userWelcome = document.getElementById('userWelcome');
+const defaultModelSelect = document.getElementById('defaultModelSelect');
+const setDefaultBtn = document.getElementById('setDefaultBtn');
+const defaultModelStatus = document.getElementById('defaultModelStatus');
+const modelStatus = document.getElementById('modelStatus');
 
 async function init() {
 	// Update the login/logout link
@@ -30,6 +34,9 @@ async function init() {
 	
 	// Add TTS test section
 	addTTSTestSection();
+	
+	// Set up default model selection
+	setupDefaultModelSelection();
 }
 
 async function loadPreferencesIntoUI() {
@@ -53,30 +60,112 @@ async function refreshModels() {
 		if (!res) return; // Redirect happened
 		
 		const data = await res.json();
+		const models = data.voiceModels || [];
+		
+		// Update models list
 		modelsList.innerHTML = '';
-		for (const model of data.voiceModels || []) {
+		for (const model of models) {
 			const row = document.createElement('div');
-			row.className = 'flex items-center justify-between p-2 bg-[#0b1020] rounded';
+			row.className = 'flex items-center justify-between p-3 bg-[#0b1020] border border-slate-600 rounded-lg';
 			
 			const defaultBadge = model.isDefault ? '<span class="px-2 py-1 text-xs rounded bg-green-700 text-white mr-2">Default</span>' : '';
-			const setDefaultBtn = model.isDefault ? '' : `<button onclick="setDefaultModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 mr-2">Set Default</button>`;
+			const setDefaultBtn = model.isDefault ? '' : `<button onclick="setDefaultModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 mr-2 transition-colors">Set Default</button>`;
 			
 			row.innerHTML = `
 				<div class="flex items-center">
 					${defaultBadge}
-					<span class="text-sm">${model.name || model.id} (${model.id})</span>
+					<span class="text-sm font-medium">${model.name || model.id}</span>
+					<span class="text-xs text-slate-400 ml-2">(${model.id})</span>
 				</div>
 				<div class="flex items-center">
 					${setDefaultBtn}
-					<button onclick="deleteModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600">Delete</button>
+					<button onclick="deleteModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600 transition-colors">Delete</button>
 				</div>
 			`;
 			modelsList.appendChild(row);
 		}
+		
+		// Update default model dropdown
+		updateDefaultModelDropdown(models);
+		
+		// Show status
+		if (models.length === 0) {
+			modelStatus.innerHTML = '<div class="text-yellow-400">No voice models configured. Add a model to get started.</div>';
+		} else {
+			modelStatus.innerHTML = `<div class="text-green-400">${models.length} voice model${models.length > 1 ? 's' : ''} available</div>`;
+		}
+		
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
 		modelsList.innerHTML = '<div class="text-red-400">Failed to load models</div>';
+		modelStatus.innerHTML = '<div class="text-red-400">Error loading voice models</div>';
+		console.error('Failed to load models:', error);
 	}
+}
+
+function updateDefaultModelDropdown(models) {
+	defaultModelSelect.innerHTML = '<option value="">Select default model...</option>';
+	
+	for (const model of models) {
+		const option = document.createElement('option');
+		option.value = model.id;
+		option.textContent = `${model.name || model.id}${model.isDefault ? ' (Current Default)' : ''}`;
+		if (model.isDefault) {
+			option.selected = true;
+		}
+		defaultModelSelect.appendChild(option);
+	}
+	
+	// Update button state
+	setDefaultBtn.disabled = !defaultModelSelect.value;
+	
+	// Update status
+	const defaultModel = models.find(m => m.isDefault);
+	if (defaultModel) {
+		defaultModelStatus.innerHTML = `<div class="text-green-400">Current default: ${defaultModel.name || defaultModel.id}</div>`;
+	} else {
+		defaultModelStatus.innerHTML = '<div class="text-yellow-400">No default model set</div>';
+	}
+}
+
+function setupDefaultModelSelection() {
+	defaultModelSelect.addEventListener('change', () => {
+		setDefaultBtn.disabled = !defaultModelSelect.value;
+	});
+	
+	setDefaultBtn.addEventListener('click', async () => {
+		const selectedModelId = defaultModelSelect.value;
+		if (!selectedModelId) return;
+		
+		try {
+			setDefaultBtn.disabled = true;
+			setDefaultBtn.textContent = 'Setting...';
+			
+			const res = await authenticatedFetch('/api/models/set-default', { 
+				method: 'POST', 
+				headers: { 'Content-Type': 'application/json' }, 
+				body: JSON.stringify({ id: selectedModelId }) 
+			});
+			if (!res) return; // Redirect happened
+			
+			// Refresh the models to update the interface
+			await refreshModels();
+			
+			// Show success message
+			modelStatus.innerHTML = '<div class="text-green-400">Default model updated successfully!</div>';
+			setTimeout(() => {
+				modelStatus.innerHTML = '';
+			}, 3000);
+			
+		} catch (error) {
+			if (handleUnauthorizedError(error)) return; // Redirect happened
+			modelStatus.innerHTML = '<div class="text-red-400">Failed to set default model</div>';
+			console.error('Failed to set default model:', error);
+		} finally {
+			setDefaultBtn.disabled = false;
+			setDefaultBtn.textContent = 'Set as Default';
+		}
+	});
 }
 
 function addTTSTestSection() {
@@ -207,9 +296,20 @@ addModelBtn?.addEventListener('click', async () => {
 			body: JSON.stringify({ id, name }) 
 		});
 		if (!res) return; // Redirect happened
-		await refreshModels();
+		
+		if (res.ok) {
+			await refreshModels();
+			modelStatus.innerHTML = '<div class="text-green-400">Voice model added successfully!</div>';
+			setTimeout(() => {
+				modelStatus.innerHTML = '';
+			}, 3000);
+		} else {
+			const errorData = await res.json();
+			modelStatus.innerHTML = `<div class="text-red-400">Failed to add model: ${errorData.error}</div>`;
+		}
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
+		modelStatus.innerHTML = '<div class="text-red-400">Failed to add model</div>';
 		console.error('Failed to add model:', error);
 	}
 });
@@ -225,9 +325,20 @@ window.deleteModel = async function(modelId) {
 			body: JSON.stringify({ id: modelId }) 
 		});
 		if (!res) return; // Redirect happened
-		await refreshModels();
+		
+		if (res.ok) {
+			await refreshModels();
+			modelStatus.innerHTML = '<div class="text-green-400">Voice model deleted successfully!</div>';
+			setTimeout(() => {
+				modelStatus.innerHTML = '';
+			}, 3000);
+		} else {
+			const errorData = await res.json();
+			modelStatus.innerHTML = `<div class="text-red-400">Failed to delete model: ${errorData.error}</div>`;
+		}
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
+		modelStatus.innerHTML = '<div class="text-red-400">Failed to delete model</div>';
 		console.error('Failed to delete model:', error);
 	}
 };
@@ -243,9 +354,20 @@ window.setDefaultModel = async function(modelId) {
 			body: JSON.stringify({ id: modelId }) 
 		});
 		if (!res) return; // Redirect happened
-		await refreshModels();
+		
+		if (res.ok) {
+			await refreshModels();
+			modelStatus.innerHTML = '<div class="text-green-400">Default model updated successfully!</div>';
+			setTimeout(() => {
+				modelStatus.innerHTML = '';
+			}, 3000);
+		} else {
+			const errorData = await res.json();
+			modelStatus.innerHTML = `<div class="text-red-400">Failed to set default model: ${errorData.error}</div>`;
+		}
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
+		modelStatus.innerHTML = '<div class="text-red-400">Failed to set default model</div>';
 		console.error('Failed to set default model:', error);
 	}
 };
