@@ -14,9 +14,6 @@ const addModelBtn = document.getElementById('addModelBtn');
 const refreshModelsBtn = document.getElementById('refreshModelsBtn');
 const modelsList = document.getElementById('modelsList');
 const userWelcome = document.getElementById('userWelcome');
-const defaultModelSelect = document.getElementById('defaultModelSelect');
-const setDefaultBtn = document.getElementById('setDefaultBtn');
-const defaultModelStatus = document.getElementById('defaultModelStatus');
 const modelStatus = document.getElementById('modelStatus');
 
 async function init() {
@@ -36,8 +33,7 @@ async function init() {
 	// Add TTS test section
 	addTTSTestSection();
 	
-	// Set up default model selection
-	setupDefaultModelSelection();
+
 }
 
 async function loadPreferencesIntoUI() {
@@ -70,7 +66,9 @@ async function refreshModels() {
 			row.className = 'flex items-center justify-between p-3 bg-[#0b1020] border border-slate-600 rounded-lg';
 			
 			const defaultBadge = model.isDefault ? '<span class="px-2 py-1 text-xs rounded bg-green-700 text-white mr-2">Default</span>' : '';
-			const setDefaultBtn = model.isDefault ? '' : `<button onclick="setDefaultModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 mr-2 transition-colors">Set Default</button>`;
+			const toggleDefaultBtn = model.isDefault ? 
+				`<button onclick="toggleDefaultModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-yellow-700 hover:bg-yellow-600 mr-2 transition-colors">Remove Default</button>` : 
+				`<button onclick="toggleDefaultModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 mr-2 transition-colors">Set as Default</button>`;
 			
 			row.innerHTML = `
 				<div class="flex items-center">
@@ -79,15 +77,12 @@ async function refreshModels() {
 					<span class="text-xs text-slate-400 ml-2">(${model.id})</span>
 				</div>
 				<div class="flex items-center">
-					${setDefaultBtn}
+					${toggleDefaultBtn}
 					<button onclick="deleteModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600 transition-colors">Delete</button>
 				</div>
 			`;
 			modelsList.appendChild(row);
 		}
-		
-		// Update default model dropdown
-		updateDefaultModelDropdown(models);
 		
 		// Show status
 		if (models.length === 0) {
@@ -104,93 +99,7 @@ async function refreshModels() {
 	}
 }
 
-function updateDefaultModelDropdown(models) {
-	console.log('Updating default model dropdown with models:', models);
-	
-	defaultModelSelect.innerHTML = '<option value="">Select default model...</option>';
-	
-	for (const model of models) {
-		const option = document.createElement('option');
-		option.value = model.id;
-		option.textContent = `${model.name || model.id}${model.isDefault ? ' (Current Default)' : ''}`;
-		if (model.isDefault) {
-			option.selected = true;
-		}
-		defaultModelSelect.appendChild(option);
-	}
-	
-	// Update button state
-	const hasSelection = defaultModelSelect.value && defaultModelSelect.value !== '';
-	console.log('Dropdown value:', defaultModelSelect.value, 'Has selection:', hasSelection);
-	setDefaultBtn.disabled = !hasSelection;
-	
-	// Force enable button if there's a selection (in case of UI issues)
-	if (hasSelection) {
-		setDefaultBtn.disabled = false;
-	}
-	
-	// Update status
-	const defaultModel = models.find(m => m.isDefault);
-	if (defaultModel) {
-		defaultModelStatus.innerHTML = `<div class="text-green-400">Current default: ${defaultModel.name || defaultModel.id}</div>`;
-	} else {
-		defaultModelStatus.innerHTML = '<div class="text-yellow-400">No default model set</div>';
-	}
-}
 
-function setupDefaultModelSelection() {
-	console.log('Setting up default model selection');
-	
-	defaultModelSelect.addEventListener('change', () => {
-		console.log('Dropdown changed to:', defaultModelSelect.value);
-		const hasSelection = defaultModelSelect.value && defaultModelSelect.value !== '';
-		setDefaultBtn.disabled = !hasSelection;
-	});
-	
-	setDefaultBtn.addEventListener('click', async () => {
-		console.log('Set default button clicked!');
-		const selectedModelId = defaultModelSelect.value;
-		console.log('Set default button clicked with model ID:', selectedModelId);
-		
-		if (!selectedModelId) {
-			console.log('No model selected, returning');
-			alert('Please select a model first');
-			return;
-		}
-		
-		try {
-			setDefaultBtn.disabled = true;
-			setDefaultBtn.textContent = 'Setting...';
-			
-			console.log('Sending request to set default model:', selectedModelId);
-			const res = await authenticatedFetch('/api/models/set-default', { 
-				method: 'POST', 
-				headers: { 'Content-Type': 'application/json' }, 
-				body: JSON.stringify({ id: selectedModelId }) 
-			});
-			if (!res) return; // Redirect happened
-			
-			console.log('Response received:', res.status);
-			
-			// Refresh the models to update the interface
-			await refreshModels();
-			
-			// Show success message
-			modelStatus.innerHTML = '<div class="text-green-400">Default model updated successfully!</div>';
-			setTimeout(() => {
-				modelStatus.innerHTML = '';
-			}, 3000);
-			
-		} catch (error) {
-			if (handleUnauthorizedError(error)) return; // Redirect happened
-			modelStatus.innerHTML = '<div class="text-red-400">Failed to set default model</div>';
-			console.error('Failed to set default model:', error);
-		} finally {
-			setDefaultBtn.disabled = false;
-			setDefaultBtn.textContent = 'Set as Default';
-		}
-	});
-}
 
 function addTTSTestSection() {
 	const main = document.querySelector('main');
@@ -373,10 +282,8 @@ window.deleteModel = async function(modelId) {
 	}
 };
 
-// Global function for setting default model
-window.setDefaultModel = async function(modelId) {
-	if (!confirm('Set this as the default voice model?')) return;
-	
+// Global function for toggling default model
+window.toggleDefaultModel = async function(modelId) {
 	try {
 		const res = await authenticatedFetch('/api/models/set-default', { 
 			method: 'POST', 
@@ -393,11 +300,11 @@ window.setDefaultModel = async function(modelId) {
 			}, 3000);
 		} else {
 			const errorData = await res.json();
-			modelStatus.innerHTML = `<div class="text-red-400">Failed to set default model: ${errorData.error}</div>`;
+			modelStatus.innerHTML = `<div class="text-red-400">Failed to update default model: ${errorData.error}</div>`;
 		}
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
-		modelStatus.innerHTML = '<div class="text-red-400">Failed to set default model</div>';
-		console.error('Failed to set default model:', error);
+		modelStatus.innerHTML = '<div class="text-red-400">Failed to update default model</div>';
+		console.error('Failed to update default model:', error);
 	}
 };
