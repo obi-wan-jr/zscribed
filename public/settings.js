@@ -57,9 +57,19 @@ async function refreshModels() {
 		for (const model of data.voiceModels || []) {
 			const row = document.createElement('div');
 			row.className = 'flex items-center justify-between p-2 bg-[#0b1020] rounded';
+			
+			const defaultBadge = model.isDefault ? '<span class="px-2 py-1 text-xs rounded bg-green-700 text-white mr-2">Default</span>' : '';
+			const setDefaultBtn = model.isDefault ? '' : `<button onclick="setDefaultModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 mr-2">Set Default</button>`;
+			
 			row.innerHTML = `
-				<span class="text-sm">${model.name || model.id} (${model.id})</span>
-				<button onclick="deleteModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600">Delete</button>
+				<div class="flex items-center">
+					${defaultBadge}
+					<span class="text-sm">${model.name || model.id} (${model.id})</span>
+				</div>
+				<div class="flex items-center">
+					${setDefaultBtn}
+					<button onclick="deleteModel('${model.id}')" class="px-2 py-1 text-xs rounded bg-red-700 hover:bg-red-600">Delete</button>
+				</div>
 			`;
 			modelsList.appendChild(row);
 		}
@@ -219,5 +229,23 @@ window.deleteModel = async function(modelId) {
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to delete model:', error);
+	}
+};
+
+// Global function for setting default model
+window.setDefaultModel = async function(modelId) {
+	if (!confirm('Set this as the default voice model?')) return;
+	
+	try {
+		const res = await authenticatedFetch('/api/models/set-default', { 
+			method: 'POST', 
+			headers: { 'Content-Type': 'application/json' }, 
+			body: JSON.stringify({ id: modelId }) 
+		});
+		if (!res) return; // Redirect happened
+		await refreshModels();
+	} catch (error) {
+		if (handleUnauthorizedError(error)) return; // Redirect happened
+		console.error('Failed to set default model:', error);
 	}
 };

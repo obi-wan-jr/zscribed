@@ -271,11 +271,20 @@ async function loadModels() {
 		if (modelSelect) {
 			modelSelect.innerHTML = '<option value="">Select voice model</option>';
 			
+			let defaultModelId = null;
 			for (const m of data.voiceModels || []) {
 				const option = document.createElement('option');
 				option.value = m.id;
 				option.textContent = m.name || m.id;
+				if (m.isDefault) {
+					defaultModelId = m.id;
+				}
 				modelSelect.appendChild(option);
+			}
+			
+			// Select the default model if one exists
+			if (defaultModelId) {
+				modelSelect.value = defaultModelId;
 			}
 		}
 	} catch (error) {

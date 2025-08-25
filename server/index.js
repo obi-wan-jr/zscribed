@@ -351,14 +351,14 @@ app.get('/api/models', async (_req, res) => {
 			];
 			const voices = configVoices.length > 0 ? configVoices : defaultVoices;
 			
-			return res.json({ 
-				voiceModels: voices.map(v => ({ id: v.id, name: v.name })),
-				note: configVoices.length > 0 ? 'Using config voice models' : 'Using default voice models (no config found)'
-			});
+			return 		res.json({ 
+			voiceModels: voices.map(v => ({ id: v.id, name: v.name, isDefault: v.isDefault || false })),
+			note: configVoices.length > 0 ? 'Using config voice models' : 'Using default voice models (no config found)'
+		});
 		}
 		
 		const voices = await ttsService.getAvailableVoices();
-		res.json({ voiceModels: voices.map(v => ({ id: v.id, name: v.name })) });
+		res.json({ voiceModels: voices.map(v => ({ id: v.id, name: v.name, isDefault: v.isDefault || false })) });
 	} catch (error) {
 		console.error('[API] Error fetching voices:', error);
 		// Fallback to config voice models or defaults
@@ -370,7 +370,7 @@ app.get('/api/models', async (_req, res) => {
 		const voices = configVoices.length > 0 ? configVoices : defaultVoices;
 		
 		res.json({ 
-			voiceModels: voices.map(v => ({ id: v.id, name: v.name })),
+			voiceModels: voices.map(v => ({ id: v.id, name: v.name, isDefault: v.isDefault || false })),
 			note: configVoices.length > 0 ? 'Using config voice models (API error)' : 'Using default voice models (API error)'
 		});
 	}
@@ -395,6 +395,28 @@ app.post('/api/models/delete', (req, res) => {
 	const list = Array.isArray(config.voiceModels) ? config.voiceModels.filter(v => v.id !== id) : [];
 	config = saveConfig(ROOT, { ...config, voiceModels: list });
 	res.json({ ok: true });
+});
+
+app.post('/api/models/set-default', (req, res) => {
+	const { id } = req.body || {};
+	if (!id) return res.status(400).json({ error: 'Missing id' });
+	
+	const list = Array.isArray(config.voiceModels) ? [...config.voiceModels] : [];
+	
+	// Remove default flag from all models
+	list.forEach(model => {
+		model.isDefault = false;
+	});
+	
+	// Set the specified model as default
+	const targetModel = list.find(model => model.id === id);
+	if (targetModel) {
+		targetModel.isDefault = true;
+		config = saveConfig(ROOT, { ...config, voiceModels: list });
+		res.json({ ok: true });
+	} else {
+		res.status(404).json({ error: 'Model not found' });
+	}
 });
 
 // Preferences

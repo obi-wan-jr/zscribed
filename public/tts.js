@@ -47,11 +47,21 @@ async function loadVoiceModels() {
 		
 		const data = await res.json();
 		voiceModel.innerHTML = '';
+		let defaultModelId = null;
+		
 		for (const m of data.voiceModels || []) {
 			const opt = document.createElement('option');
 			opt.value = m.id; 
 			opt.textContent = m.name || m.id; 
+			if (m.isDefault) {
+				defaultModelId = m.id;
+			}
 			voiceModel.appendChild(opt);
+		}
+		
+		// Select the default model if one exists
+		if (defaultModelId) {
+			voiceModel.value = defaultModelId;
 		}
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
