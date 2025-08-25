@@ -1753,6 +1753,70 @@ app.post('/api/debug/cleanup', (req, res) => {
 	}
 });
 
+// User management endpoints
+app.get('/api/users', (req, res) => {
+	try {
+		const allowedUsers = config.allowedUsers || [];
+		res.json(allowedUsers);
+	} catch (error) {
+		console.error('[API] Error fetching users:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.post('/api/users', (req, res) => {
+	try {
+		const { username } = req.body;
+		
+		if (!username || typeof username !== 'string' || username.trim().length === 0) {
+			return res.status(400).json({ error: 'Username is required and must be a non-empty string' });
+		}
+		
+		const normalizedUsername = username.trim();
+		const allowedUsers = config.allowedUsers || [];
+		
+		// Check if user already exists (case-insensitive)
+		const existingUser = allowedUsers.find(user => user.toLowerCase() === normalizedUsername.toLowerCase());
+		if (existingUser) {
+			return res.status(409).json({ error: 'User already exists' });
+		}
+		
+		// Add new user
+		allowedUsers.push(normalizedUsername);
+		config = saveConfig(ROOT, { ...config, allowedUsers });
+		
+		broadcastLog('info', 'system', `User added: ${normalizedUsername}`);
+		res.json({ success: true, message: 'User added successfully' });
+	} catch (error) {
+		console.error('[API] Error adding user:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.delete('/api/users/:username', (req, res) => {
+	try {
+		const { username } = req.params;
+		const allowedUsers = config.allowedUsers || [];
+		
+		// Find user (case-insensitive)
+		const userIndex = allowedUsers.findIndex(user => user.toLowerCase() === username.toLowerCase());
+		
+		if (userIndex === -1) {
+			return res.status(404).json({ error: 'User not found' });
+		}
+		
+		// Remove user
+		const removedUser = allowedUsers.splice(userIndex, 1)[0];
+		config = saveConfig(ROOT, { ...config, allowedUsers });
+		
+		broadcastLog('info', 'system', `User deleted: ${removedUser}`);
+		res.json({ success: true, message: 'User deleted successfully' });
+	} catch (error) {
+		console.error('[API] Error deleting user:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
 process.on('SIGINT', () => { saveQueue(); process.exit(0); });
 process.on('SIGTERM', () => { saveQueue(); process.exit(0); });
 
