@@ -3,44 +3,49 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Admin Panel - dScribe</title>
+    <title>dScribe • Admin</title>
     <link rel="stylesheet" href="/styles.build.css" />
     <style>
         .admin-section { transition: all 0.3s ease; }
-        .admin-section:hover { background-color: #374151; }
+        .admin-section:hover { background-color: #1e293b; }
         .section-header { cursor: pointer; }
         .section-content { transition: all 0.3s ease; }
         .debug-step { transition: all 0.3s ease; }
-        .debug-step:hover { background-color: #f3f4f6; }
-        .status-success { color: #059669; }
-        .status-error { color: #dc2626; }
-        .status-warning { color: #d97706; }
-        .status-info { color: #2563eb; }
+        .debug-step:hover { background-color: #1e293b; }
+        .status-success { color: #10b981; }
+        .status-error { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+        .status-info { color: #3b82f6; }
         .chevron { transition: transform 0.3s ease; }
         .chevron.rotated { transform: rotate(90deg); }
+        .log-entry { border-left: 3px solid transparent; }
+        .log-entry.error { border-left-color: #ef4444; background-color: #1f2937; }
+        .log-entry.warning { border-left-color: #f59e0b; background-color: #1f2937; }
+        .log-entry.success { border-left-color: #10b981; background-color: #1f2937; }
+        .log-entry.info { border-left-color: #3b82f6; background-color: #1f2937; }
     </style>
 </head>
 <body class="h-full bg-[#0b1020] text-slate-200">
     <div class="min-h-full">
         <nav class="px-4 py-3 border-b border-slate-700 bg-[#0b1020]/90 sticky top-0 z-10">
             <div class="max-w-6xl mx-auto flex items-center justify-between">
-                <div class="text-xl font-semibold text-indigo-300">dScribe</div>
+                <a href="/" class="text-xl font-semibold text-indigo-300">dScribe</a>
                 <div class="space-x-4">
                     <a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
                     <a href="/bible.html" class="hover:text-white">Bible Transcription</a>
-                    <a href="/admin.html" class="text-indigo-300 font-semibold">Admin</a>
+                    <a href="/admin.html" class="text-white">Admin</a>
                     <a href="/settings.html" class="hover:text-white">Settings</a>
                     <a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
                 </div>
             </div>
         </nav>
         
-        <main class="max-w-7xl mx-auto p-4">
-            <div class="bg-slate-800 rounded-lg shadow-lg p-6">
+        <main class="max-w-6xl mx-auto p-6 space-y-6">
+            <section class="bg-[#121733] border border-slate-700 rounded-lg p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-2xl font-semibold text-indigo-200">dScribe Admin Panel</h1>
+                    <h1 class="text-xl font-semibold text-indigo-200">dScribe Admin Panel</h1>
                     <div class="flex space-x-2">
-                        <button onclick="refreshAllSections()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        <button onclick="refreshAllSections()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
                             Refresh All
                         </button>
                     </div>
@@ -49,49 +54,49 @@
                 <!-- Cascading Sections -->
                 <div class="space-y-4">
                     <!-- Server Logs Section -->
-                    <div class="admin-section bg-slate-700 rounded-lg">
-                        <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection('logs')">
+                    <div class="admin-section bg-[#0b1020] border border-slate-700 rounded-lg">
+                        <div class="section-header p-4 flex items-center justify-between hover:bg-[#1e293b] transition-colors" onclick="toggleSection('logs')">
                             <div class="flex items-center space-x-3">
                                 <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                 </svg>
-                                <h2 class="text-lg font-semibold">Server Logs</h2>
+                                <h2 class="text-lg font-semibold text-indigo-200">Server Logs</h2>
                             </div>
                             <div class="flex space-x-2">
-                                <button onclick="event.stopPropagation(); clearLogs()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                <button onclick="event.stopPropagation(); clearLogs()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
                                     Clear Logs
                                 </button>
-                                <button onclick="event.stopPropagation(); downloadLogs()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                <button onclick="event.stopPropagation(); downloadLogs()" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
                                     Download
                                 </button>
                             </div>
                         </div>
-                        <div id="logs-content" class="section-content hidden p-4 border-t border-slate-600">
-                            <div id="logs-container" class="bg-slate-900 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
+                        <div id="logs-content" class="section-content hidden p-4 border-t border-slate-700">
+                            <div id="logs-container" class="bg-[#0b1020] border border-slate-600 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
                                 <!-- Logs will be loaded here -->
                             </div>
                         </div>
                     </div>
 
                     <!-- Video Debug Section -->
-                    <div class="admin-section bg-slate-700 rounded-lg">
-                        <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection('debug')">
+                    <div class="admin-section bg-[#0b1020] border border-slate-700 rounded-lg">
+                        <div class="section-header p-4 flex items-center justify-between hover:bg-[#1e293b] transition-colors" onclick="toggleSection('debug')">
                             <div class="flex items-center space-x-3">
                                 <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                 </svg>
-                                <h2 class="text-lg font-semibold">Video Generation Debug</h2>
+                                <h2 class="text-lg font-semibold text-indigo-200">Video Generation Debug</h2>
                             </div>
                             <div class="flex space-x-2">
-                                <button onclick="event.stopPropagation(); cleanupDebugSessions()" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
+                                <button onclick="event.stopPropagation(); cleanupDebugSessions()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
                                     Cleanup Old Sessions
                                 </button>
                             </div>
                         </div>
-                        <div id="debug-content" class="section-content hidden p-4 border-t border-slate-600">
+                        <div id="debug-content" class="section-content hidden p-4 border-t border-slate-700">
                             <!-- Session List -->
                             <div id="debug-session-list" class="mb-6">
-                                <h3 class="text-md font-semibold mb-3">Debug Sessions</h3>
+                                <h3 class="text-md font-semibold mb-3 text-indigo-200">Debug Sessions</h3>
                                 <div id="debug-sessions" class="space-y-2">
                                     <!-- Sessions will be loaded here -->
                                 </div>
@@ -100,15 +105,15 @@
                             <!-- Session Details -->
                             <div id="debug-session-details" class="hidden">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-md font-semibold">Session Details</h3>
-                                    <button onclick="hideDebugSessionDetails()" class="text-gray-500 hover:text-gray-700">
+                                    <h3 class="text-md font-semibold text-indigo-200">Session Details</h3>
+                                    <button onclick="hideDebugSessionDetails()" class="text-gray-400 hover:text-gray-200 transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                         </svg>
                                     </button>
                                 </div>
                                 
-                                <div id="debug-session-info" class="bg-gray-100 p-4 rounded-lg mb-4 text-gray-800">
+                                <div id="debug-session-info" class="bg-[#1e293b] border border-slate-600 p-4 rounded-lg mb-4 text-slate-200">
                                     <!-- Session info will be loaded here -->
                                 </div>
 
@@ -119,7 +124,7 @@
 
                                 <!-- Steps -->
                                 <div class="mb-4">
-                                    <h4 class="text-sm font-semibold mb-2">Steps</h4>
+                                    <h4 class="text-sm font-semibold mb-2 text-indigo-200">Steps</h4>
                                     <div id="debug-session-steps" class="space-y-2">
                                         <!-- Steps will be loaded here -->
                                     </div>
@@ -127,7 +132,7 @@
 
                                 <!-- Errors -->
                                 <div id="debug-session-errors" class="mb-4 hidden">
-                                    <h4 class="text-sm font-semibold mb-2 text-red-600">Errors</h4>
+                                    <h4 class="text-sm font-semibold mb-2 text-red-400">Errors</h4>
                                     <div id="debug-errors" class="space-y-2">
                                         <!-- Errors will be loaded here -->
                                     </div>
@@ -135,7 +140,7 @@
 
                                 <!-- Warnings -->
                                 <div id="debug-session-warnings" class="mb-4 hidden">
-                                    <h4 class="text-sm font-semibold mb-2 text-yellow-600">Warnings</h4>
+                                    <h4 class="text-sm font-semibold mb-2 text-yellow-400">Warnings</h4>
                                     <div id="debug-warnings" class="space-y-2">
                                         <!-- Warnings will be loaded here -->
                                     </div>
@@ -143,7 +148,7 @@
 
                                 <!-- File Checks -->
                                 <div class="mb-4">
-                                    <h4 class="text-sm font-semibold mb-2">File Checks</h4>
+                                    <h4 class="text-sm font-semibold mb-2 text-indigo-200">File Checks</h4>
                                     <div id="debug-file-checks" class="space-y-2">
                                         <!-- File checks will be loaded here -->
                                     </div>
@@ -151,7 +156,7 @@
 
                                 <!-- FFmpeg Commands -->
                                 <div class="mb-4">
-                                    <h4 class="text-sm font-semibold mb-2">FFmpeg Commands</h4>
+                                    <h4 class="text-sm font-semibold mb-2 text-indigo-200">FFmpeg Commands</h4>
                                     <div id="debug-ffmpeg-commands" class="space-y-2">
                                         <!-- FFmpeg commands will be loaded here -->
                                     </div>
@@ -161,23 +166,23 @@
                     </div>
 
                     <!-- User Management Section -->
-                    <div class="admin-section bg-slate-700 rounded-lg">
-                        <div class="section-header p-4 flex items-center justify-between" onclick="toggleSection('users')">
+                    <div class="admin-section bg-[#0b1020] border border-slate-700 rounded-lg">
+                        <div class="section-header p-4 flex items-center justify-between hover:bg-[#1e293b] transition-colors" onclick="toggleSection('users')">
                             <div class="flex items-center space-x-3">
                                 <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                 </svg>
-                                <h2 class="text-lg font-semibold">User Management</h2>
+                                <h2 class="text-lg font-semibold text-indigo-200">User Management</h2>
                             </div>
                         </div>
-                        <div id="users-content" class="section-content hidden p-4 border-t border-slate-600">
+                        <div id="users-content" class="section-content hidden p-4 border-t border-slate-700">
                             <!-- Add User Form -->
-                            <div class="bg-slate-600 rounded-lg p-4 mb-6">
-                                <h3 class="text-md font-semibold mb-3">Add New User</h3>
+                            <div class="bg-[#1e293b] border border-slate-600 rounded-lg p-4 mb-6">
+                                <h3 class="text-md font-semibold mb-3 text-indigo-200">Add New User</h3>
                                 <div class="flex gap-4">
                                     <input type="text" id="newUsername" placeholder="Enter username" 
-                                           class="flex-1 bg-slate-500 border border-slate-400 rounded px-3 py-2 text-white placeholder-slate-300 focus:outline-none focus:border-indigo-400">
-                                    <button onclick="addUser()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                                           class="flex-1 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors">
+                                    <button onclick="addUser()" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors">
                                         Add User
                                     </button>
                                 </div>
@@ -185,8 +190,8 @@
                             </div>
 
                             <!-- User List -->
-                            <div class="bg-slate-600 rounded-lg p-4">
-                                <h3 class="text-md font-semibold mb-3">Current Users</h3>
+                            <div class="bg-[#1e293b] border border-slate-600 rounded-lg p-4">
+                                <h3 class="text-md font-semibold mb-3 text-indigo-200">Current Users</h3>
                                 <div id="userList" class="space-y-2">
                                     <!-- Users will be loaded here -->
                                 </div>
@@ -195,7 +200,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
         </main>
     </div>
 
@@ -268,9 +273,9 @@
         function displayLogs(logs) {
             const container = document.getElementById('logs-container');
             container.innerHTML = logs.map(log => `
-                <div class="mb-1">
+                <div class="log-entry ${log.level.toLowerCase()} mb-2 p-2 rounded">
                     <span class="text-gray-400">[${log.timestamp}]</span>
-                    <span class="text-${getLogLevelColor(log.level)}">${log.level.toUpperCase()}</span>
+                    <span class="text-${getLogLevelColor(log.level)} font-medium">${log.level.toUpperCase()}</span>
                     <span class="text-white">${log.message}</span>
                 </div>
             `).join('');
@@ -342,10 +347,10 @@
             }
 
             container.innerHTML = sessions.map(session => `
-                <div class="debug-step border rounded-lg p-3 cursor-pointer" onclick="loadDebugSessionDetails('${session.id}')">
+                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-3 cursor-pointer hover:bg-[#374151] transition-colors" onclick="loadDebugSessionDetails('${session.id}')">
                     <div class="flex justify-between items-start">
                         <div>
-                            <h4 class="font-semibold">${session.id}</h4>
+                            <h4 class="font-semibold text-indigo-200">${session.id}</h4>
                             <p class="text-sm text-gray-400">Job: ${session.jobId}</p>
                             <p class="text-xs text-gray-500">Started: ${new Date(session.startTime).toLocaleString()}</p>
                         </div>
@@ -382,19 +387,19 @@
             document.getElementById('debug-session-info').innerHTML = `
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                        <strong>Session ID:</strong><br>
-                        <span class="text-sm">${session.sessionId}</span>
+                        <strong class="text-indigo-200">Session ID:</strong><br>
+                        <span class="text-sm text-gray-300">${session.sessionId}</span>
                     </div>
                     <div>
-                        <strong>Job ID:</strong><br>
-                        <span class="text-sm">${session.jobId}</span>
+                        <strong class="text-indigo-200">Job ID:</strong><br>
+                        <span class="text-sm text-gray-300">${session.jobId}</span>
                     </div>
                     <div>
-                        <strong>Duration:</strong><br>
-                        <span class="text-sm">${(session.totalDuration / 1000).toFixed(2)}s</span>
+                        <strong class="text-indigo-200">Duration:</strong><br>
+                        <span class="text-sm text-gray-300">${(session.totalDuration / 1000).toFixed(2)}s</span>
                     </div>
                     <div>
-                        <strong>Status:</strong><br>
+                        <strong class="text-indigo-200">Status:</strong><br>
                         <span class="text-sm ${session.summary.success ? 'status-success' : 'status-error'}">
                             ${session.summary.success ? 'Success' : 'Failed'}
                         </span>
@@ -404,43 +409,43 @@
 
             // Summary
             document.getElementById('debug-session-summary').innerHTML = `
-                <div class="bg-green-100 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-green-800">${session.summary.totalSteps}</div>
-                    <div class="text-xs text-green-600">Total Steps</div>
+                <div class="bg-green-900 border border-green-700 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-green-300">${session.summary.totalSteps}</div>
+                    <div class="text-xs text-green-400">Total Steps</div>
                 </div>
-                <div class="bg-red-100 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-red-800">${session.summary.totalErrors}</div>
-                    <div class="text-xs text-red-600">Errors</div>
+                <div class="bg-red-900 border border-red-700 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-red-300">${session.summary.totalErrors}</div>
+                    <div class="text-xs text-red-400">Errors</div>
                 </div>
-                <div class="bg-yellow-100 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-yellow-800">${session.summary.totalWarnings}</div>
-                    <div class="text-xs text-yellow-600">Warnings</div>
+                <div class="bg-yellow-900 border border-yellow-700 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-yellow-300">${session.summary.totalWarnings}</div>
+                    <div class="text-xs text-yellow-400">Warnings</div>
                 </div>
-                <div class="bg-blue-100 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-blue-800">${session.summary.totalFileChecks}</div>
-                    <div class="text-xs text-blue-600">File Checks</div>
+                <div class="bg-blue-900 border border-blue-700 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-blue-300">${session.summary.totalFileChecks}</div>
+                    <div class="text-xs text-blue-400">File Checks</div>
                 </div>
-                <div class="bg-purple-100 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-purple-800">${session.summary.totalFFmpegCommands}</div>
-                    <div class="text-xs text-purple-600">FFmpeg Commands</div>
+                <div class="bg-purple-900 border border-purple-700 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-purple-300">${session.summary.totalFFmpegCommands}</div>
+                    <div class="text-xs text-purple-400">FFmpeg Commands</div>
                 </div>
-                <div class="bg-gray-100 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-gray-800">${(session.totalDuration / 1000).toFixed(1)}s</div>
-                    <div class="text-xs text-gray-600">Total Time</div>
+                <div class="bg-gray-900 border border-gray-700 p-3 rounded-lg">
+                    <div class="text-xl font-bold text-gray-300">${(session.totalDuration / 1000).toFixed(1)}s</div>
+                    <div class="text-xs text-gray-400">Total Time</div>
                 </div>
             `;
 
             // Steps
             document.getElementById('debug-session-steps').innerHTML = session.steps.map(step => `
-                <div class="debug-step border rounded-lg p-2">
+                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-2">
                     <div class="flex justify-between items-start">
                         <div>
-                            <strong class="text-sm">${step.step}</strong>
-                            <p class="text-xs text-gray-600">${new Date(step.timestamp).toLocaleTimeString()}</p>
+                            <strong class="text-sm text-indigo-200">${step.step}</strong>
+                            <p class="text-xs text-gray-500">${new Date(step.timestamp).toLocaleTimeString()}</p>
                         </div>
                         <span class="text-xs text-gray-500">${step.duration}ms</span>
                     </div>
-                    ${step.details ? `<pre class="text-xs bg-gray-100 p-2 mt-1 rounded overflow-x-auto">${JSON.stringify(step.details, null, 2)}</pre>` : ''}
+                    ${step.details ? `<pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${JSON.stringify(step.details, null, 2)}</pre>` : ''}
                 </div>
             `).join('');
 
@@ -448,16 +453,16 @@
             if (session.errors.length > 0) {
                 document.getElementById('debug-session-errors').classList.remove('hidden');
                 document.getElementById('debug-errors').innerHTML = session.errors.map(error => `
-                    <div class="debug-step border border-red-200 rounded-lg p-2 bg-red-50">
+                    <div class="debug-step border border-red-600 rounded-lg p-2 bg-red-900/20">
                         <div class="flex justify-between items-start">
                             <div>
-                                <strong class="text-red-800 text-sm">${error.error}</strong>
-                                <p class="text-xs text-gray-600">${new Date(error.timestamp).toLocaleTimeString()}</p>
+                                <strong class="text-red-300 text-sm">${error.error}</strong>
+                                <p class="text-xs text-gray-500">${new Date(error.timestamp).toLocaleTimeString()}</p>
                             </div>
                             <span class="text-xs text-gray-500">${error.duration}ms</span>
                         </div>
-                        ${error.stack ? `<pre class="text-xs bg-red-100 p-2 mt-1 rounded overflow-x-auto">${error.stack}</pre>` : ''}
-                        ${error.context ? `<pre class="text-xs bg-gray-100 p-2 mt-1 rounded overflow-x-auto">${JSON.stringify(error.context, null, 2)}</pre>` : ''}
+                        ${error.stack ? `<pre class="text-xs bg-[#0b1020] border border-red-600 p-2 mt-1 rounded overflow-x-auto text-red-300">${error.stack}</pre>` : ''}
+                        ${error.context ? `<pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${JSON.stringify(error.context, null, 2)}</pre>` : ''}
                     </div>
                 `).join('');
             }
@@ -466,26 +471,26 @@
             if (session.warnings.length > 0) {
                 document.getElementById('debug-session-warnings').classList.remove('hidden');
                 document.getElementById('debug-warnings').innerHTML = session.warnings.map(warning => `
-                    <div class="debug-step border border-yellow-200 rounded-lg p-2 bg-yellow-50">
+                    <div class="debug-step border border-yellow-600 rounded-lg p-2 bg-yellow-900/20">
                         <div class="flex justify-between items-start">
                             <div>
-                                <strong class="text-yellow-800 text-sm">${warning.warning}</strong>
-                                <p class="text-xs text-gray-600">${new Date(warning.timestamp).toLocaleTimeString()}</p>
+                                <strong class="text-yellow-300 text-sm">${warning.warning}</strong>
+                                <p class="text-xs text-gray-500">${new Date(warning.timestamp).toLocaleTimeString()}</p>
                             </div>
                             <span class="text-xs text-gray-500">${warning.duration}ms</span>
                         </div>
-                        ${warning.context ? `<pre class="text-xs bg-yellow-100 p-2 mt-1 rounded overflow-x-auto">${JSON.stringify(warning.context, null, 2)}</pre>` : ''}
+                        ${warning.context ? `<pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${JSON.stringify(warning.context, null, 2)}</pre>` : ''}
                     </div>
                 `).join('');
             }
 
             // File checks
             document.getElementById('debug-file-checks').innerHTML = session.fileChecks.map(check => `
-                <div class="debug-step border rounded-lg p-2">
+                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-2">
                     <div class="flex justify-between items-center">
                         <div>
-                            <strong class="text-sm">${check.filePath}</strong>
-                            <p class="text-xs text-gray-600">${new Date(check.timestamp).toLocaleTimeString()}</p>
+                            <strong class="text-sm text-indigo-200">${check.filePath}</strong>
+                            <p class="text-xs text-gray-500">${new Date(check.timestamp).toLocaleTimeString()}</p>
                         </div>
                         <div class="text-right">
                             <span class="px-2 py-1 rounded text-xs ${check.status === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
@@ -499,12 +504,12 @@
 
             // FFmpeg commands
             document.getElementById('debug-ffmpeg-commands').innerHTML = session.ffmpegCommands.map(cmd => `
-                <div class="debug-step border rounded-lg p-2">
+                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-2">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <strong class="text-sm">FFmpeg Command</strong>
-                            <p class="text-xs text-gray-600">${new Date(cmd.timestamp).toLocaleTimeString()}</p>
-                            <pre class="text-xs bg-gray-100 p-2 mt-1 rounded overflow-x-auto">${cmd.command}</pre>
+                            <strong class="text-sm text-indigo-200">FFmpeg Command</strong>
+                            <p class="text-xs text-gray-500">${new Date(cmd.timestamp).toLocaleTimeString()}</p>
+                            <pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${cmd.command}</pre>
                         </div>
                         <div class="text-right ml-4">
                             <span class="px-2 py-1 rounded text-xs ${cmd.fileExists ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
@@ -559,15 +564,15 @@
             }
 
             container.innerHTML = users.map(user => `
-                <div class="flex items-center justify-between bg-slate-500 rounded-lg p-3">
+                <div class="flex items-center justify-between bg-[#0b1020] border border-slate-600 rounded-lg p-3">
                     <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center text-white font-semibold">
+                        <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
                             ${user.charAt(0).toUpperCase()}
                         </div>
-                        <span class="font-medium">${user}</span>
+                        <span class="font-medium text-indigo-200">${user}</span>
                     </div>
                     <button onclick="deleteUser('${user}')" 
-                            class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">
+                            class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
                         Delete
                     </button>
                 </div>

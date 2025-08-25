@@ -1,4 +1,4 @@
-# dscribe
+# dScribe
 
 Lightweight Bible TTS & Video web app scaffold.
 
