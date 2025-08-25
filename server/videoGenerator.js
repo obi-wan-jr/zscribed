@@ -1,55 +1,110 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { VideoDebugger } from './videoDebugger.js';
 
 export class VideoGenerator {
 	constructor(outputsDir, storageDir) {
 		this.outputsDir = outputsDir;
 		this.storageDir = storageDir;
 		this.uploadDir = path.join(storageDir, 'uploads');
+		this.debugger = new VideoDebugger(outputsDir);
 	}
 
 	async createVideo(audioFile, videoSettings, jobId, broadcastLog, emitProgress) {
-		const { backgroundType, videoResolution, backgroundFile, bookName, chapterNumber, enableTitle = true } = videoSettings;
-		const audioBasename = path.basename(audioFile, '.mp3');
-		const videoOutput = path.join(this.outputsDir, `${audioBasename}-video.mp4`);
+		// Create debug session
+		const debugSession = this.debugger.createDebugSession(jobId);
 		
-		broadcastLog('progress', 'video', 'video_init', `Starting video creation: ${videoResolution}, ${backgroundType}`, `Job: ${jobId}`);
-		
-		// Validate inputs
-		if (!fs.existsSync(audioFile)) {
-			throw new Error(`Audio file not found: ${audioFile}`);
-		}
-		
-		// Validate background file
-		if (!backgroundFile) {
-			throw new Error(`Background file is required but not provided. Background type: ${backgroundType}`);
-		}
-
-		// Get audio duration early for accurate timing
-		const audioDurationMs = await this.getAudioDurationMs(audioFile);
-		if (!audioDurationMs) {
-			broadcastLog('warning', 'video', 'Could not determine audio duration, using default timing', `Job: ${jobId}`);
-		}
-
 		try {
+			this.debugger.logStep(debugSession, 'video_creation_started', {
+				audioFile,
+				videoSettings,
+				jobId
+			});
+
+			const { backgroundType, videoResolution, backgroundFile, bookName, chapterNumber, enableTitle = true } = videoSettings;
+			const audioBasename = path.basename(audioFile, '.mp3');
+			const videoOutput = path.join(this.outputsDir, `${audioBasename}-video.mp4`);
+			
+			broadcastLog('progress', 'video', 'video_init', `Starting video creation: ${videoResolution}, ${backgroundType}`, `Job: ${jobId}`);
+			
+			// Validate video settings
+			const settingsValidation = this.debugger.validateVideoSettings(debugSession, videoSettings);
+			if (!settingsValidation.isValid) {
+				this.debugger.logError(debugSession, new Error('Invalid video settings'), settingsValidation);
+				throw new Error('Invalid video settings');
+			}
+
+			// Validate input files
+			const fileValidation = this.debugger.validateInputFiles(debugSession, audioFile, backgroundFile, this.uploadDir);
+			if (!fileValidation.isValid) {
+				this.debugger.logError(debugSession, new Error('Invalid input files'), fileValidation);
+				throw new Error('Invalid input files');
+			}
+
+			// Get audio duration early for accurate timing
+			this.debugger.logStep(debugSession, 'getting_audio_duration');
+			const audioDurationMs = await this.getAudioDurationMs(audioFile);
+			if (!audioDurationMs) {
+				this.debugger.logWarning(debugSession, 'Could not determine audio duration, using default timing');
+				broadcastLog('warning', 'video', 'Could not determine audio duration, using default timing', `Job: ${jobId}`);
+			}
+
+			this.debugger.logStep(debugSession, 'audio_duration_obtained', { audioDurationMs });
+
 			// Create video with static title (if enabled)
 			if (bookName && chapterNumber && enableTitle) {
+				this.debugger.logStep(debugSession, 'creating_video_with_title', {
+					bookName,
+					chapterNumber,
+					enableTitle
+				});
+				
 				broadcastLog('info', 'video', `Creating video with static title overlay`, `Job: ${jobId}`);
 				const ffmpegArgs = await this.buildBasicVideoWithTitleCommand(backgroundType, backgroundFile, audioFile, videoResolution, videoOutput, bookName, chapterNumber, audioDurationMs);
 				
-				await this.runFFmpegCommand(ffmpegArgs, videoOutput, jobId, broadcastLog, emitProgress);
+				this.debugger.logFFmpegCommand(debugSession, ffmpegArgs, videoOutput);
+				await this.runFFmpegCommandWithDebug(ffmpegArgs, videoOutput, jobId, broadcastLog, emitProgress, debugSession);
 				broadcastLog('success', 'video', `Video with title created successfully`, `Job: ${jobId}`);
 			} else {
 				// No title needed, create basic video
+				this.debugger.logStep(debugSession, 'creating_basic_video', {
+					bookName,
+					chapterNumber,
+					enableTitle
+				});
+				
 				broadcastLog('info', 'video', `Creating basic video without title`, `Job: ${jobId}`);
 				const ffmpegArgs = await this.buildBasicVideoCommand(backgroundType, backgroundFile, audioFile, videoResolution, videoOutput, audioDurationMs);
-				await this.runFFmpegCommand(ffmpegArgs, videoOutput, jobId, broadcastLog, emitProgress);
+				
+				this.debugger.logFFmpegCommand(debugSession, ffmpegArgs, videoOutput);
+				await this.runFFmpegCommandWithDebug(ffmpegArgs, videoOutput, jobId, broadcastLog, emitProgress, debugSession);
 				broadcastLog('success', 'video', `Basic video created successfully`, `Job: ${jobId}`);
 			}
 
+			// Final file check
+			this.debugger.logFileCheck(debugSession, videoOutput, true);
+			
+			this.debugger.logStep(debugSession, 'video_creation_completed', {
+				videoOutput,
+				fileSize: fs.existsSync(videoOutput) ? fs.statSync(videoOutput).size : 0
+			});
+
+			// Generate debug report
+			const report = this.debugger.generateDebugReport(debugSession);
+			this.debugger.logStep(debugSession, 'debug_report_generated', { reportId: report.sessionId });
+
 			return videoOutput;
 		} catch (error) {
+			this.debugger.logError(debugSession, error, {
+				audioFile,
+				videoSettings,
+				jobId
+			});
+			
+			// Generate debug report even on error
+			const report = this.debugger.generateDebugReport(debugSession);
+			
 			broadcastLog('error', 'video', 'video_failed', error.message, `Job: ${jobId}`);
 			throw error;
 		}
@@ -257,6 +312,55 @@ export class VideoGenerator {
 			case '4k': return '3840:2160';
 			default: return '1920:1080';
 		}
+	}
+
+	async runFFmpegCommandWithDebug(args, outputFile, jobId, broadcastLog, emitProgress, debugSession) {
+		return new Promise((resolve, reject) => {
+			const ffmpeg = spawn('ffmpeg', args);
+			
+			let stderr = '';
+			let stdout = '';
+			
+			ffmpeg.stdout.on('data', (data) => {
+				stdout += data.toString();
+			});
+			
+			ffmpeg.stderr.on('data', (data) => {
+				stderr += data.toString();
+			});
+			
+			ffmpeg.on('close', (code) => {
+				const success = code === 0 || (fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0);
+				
+				if (success) {
+					this.debugger.logStep(debugSession, 'ffmpeg_completed_successfully', {
+						exitCode: code,
+						outputFile,
+						fileSize: fs.existsSync(outputFile) ? fs.statSync(outputFile).size : 0
+					});
+					broadcastLog('success', 'video', `FFmpeg completed successfully`, `Job: ${jobId}`);
+					resolve(outputFile);
+				} else {
+					this.debugger.logError(debugSession, new Error(`FFmpeg failed with code ${code}`), {
+						exitCode: code,
+						stderr,
+						stdout,
+						outputFile
+					});
+					broadcastLog('error', 'video', `FFmpeg failed`, `Job: ${jobId}, Code: ${code}, Error: ${stderr}`);
+					reject(new Error(`FFmpeg failed with code ${code}: ${stderr}`));
+				}
+			});
+			
+			ffmpeg.on('error', (error) => {
+				this.debugger.logError(debugSession, error, {
+					args,
+					outputFile
+				});
+				broadcastLog('error', 'video', `FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
+				reject(error);
+			});
+		});
 	}
 
 	async runFFmpegCommand(args, outputFile, jobId, broadcastLog, emitProgress) {

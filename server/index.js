@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { spawn } from 'child_process';
 import { loadConfig, saveConfig } from './config.js';
 import { VideoGenerator } from './videoGenerator.js';
+import { VideoDebugger } from './videoDebugger.js';
 import { UserLogger } from './logger.js';
 import { parseVerseRanges } from './bible/verseRange.js';
 import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testLocalBibleConnection, BIBLE_BOOKS, validateChapter, validateVerseRanges } from './bible/localBibleProvider.js';
@@ -55,8 +56,9 @@ const PUBLIC_DIR = path.join(ROOT, 'public');
 const CONFIG_DIR = path.join(ROOT, 'config');
 const QUEUE_FILE = path.join(STORAGE_DIR, 'queue.json');
 
-// Initialize video generator
+// Initialize video generator and debugger
 const videoGenerator = new VideoGenerator(OUTPUTS_DIR, STORAGE_DIR);
+const videoDebugger = new VideoDebugger(OUTPUTS_DIR);
 
 // Multi-job processing system constants
 const MAX_CONCURRENT_JOBS = 3; // Allow up to 3 jobs to run simultaneously
@@ -1710,6 +1712,45 @@ app.get('/api/tts/status', (_req, res) => {
 	}
 	
 	res.json(ttsService.getStatus());
+});
+
+// Debug API endpoints
+app.get('/api/debug/sessions', (req, res) => {
+	try {
+		const sessions = videoDebugger.getDebugSessions();
+		res.json(sessions);
+	} catch (error) {
+		console.error('[API] Error fetching debug sessions:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.get('/api/debug/session/:sessionId', (req, res) => {
+	try {
+		const { sessionId } = req.params;
+		const sessions = videoDebugger.getDebugSessions();
+		const session = sessions.find(s => s.id === sessionId);
+		
+		if (!session) {
+			return res.status(404).json({ error: 'Session not found' });
+		}
+		
+		const report = videoDebugger.generateDebugReport(session);
+		res.json(report);
+	} catch (error) {
+		console.error('[API] Error fetching session details:', error);
+		res.status(500).json({ error: error.message });
+	}
+});
+
+app.post('/api/debug/cleanup', (req, res) => {
+	try {
+		videoDebugger.cleanupOldSessions();
+		res.json({ success: true, message: 'Old debug sessions cleaned up' });
+	} catch (error) {
+		console.error('[API] Error cleaning up debug sessions:', error);
+		res.status(500).json({ error: error.message });
+	}
 });
 
 process.on('SIGINT', () => { saveQueue(); process.exit(0); });
