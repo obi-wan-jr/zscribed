@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-08-25T01:35:56.839Z",
+  "summary": {
+    "totalBooks": 66,
+    "totalChapters": 1189,
+    "presentBooks": 66,
+    "missingBooks": 0,
+    "missingChapters": 0,
+    "chapterCountMismatches": 0,
+    "contentIssues": 0,
+    "completeness": {
+      "books": "100.00%",
+      "chapters": "100.00%"
+    }
+  },
+  "translation": {
+    "translation_id": "web",
+    "translation_name": "World English Bible",
+    "translation_note": "Public Domain",
+    "sample_reference": "Genesis 1",
+    "verse_count": 31
+  },
+  "issues": {
+    "missingBooks": [],
+    "missingChapters": [],
+    "chapterCountMismatches": [],
+    "contentIssues": []
+  },
+  "recommendations": [
+    {
+      "priority": "MEDIUM",
+      "action": "Improve chapter completeness",
+      "current": "100.00%"
+    }
+  ]
+}
