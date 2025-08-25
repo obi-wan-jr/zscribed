@@ -262,10 +262,12 @@ function setupAllChaptersButton() {
 
 async function loadModels() {
 	try {
-		const response = await authenticatedFetch('/api/models');
+		console.log('Loading voice models for Bible page...');
+		const response = await authenticatedFetch('/api/models?t=' + Date.now());
 		if (!response) return; // Redirect happened
 		
 		const data = await response.json();
+		console.log('Bible page voice models data:', data);
 		
 		const modelSelect = document.getElementById('voiceModel');
 		if (modelSelect) {
@@ -278,6 +280,7 @@ async function loadModels() {
 				option.textContent = m.name || m.id;
 				if (m.isDefault) {
 					defaultModelId = m.id;
+					console.log('Found default model in Bible page:', m.name, 'with ID:', m.id);
 				}
 				modelSelect.appendChild(option);
 			}
@@ -285,6 +288,9 @@ async function loadModels() {
 			// Select the default model if one exists
 			if (defaultModelId) {
 				modelSelect.value = defaultModelId;
+				console.log('Set default model in Bible dropdown:', defaultModelId);
+			} else {
+				console.log('No default model found in Bible page');
 			}
 		}
 	} catch (error) {

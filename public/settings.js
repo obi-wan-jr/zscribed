@@ -53,7 +53,7 @@ async function loadPreferencesIntoUI() {
 
 async function refreshModels() {
 	try {
-		const res = await authenticatedFetch('/api/models');
+		const res = await authenticatedFetch('/api/models?t=' + Date.now());
 		if (!res) return; // Redirect happened
 		
 		const data = await res.json();

@@ -42,10 +42,13 @@ async function init() {
 
 async function loadVoiceModels() {
 	try {
-		const res = await authenticatedFetch('/api/models');
+		console.log('Loading voice models...');
+		const res = await authenticatedFetch('/api/models?t=' + Date.now());
 		if (!res) return; // Redirect happened
 		
 		const data = await res.json();
+		console.log('Voice models data:', data);
+		
 		voiceModel.innerHTML = '';
 		let defaultModelId = null;
 		
@@ -55,6 +58,7 @@ async function loadVoiceModels() {
 			opt.textContent = m.name || m.id; 
 			if (m.isDefault) {
 				defaultModelId = m.id;
+				console.log('Found default model:', m.name, 'with ID:', m.id);
 			}
 			voiceModel.appendChild(opt);
 		}
@@ -62,6 +66,9 @@ async function loadVoiceModels() {
 		// Select the default model if one exists
 		if (defaultModelId) {
 			voiceModel.value = defaultModelId;
+			console.log('Set default model in dropdown:', defaultModelId);
+		} else {
+			console.log('No default model found');
 		}
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
