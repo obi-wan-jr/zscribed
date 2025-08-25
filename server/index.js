@@ -102,6 +102,7 @@ const logger = new UserLogger(LOGS_DIR);
 
 // Logging system - initialize before TTS service
 const logSubscribers = new Map();
+const logBuffer = new Set(); // Store recent logs for API access
 const recentLogs = [];
 const MAX_RECENT_LOGS = 100;
 
@@ -114,7 +115,17 @@ function broadcastLog(level, category, message, details = null) {
 		details
 	};
 
-	// Add to recent logs
+	// Add to log buffer
+	logBuffer.add(logEntry);
+	
+	// Keep only the last 100 logs
+	if (logBuffer.size > 100) {
+		const logsArray = Array.from(logBuffer);
+		logBuffer.clear();
+		logsArray.slice(-100).forEach(log => logBuffer.add(log));
+	}
+
+	// Add to recent logs (for backward compatibility)
 	recentLogs.unshift(logEntry);
 	if (recentLogs.length > MAX_RECENT_LOGS) {
 		recentLogs.pop();
