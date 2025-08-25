@@ -11,6 +11,7 @@ requireAuth().then(isAuthenticated => {
 const showNotifications = document.getElementById('showNotifications');
 const savePrefsBtn = document.getElementById('savePrefsBtn');
 const addModelBtn = document.getElementById('addModelBtn');
+const refreshModelsBtn = document.getElementById('refreshModelsBtn');
 const modelsList = document.getElementById('modelsList');
 const userWelcome = document.getElementById('userWelcome');
 const defaultModelSelect = document.getElementById('defaultModelSelect');
@@ -304,6 +305,12 @@ savePrefsBtn?.addEventListener('click', async () => {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
 		console.error('Failed to save preferences:', error);
 	}
+});
+
+refreshModelsBtn?.addEventListener('click', async () => {
+	console.log('Refresh models button clicked');
+	modelStatus.innerHTML = '<div class="text-blue-400">Refreshing models...</div>';
+	await refreshModels();
 });
 
 addModelBtn?.addEventListener('click', async () => {

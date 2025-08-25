@@ -341,6 +341,10 @@ app.get('/api/config/meta', (_req, res) => {
 
 // Voice models endpoint (no auth required for reading)
 app.get('/api/models', async (_req, res) => {
+	// Add cache control headers to prevent caching
+	res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+	res.set('Pragma', 'no-cache');
+	res.set('Expires', '0');
 	try {
 		if (!ttsService) {
 			// If TTS service is not available, return config voice models as fallback
