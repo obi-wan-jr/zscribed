@@ -651,6 +651,29 @@
             }
         });
 
+        // Toggle section visibility and load data
+        function toggleSection(section) {
+            const content = document.getElementById(`${section}-content`);
+            const chevron = content.previousElementSibling.querySelector('.chevron');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                chevron.classList.add('rotated');
+                
+                // Load data when section is expanded
+                if (section === 'debug') {
+                    loadDebugSessions();
+                } else if (section === 'logs') {
+                    loadLogs();
+                } else if (section === 'users') {
+                    loadUsers();
+                }
+            } else {
+                content.classList.add('hidden');
+                chevron.classList.remove('rotated');
+            }
+        }
+
         // Initialize - expand logs section by default
         toggleSection('logs');
     </script>
