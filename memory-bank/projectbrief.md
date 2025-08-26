@@ -8,7 +8,7 @@ Primary Outcomes:
 - Pure TTS page for arbitrary text inputs
 - Bible transcription page with translation/book/chapter/verse-range selection, segmentation, and batch processing
 - Output management (preview, download, rename, delete)
-- Basic per-user job logging (Inggo, Gelo, JM)
+- Basic per-user job logging (Inggo, Gelo, JM, Irish)
 - Queue-driven processing with real-time progress
 
 Key Constraints:
