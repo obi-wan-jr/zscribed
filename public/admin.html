@@ -8,7 +8,7 @@
     <style>
         .admin-section { transition: all 0.3s ease; }
         .admin-section:hover { background-color: #1e293b; }
-        .section-header { cursor: pointer; }
+        .section-header { cursor: pointer; min-height: 60px; }
         .section-content { transition: all 0.3s ease; }
         .debug-step { transition: all 0.3s ease; }
         .debug-step:hover { background-color: #1e293b; }
@@ -85,7 +85,7 @@
                                 <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                                 </svg>
-                                <h2 class="text-lg font-semibold text-indigo-200">Video Generation Debug</h2>
+                                <h2 class="text-lg font-semibold text-indigo-200">Video Debug</h2>
                             </div>
                             <div class="flex space-x-2">
                                 <button onclick="event.stopPropagation(); cleanupDebugSessions()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
