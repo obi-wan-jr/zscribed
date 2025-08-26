@@ -270,7 +270,7 @@ export class VideoGenerator {
 		}
 		
 		// Build the drawtext filter with proper centering
-		const filter = `,drawtext=text='${text}':fontcolor=white:fontsize=${fontSize}:x=(w-text_w)/2:y=${y}:box=1:boxcolor=black@0.5:boxborderw=5:line_spacing=10:box_align=center${fontfile}`;
+		const filter = `,drawtext=text='${text}':fontcolor=white:fontsize=${fontSize}:x=(w-text_w)/2:y=${y}:box=1:boxcolor=black@0.5:boxborderw=5:line_spacing=10${fontfile}`;
 		
 		return filter;
 	}
