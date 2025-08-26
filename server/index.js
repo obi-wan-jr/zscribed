@@ -298,7 +298,7 @@ app.use((req, res, next) => {
 	next();
 });
 
-// HTML page protection middleware
+// HTML page protection and server-side rendering middleware
 app.use((req, res, next) => {
     // Allow access to login page and static assets
     if (req.path === '/login.html' || 
@@ -316,33 +316,91 @@ app.use((req, res, next) => {
         return res.redirect('/login.html');
     }
     
+    // Add user info to request for server-side rendering
+    req.user = session.user;
     next();
 });
 
-// Static assets with smart caching (no auth required)
-app.use('/', express.static(PUBLIC_DIR, {
-    etag: true,
-    lastModified: true,
-    setHeaders: (res, path) => {
-        // Add cache buster to all static assets
-        res.setHeader('X-Cache-Buster', CACHE_BUSTER);
-        res.setHeader('X-App-Version', APP_VERSION);
+// Server-side rendering function
+function renderHTMLWithUser(htmlContent, user) {
+    if (!user) return htmlContent;
+    
+    // Replace the old navigation with authenticated navigation
+    const oldNav = `<div class="space-x-4">
+					<a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
+					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
+					<a href="/admin.html" class="hover:text-white">Admin</a>
+					<a href="/settings.html" class="hover:text-white">Settings</a>
+					<a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
+				</div>`;
+    
+    const newNav = `<div class="space-x-4">
+					<a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
+					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
+					<a href="/admin.html" class="hover:text-white">Admin</a>
+					<a href="/settings.html" class="hover:text-white">Settings</a>
+					<div class="flex items-center space-x-4">
+						<span class="text-indigo-300">Hi, ${user}!</span>
+						<a href="#" id="logoutLink" class="text-red-400 hover:text-red-300 transition-colors">Logout</a>
+					</div>
+				</div>`;
+    
+    return htmlContent.replace(oldNav, newNav);
+}
+
+// Static assets with smart caching and server-side rendering
+app.use('/', (req, res, next) => {
+    // Handle HTML files with server-side rendering
+    if (req.path.endsWith('.html') && req.user) {
+        const filePath = path.join(PUBLIC_DIR, req.path);
         
-        // Smart caching based on file type
-        if (path.endsWith('.html')) {
-            // HTML files - no cache to ensure fresh content
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-            res.setHeader('Pragma', 'no-cache');
-            res.setHeader('Expires', '0');
-        } else if (path.endsWith('.css') || path.endsWith('.js')) {
-            // CSS/JS files - cache with version-based invalidation
-            res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
-        } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
-            // Images and fonts - long cache
-            res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
+        if (fs.existsSync(filePath)) {
+            fs.readFile(filePath, 'utf8', (err, data) => {
+                if (err) {
+                    return next();
+                }
+                
+                // Render HTML with user info
+                const renderedHTML = renderHTMLWithUser(data, req.user);
+                
+                res.setHeader('Content-Type', 'text/html');
+                res.setHeader('X-Cache-Buster', CACHE_BUSTER);
+                res.setHeader('X-App-Version', APP_VERSION);
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+                
+                res.send(renderedHTML);
+            });
+            return;
         }
     }
-}));
+    
+    // Handle other static files
+    express.static(PUBLIC_DIR, {
+        etag: true,
+        lastModified: true,
+        setHeaders: (res, path) => {
+            // Add cache buster to all static assets
+            res.setHeader('X-Cache-Buster', CACHE_BUSTER);
+            res.setHeader('X-App-Version', APP_VERSION);
+            
+            // Smart caching based on file type
+            if (path.endsWith('.html')) {
+                // HTML files - no cache to ensure fresh content
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+            } else if (path.endsWith('.css') || path.endsWith('.js')) {
+                // CSS/JS files - cache with version-based invalidation
+                res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+            } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
+                // Images and fonts - long cache
+                res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
+            }
+        }
+    })(req, res, next);
+});
 
 // Auth endpoints (no auth required)
 app.post('/api/auth/login', (req, res) => {

@@ -1,8 +1,4 @@
-import { updateNavigation, requireAuth } from './common.js';
+import { updateNavigation } from './common.js';
 
-// Check authentication and update navigation
-requireAuth().then(isAuthenticated => {
-	if (isAuthenticated) {
-		updateNavigation();
-	}
-});
+// Update navigation (server-side rendered, just add event handlers)
+updateNavigation();
