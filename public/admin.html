@@ -654,7 +654,18 @@
 
 
         // Initialize - expand logs section by default
-        toggleSection('logs');
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize logs section as expanded
+            expandedSections.add('logs');
+            const logsContent = document.getElementById('logs-content');
+            const logsChevron = logsContent.previousElementSibling.querySelector('.chevron');
+            
+            logsContent.classList.remove('hidden');
+            logsChevron.classList.add('rotated');
+            
+            // Load logs data
+            loadLogs();
+        });
     </script>
 </body>
 </html>
