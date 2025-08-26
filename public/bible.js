@@ -9,7 +9,7 @@ requireAuth().then(isAuthenticated => {
 	if (isAuthenticated) {
 		init();
 	} else {
-		window.location.href = '/login.html';
+		// Server will handle redirect
 	}
 });
 

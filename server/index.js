@@ -16,7 +16,7 @@ import { fetchBibleText, cleanupBibleText, AVAILABLE_TRANSLATIONS, testLocalBibl
 import { groupSentences, splitIntoSentences } from './text/segment.js';
 import { createTTSService } from './tts/service.js';
 import { loadPreferences, savePreferences } from './memory.js';
-import { requireAuth, getAuthMiddleware, createSession, deleteSession, checkRateLimit } from './auth.js';
+import { requireAuth, getAuthMiddleware, createSession, deleteSession, checkRateLimit, getSession } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -296,6 +296,27 @@ app.use((req, res, next) => {
 		};
 	}
 	next();
+});
+
+// HTML page protection middleware
+app.use((req, res, next) => {
+    // Allow access to login page and static assets
+    if (req.path === '/login.html' || 
+        req.path.startsWith('/api/') || 
+        req.path.startsWith('/outputs/') ||
+        !req.path.endsWith('.html')) {
+        return next();
+    }
+    
+    // Check authentication for HTML pages and root path
+    const sessionId = req.cookies?.sessionId;
+    const session = getSession(sessionId);
+    
+    if (!session) {
+        return res.redirect('/login.html');
+    }
+    
+    next();
 });
 
 // Static assets with smart caching (no auth required)

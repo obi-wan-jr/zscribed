@@ -1,4 +1,8 @@
-import { updateNavigation } from './common.js';
+import { updateNavigation, requireAuth } from './common.js';
 
-// Update the navigation based on authentication status
-updateNavigation();
+// Check authentication and update navigation
+requireAuth().then(isAuthenticated => {
+	if (isAuthenticated) {
+		updateNavigation();
+	}
+});

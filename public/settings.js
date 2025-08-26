@@ -2,7 +2,7 @@ import { fetchMeta, getActiveUser, setActiveUser, updateNavigation, requireAuth,
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
-	if (!isAuthenticated) return; // Will redirect to login
+	if (!isAuthenticated) return; // Server will handle redirect
 	
 	// Initialize the page
 	init();

@@ -188,7 +188,7 @@ export async function updateAuthLink() {
 export async function requireAuth() {
 	const isAuthenticated = await checkAuth();
 	if (!isAuthenticated) {
-		window.location.href = '/login.html';
+		// Server will handle redirect, just return false
 		return false;
 	}
 	return true;
