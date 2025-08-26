@@ -98,7 +98,72 @@ export async function checkAuth() {
 	}
 }
 
-// Update login/logout link based on auth status
+// Get current user info from server
+export async function getCurrentUser() {
+	try {
+		const res = await fetch('/api/auth/current-user');
+		if (res.ok) {
+			const data = await res.json();
+			return data.user;
+		}
+		return null;
+	} catch (e) {
+		return null;
+	}
+}
+
+// Update navigation based on auth status
+export async function updateNavigation() {
+	const isAuthenticated = await checkAuth();
+	const navContainer = document.querySelector('nav div:last-child');
+	
+	if (!navContainer) return;
+	
+	if (isAuthenticated) {
+		// Get current user
+		const currentUser = await getCurrentUser();
+		
+		// Remove login link if it exists
+		const loginLink = document.getElementById('loginLogoutLink');
+		if (loginLink) {
+			loginLink.remove();
+		}
+		
+		// Add user greeting and logout
+		const userGreeting = document.createElement('div');
+		userGreeting.className = 'flex items-center space-x-4';
+		userGreeting.innerHTML = `
+			<span class="text-indigo-300">Hi, ${currentUser || 'User'}!</span>
+			<a href="#" id="logoutLink" class="text-red-400 hover:text-red-300 transition-colors">Logout</a>
+		`;
+		
+		// Add click handler for logout
+		userGreeting.querySelector('#logoutLink').onclick = (e) => {
+			e.preventDefault();
+			logout();
+		};
+		
+		navContainer.appendChild(userGreeting);
+	} else {
+		// Remove any existing user greeting
+		const userGreeting = navContainer.querySelector('.flex.items-center.space-x-4');
+		if (userGreeting) {
+			userGreeting.remove();
+		}
+		
+		// Add login link if it doesn't exist
+		if (!document.getElementById('loginLogoutLink')) {
+			const loginLink = document.createElement('a');
+			loginLink.id = 'loginLogoutLink';
+			loginLink.href = '/login.html';
+			loginLink.className = 'hover:text-white';
+			loginLink.textContent = 'Login';
+			navContainer.appendChild(loginLink);
+		}
+	}
+}
+
+// Update login/logout link based on auth status (legacy function)
 export async function updateAuthLink() {
 	const link = document.getElementById('loginLogoutLink');
 	if (!link) return;

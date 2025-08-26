@@ -1,4 +1,4 @@
-import { getActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError, cancelCurrentJob } from './common.js';
+import { getActiveUser, updateNavigation, requireAuth, authenticatedFetch, handleUnauthorizedError, cancelCurrentJob } from './common.js';
 
 // Bible audio creation functionality
 let currentMode = 'book';
@@ -13,7 +13,10 @@ requireAuth().then(isAuthenticated => {
 	}
 });
 
-function init() {
+async function init() {
+	// Update the navigation
+	await updateNavigation();
+	
 	// Set up event listeners
 	setupEventListeners();
 	

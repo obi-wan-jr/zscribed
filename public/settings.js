@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateNavigation, requireAuth, authenticatedFetch, handleUnauthorizedError } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -17,8 +17,8 @@ const userWelcome = document.getElementById('userWelcome');
 const modelStatus = document.getElementById('modelStatus');
 
 async function init() {
-	// Update the login/logout link
-	await updateAuthLink();
+	// Update the navigation
+	await updateNavigation();
 	
 	// Set welcome message
 	const currentUser = getActiveUser();

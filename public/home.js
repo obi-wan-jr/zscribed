@@ -1,4 +1,4 @@
-import { updateAuthLink } from './common.js';
+import { updateNavigation } from './common.js';
 
-// Update the login/logout link based on authentication status
-updateAuthLink();
+// Update the navigation based on authentication status
+updateNavigation();

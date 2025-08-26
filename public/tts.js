@@ -1,4 +1,4 @@
-import { fetchMeta, getActiveUser, setActiveUser, updateAuthLink, requireAuth, authenticatedFetch, handleUnauthorizedError, cancelCurrentJob } from './common.js';
+import { fetchMeta, getActiveUser, setActiveUser, updateNavigation, requireAuth, authenticatedFetch, handleUnauthorizedError, cancelCurrentJob } from './common.js';
 
 // Check authentication first
 requireAuth().then(isAuthenticated => {
@@ -19,8 +19,8 @@ const refreshOutputsBtn = document.getElementById('refreshOutputsBtn');
 const queueStatus = document.getElementById('queueStatus');
 
 async function init() {
-	// Update the login/logout link
-	await updateAuthLink();
+	// Update the navigation
+	await updateNavigation();
 	
 	// Set welcome message
 	const currentUser = getActiveUser();

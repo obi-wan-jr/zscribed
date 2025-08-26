@@ -348,6 +348,11 @@ app.post('/api/auth/logout', (req, res) => {
 	res.json({ ok: true });
 });
 
+// Get current user info
+app.get('/api/auth/current-user', requireAuth, (req, res) => {
+	res.json({ user: req.user });
+});
+
 // Basic health (no auth required)
 app.get('/api/health', (_req, res) => {
 	res.json({ ok: true, uptime: process.uptime() });
