@@ -651,37 +651,7 @@
             }
         });
 
-        // Toggle section visibility and load data
-        function toggleSection(section) {
-            console.log('toggleSection called with:', section);
-            const content = document.getElementById(`${section}-content`);
-            const chevron = content.previousElementSibling.querySelector('.chevron');
-            
-            console.log('Content element:', content);
-            console.log('Chevron element:', chevron);
-            
-            if (content.classList.contains('hidden')) {
-                console.log('Expanding section:', section);
-                content.classList.remove('hidden');
-                chevron.classList.add('rotated');
-                
-                // Load data when section is expanded
-                if (section === 'debug') {
-                    console.log('Loading debug sessions...');
-                    loadDebugSessions();
-                } else if (section === 'logs') {
-                    console.log('Loading logs...');
-                    loadLogs();
-                } else if (section === 'users') {
-                    console.log('Loading users...');
-                    loadUsers();
-                }
-            } else {
-                console.log('Collapsing section:', section);
-                content.classList.add('hidden');
-                chevron.classList.remove('rotated');
-            }
-        }
+
 
         // Initialize - expand logs section by default
         toggleSection('logs');
