@@ -208,8 +208,8 @@
         let currentDebugSession = null;
         let expandedSections = new Set();
 
-        // Section management
-        function toggleSection(sectionName) {
+        // Section management - make globally accessible
+        window.toggleSection = function(sectionName) {
             const content = document.getElementById(`${sectionName}-content`);
             const header = content.previousElementSibling;
             const chevron = header.querySelector('.chevron');
