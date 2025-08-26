@@ -136,7 +136,7 @@ export class VideoGenerator {
 				'-pix_fmt', 'yuv420p',
 				'-tune', 'stillimage',
 				'-preset', 'fast',
-				'-t', durationSec
+				'-movflags', '+faststart'
 			];
 			
 			args.push('-y', videoOutput);
@@ -158,7 +158,7 @@ export class VideoGenerator {
 				'-shortest',
 				'-pix_fmt', 'yuv420p',
 				'-preset', 'fast',
-				'-t', durationSec
+				'-movflags', '+faststart'
 			];
 			
 			args.push('-y', videoOutput);
@@ -193,7 +193,7 @@ export class VideoGenerator {
 				'-pix_fmt', 'yuv420p',
 				'-tune', 'stillimage',
 				'-preset', 'fast',
-				'-t', durationSec
+				'-movflags', '+faststart'
 			];
 			
 			args.push('-y', videoOutput);
@@ -215,7 +215,7 @@ export class VideoGenerator {
 				'-shortest',
 				'-pix_fmt', 'yuv420p',
 				'-preset', 'fast',
-				'-t', durationSec
+				'-movflags', '+faststart'
 			];
 			
 			args.push('-y', videoOutput);
