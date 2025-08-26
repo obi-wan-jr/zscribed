@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import morgan from 'morgan';
 import { v4 as uuidv4 } from 'uuid';
 import { spawn } from 'child_process';
+import compression from 'compression';
 import { loadConfig, saveConfig } from './config.js';
 import { VideoGenerator } from './videoGenerator.js';
 import { VideoDebugger } from './videoDebugger.js';
@@ -23,10 +24,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3005;
 
+// Enable compression for all responses
+app.use(compression());
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+
+// Use a more efficient logging format for production
+const logFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
+app.use(morgan(logFormat));
 
 // Generate cache buster based on deployment time
 const CACHE_BUSTER = Date.now().toString();
@@ -279,8 +286,22 @@ app.use((req, res, next) => {
 	next();
 });
 
-// Static assets (no auth required)
-app.use('/', express.static(PUBLIC_DIR));
+// Static assets with caching (no auth required)
+app.use('/', express.static(PUBLIC_DIR, {
+    maxAge: '1h', // Cache static assets for 1 hour
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+        // Cache CSS and JS files longer
+        if (path.endsWith('.css') || path.endsWith('.js')) {
+            res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
+        }
+        // Cache images and fonts even longer
+        if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+        }
+    }
+}));
 
 // Auth endpoints (no auth required)
 app.post('/api/auth/login', (req, res) => {
@@ -340,11 +361,20 @@ app.get('/api/config/meta', (_req, res) => {
 });
 
 // Voice models endpoint (no auth required for reading)
-app.get('/api/models', async (_req, res) => {
-	// Add cache control headers to prevent caching
-	res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-	res.set('Pragma', 'no-cache');
-	res.set('Expires', '0');
+app.get('/api/models', async (req, res) => {
+	// Check if client wants fresh data
+	const cacheBuster = req.query.t || req.query.v;
+	
+	if (!cacheBuster) {
+		// Add cache control headers for models (cache for 5 minutes)
+		res.set('Cache-Control', 'public, max-age=300');
+		res.set('ETag', `"models-${Date.now()}"`);
+	} else {
+		// Client requested fresh data
+		res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+		res.set('Pragma', 'no-cache');
+		res.set('Expires', '0');
+	}
 	try {
 		if (!ttsService) {
 			// If TTS service is not available, return config voice models as fallback
@@ -1756,7 +1786,11 @@ app.post('/api/cleanup/chunks', (req, res) => {
 });
 
 // Serve stored outputs
-app.use('/outputs', express.static(OUTPUTS_DIR));
+app.use('/outputs', express.static(OUTPUTS_DIR, {
+    maxAge: '30m', // Cache outputs for 30 minutes
+    etag: true,
+    lastModified: true
+}));
 
 // Add TTS connection test endpoint
 app.get('/api/tts/test', async (_req, res) => {
