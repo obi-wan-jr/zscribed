@@ -7,6 +7,8 @@
 	<link rel="stylesheet" href="/styles.build.css" />
 	<link rel="preload" href="/common.js" as="script" type="module" />
 	<link rel="preload" href="/home.js" as="script" type="module" />
+	<link rel="dns-prefetch" href="//audio.juandelacruzjr.com" />
+	<link rel="preconnect" href="//audio.juandelacruzjr.com" />
 </head>
 <body class="h-full bg-[#0b1020] text-slate-200">
 	<div class="min-h-full">
@@ -27,7 +29,37 @@
 			<p class="text-slate-300">Choose a function from the navigation above.</p>
 		</main>
 	</div>
-	<script type="module" src="/common.js?v=2"></script>
-	<script type="module" src="/home.js?v=2"></script>
+	<script>
+		// Dynamic cache busting
+		(async function() {
+			try {
+				const healthRes = await fetch('/api/health');
+				const health = await healthRes.json();
+				const cacheBuster = health.cacheBuster || Date.now();
+				
+				// Load scripts with cache buster
+				const commonScript = document.createElement('script');
+				commonScript.type = 'module';
+				commonScript.src = `/common.js?v=${cacheBuster}`;
+				document.head.appendChild(commonScript);
+				
+				const homeScript = document.createElement('script');
+				homeScript.type = 'module';
+				homeScript.src = `/home.js?v=${cacheBuster}`;
+				document.head.appendChild(homeScript);
+			} catch (error) {
+				// Fallback to static loading
+				const commonScript = document.createElement('script');
+				commonScript.type = 'module';
+				commonScript.src = '/common.js?v=2';
+				document.head.appendChild(commonScript);
+				
+				const homeScript = document.createElement('script');
+				homeScript.type = 'module';
+				homeScript.src = '/home.js?v=2';
+				document.head.appendChild(homeScript);
+			}
+		})();
+	</script>
 </body>
 </html>

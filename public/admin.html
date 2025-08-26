@@ -48,6 +48,9 @@
                         <button onclick="refreshAllSections()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
                             Refresh All
                         </button>
+                        <button onclick="resetUserCache()" class="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                            Reset Cache
+                        </button>
                     </div>
                 </div>
 
@@ -652,6 +655,25 @@
         });
 
 
+
+        // Cache reset function
+        async function resetUserCache() {
+            if (!confirm('This will reset the cache and reload the page. Continue?')) return;
+            
+            try {
+                const response = await fetch('/api/cache/reset', { method: 'POST' });
+                if (response.ok) {
+                    const result = await response.json();
+                    alert('Cache reset successful! Page will reload.');
+                    window.location.reload();
+                } else {
+                    alert('Failed to reset cache');
+                }
+            } catch (error) {
+                console.error('Error resetting cache:', error);
+                alert('Error resetting cache');
+            }
+        }
 
         // Initialize - expand logs section by default
         document.addEventListener('DOMContentLoaded', function() {

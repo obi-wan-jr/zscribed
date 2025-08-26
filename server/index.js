@@ -35,8 +35,20 @@ app.use(express.urlencoded({ extended: true }));
 const logFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(logFormat));
 
-// Generate cache buster based on deployment time
-const CACHE_BUSTER = Date.now().toString();
+// Generate cache buster based on deployment time and version
+const CACHE_BUSTER = process.env.CACHE_BUSTER || Date.now().toString();
+const APP_VERSION = process.env.APP_VERSION || '1.0.0';
+
+// Cache busting middleware
+app.use((req, res, next) => {
+	// Add cache buster to response headers for static assets
+	if (req.path.match(/\.(js|css|html)$/)) {
+		res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+		res.set('Pragma', 'no-cache');
+		res.set('Expires', '0');
+	}
+	next();
+});
 
 // Cookie parsing for sessions
 app.use((req, res, next) => {
@@ -286,19 +298,27 @@ app.use((req, res, next) => {
 	next();
 });
 
-// Static assets with caching (no auth required)
+// Static assets with smart caching (no auth required)
 app.use('/', express.static(PUBLIC_DIR, {
-    maxAge: '1h', // Cache static assets for 1 hour
     etag: true,
     lastModified: true,
     setHeaders: (res, path) => {
-        // Cache CSS and JS files longer
-        if (path.endsWith('.css') || path.endsWith('.js')) {
-            res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
-        }
-        // Cache images and fonts even longer
-        if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
+        // Add cache buster to all static assets
+        res.setHeader('X-Cache-Buster', CACHE_BUSTER);
+        res.setHeader('X-App-Version', APP_VERSION);
+        
+        // Smart caching based on file type
+        if (path.endsWith('.html')) {
+            // HTML files - no cache to ensure fresh content
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        } else if (path.endsWith('.css') || path.endsWith('.js')) {
+            // CSS/JS files - cache with version-based invalidation
             res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+        } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
+            // Images and fonts - long cache
+            res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
         }
     }
 }));
@@ -355,7 +375,23 @@ app.get('/api/auth/current-user', requireAuth, (req, res) => {
 
 // Basic health (no auth required)
 app.get('/api/health', (_req, res) => {
-	res.json({ ok: true, uptime: process.uptime() });
+	res.json({ 
+		ok: true, 
+		uptime: process.uptime(),
+		version: APP_VERSION,
+		cacheBuster: CACHE_BUSTER
+	});
+});
+
+// Cache reset endpoint (no auth required)
+app.post('/api/cache/reset', (_req, res) => {
+	// Force cache invalidation by updating cache buster
+	process.env.CACHE_BUSTER = Date.now().toString();
+	res.json({ 
+		success: true, 
+		message: 'Cache reset successful',
+		newCacheBuster: process.env.CACHE_BUSTER
+	});
 });
 
 // Public config meta (no auth required)

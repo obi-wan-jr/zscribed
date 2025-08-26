@@ -225,6 +225,37 @@ export async function cancelCurrentJob() {
 	}
 }
 
+// Cache management functions
+export async function resetCache() {
+	try {
+		const response = await fetch('/api/cache/reset', { method: 'POST' });
+		if (response.ok) {
+			const result = await response.json();
+			console.log('Cache reset successful:', result.message);
+			// Force page reload to get fresh resources
+			window.location.reload();
+			return true;
+		}
+		return false;
+	} catch (error) {
+		console.error('Failed to reset cache:', error);
+		return false;
+	}
+}
+
+export async function getCacheInfo() {
+	try {
+		const response = await fetch('/api/health');
+		if (response.ok) {
+			return await response.json();
+		}
+		return null;
+	} catch (error) {
+		console.error('Failed to get cache info:', error);
+		return null;
+	}
+}
+
 // Enhanced fetch wrapper that handles unauthorized errors
 export async function authenticatedFetch(url, options = {}) {
 	try {
