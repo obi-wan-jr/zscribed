@@ -113,11 +113,41 @@ export async function getCurrentUser() {
 }
 
 // Update navigation based on auth status
+export function createUserGreeting(username) {
+	const container = document.createElement('div');
+	container.className = 'flex items-center space-x-4';
+	
+	const greetingText = document.createElement('span');
+	greetingText.className = 'text-gray-300';
+	greetingText.textContent = `Hi ${username}`;
+	
+	const logoutBtn = document.createElement('button');
+	logoutBtn.className = 'text-red-400 hover:text-red-300';
+	logoutBtn.textContent = 'Logout';
+	logoutBtn.onclick = logout;
+	
+	container.appendChild(greetingText);
+	container.appendChild(logoutBtn);
+	return container;
+}
+
 export async function updateNavigation() {
 	const isAuthenticated = await checkAuth();
+	const navContainer = document.querySelector('nav div:last-child');
 	
+	if (!navContainer) return;
+
 	if (isAuthenticated) {
-		// Add click handler for server-side rendered logout link
+		// Add user greeting
+		const user = await getCurrentUser();
+		if (user) {
+			const existingGreeting = navContainer.querySelector('.flex.items-center.space-x-4');
+			if (existingGreeting) existingGreeting.remove();
+			
+			navContainer.prepend(createUserGreeting(user));
+		}
+		
+		// Update logout link
 		const logoutLink = document.getElementById('logoutLink');
 		if (logoutLink && !logoutLink.hasAttribute('data-handler-attached')) {
 			logoutLink.setAttribute('data-handler-attached', 'true');
@@ -127,23 +157,18 @@ export async function updateNavigation() {
 			};
 		}
 	} else {
-		// Remove any existing user greeting
-		const userGreeting = document.querySelector('.flex.items-center.space-x-4');
-		if (userGreeting) {
-			userGreeting.remove();
-		}
+		// Remove user greeting
+		const greeting = navContainer.querySelector('.flex.items-center.space-x-4');
+		if (greeting) greeting.remove();
 		
-		// Add login link if it doesn't exist
+		// Ensure login link exists
 		if (!document.getElementById('loginLogoutLink')) {
-			const navContainer = document.querySelector('nav div:last-child');
-			if (navContainer) {
-				const loginLink = document.createElement('a');
-				loginLink.id = 'loginLogoutLink';
-				loginLink.href = '/login.html';
-				loginLink.className = 'hover:text-white';
-				loginLink.textContent = 'Login';
-				navContainer.appendChild(loginLink);
-			}
+			const loginLink = document.createElement('a');
+			loginLink.id = 'loginLogoutLink';
+			loginLink.href = '/login.html';
+			loginLink.className = 'hover:text-white';
+			loginLink.textContent = 'Login';
+			navContainer.appendChild(loginLink);
 		}
 	}
 }
@@ -265,5 +290,3 @@ export async function authenticatedFetch(url, options = {}) {
 		throw error; // Re-throw other errors
 	}
 }
-
-

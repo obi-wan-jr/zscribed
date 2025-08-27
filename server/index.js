@@ -322,30 +322,8 @@ app.use((req, res, next) => {
 });
 
 // Server-side rendering function
-function renderHTMLWithUser(htmlContent, user) {
-    if (!user) return htmlContent;
-    
-    // Replace the old navigation with authenticated navigation
-    const oldNav = `<div class="space-x-4">
-					<a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
-					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
-					<a href="/admin.html" class="hover:text-white">Admin</a>
-					<a href="/settings.html" class="hover:text-white">Settings</a>
-					<a href="/login.html" id="loginLogoutLink" class="hover:text-white">Login</a>
-				</div>`;
-    
-    const newNav = `<div class="space-x-4">
-					<a href="/tts.html" class="hover:text-white">Text-to-Speech</a>
-					<a href="/bible.html" class="hover:text-white">Bible Transcription</a>
-					<a href="/admin.html" class="hover:text-white">Admin</a>
-					<a href="/settings.html" class="hover:text-white">Settings</a>
-					<div class="flex items-center space-x-4">
-						<span class="text-indigo-300">Hi, ${user}!</span>
-						<a href="#" id="logoutLink" class="text-red-400 hover:text-red-300 transition-colors">Logout</a>
-					</div>
-				</div>`;
-    
-    return htmlContent.replace(oldNav, newNav);
+function renderHTMLWithUser(htmlContent) {
+    return htmlContent;
 }
 
 // Static assets with smart caching and server-side rendering
@@ -449,6 +427,10 @@ app.post('/api/auth/logout', (req, res) => {
 
 // Get current user info
 app.get('/api/auth/current-user', requireAuth, (req, res) => {
+	res.json({ user: req.user });
+});
+
+app.get('/api/auth/me', requireAuth, (req, res) => {
 	res.json({ user: req.user });
 });
 
@@ -2065,6 +2047,41 @@ app.delete('/api/users/:username', (req, res) => {
 process.on('SIGINT', () => { saveQueue(); process.exit(0); });
 process.on('SIGTERM', () => { saveQueue(); process.exit(0); });
 
+// Auto-deployment endpoint
+app.post('/api/deploy', requireAuth, async (req, res) => {
+  try {
+    broadcastLog('info', 'deploy', 'Git deployment triggered via API');
+    
+    // Execute git pull
+    const pullProc = spawn('git', ['pull', 'origin', 'main']);
+    let pullOutput = '';
+    pullProc.stdout.on('data', (data) => pullOutput += data);
+    pullProc.stderr.on('data', (data) => pullOutput += data);
+    
+    await new Promise((resolve, reject) => {
+      pullProc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`Git pull failed with code ${code}: ${pullOutput}`)));
+    });
+
+    // Install dependencies and rebuild
+    const npmProc = spawn('npm', ['ci'], { stdio: 'inherit' });
+    await new Promise((resolve, reject) => {
+      npmProc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`npm ci failed with code ${code}`)));
+    });
+
+    // Restart application
+    const pm2Proc = spawn('pm2', ['restart', 'dscribe'], { stdio: 'inherit' });
+    await new Promise((resolve, reject) => {
+      pm2Proc.on('close', (code) => code === 0 ? resolve() : reject(new Error(`PM2 restart failed with code ${code}`)));
+    });
+
+    broadcastLog('success', 'deploy', 'Deployment completed successfully');
+    res.json({ success: true, message: 'Deployment completed' });
+  } catch (error) {
+    broadcastLog('error', 'deploy', 'Deployment failed', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
 	console.log(`Server listening on http://localhost:${PORT}`);
 	broadcastLog('info', 'system', `Server started`, `Port: ${PORT}, Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -2072,4 +2089,3 @@ app.listen(PORT, () => {
 	// Start the stuck job checker after server is running
 	setInterval(checkForStuckJobs, RECOVERY_CHECK_INTERVAL);
 });
-
