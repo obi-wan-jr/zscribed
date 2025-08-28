@@ -1,0 +1,68 @@
+{
+  "timestamp": "2025-08-28T04:43:43.657Z",
+  "summary": {
+    "totalSamples": 6,
+    "exactMatches": 0,
+    "mismatches": 3,
+    "errors": 3,
+    "matchPercentage": 0
+  },
+  "results": [
+    {
+      "book": "John",
+      "chapter": 17,
+      "verse": 2,
+      "local": "even as you gave him authority over all flesh, so he will give eternal life to all whom you have given him.",
+      "bibleGateway": "Jesus said these things, then lifting up his eyes to heaven, he said, “Father, ",
+      "localClean": "even as you gave him authority over all flesh, so he will give eternal life to all whom you have given him.",
+      "gatewayClean": "jesus said these things, then lifting up his eyes to heaven, he said, father,",
+      "isMatch": false,
+      "similarity": 9
+    },
+    {
+      "book": "John",
+      "chapter": 17,
+      "verse": 25,
+      "local": "Righteous Father, the world hasn’t known you, but I knew you; and these knew that you sent me.",
+      "bibleGateway": "Jesus said these things, then lifting up his eyes to heaven, he said, “Father, ",
+      "localClean": "righteous father, the world hasnt known you, but i knew you; and these knew that you sent me.",
+      "gatewayClean": "jesus said these things, then lifting up his eyes to heaven, he said, father,",
+      "isMatch": false,
+      "similarity": 11
+    },
+    {
+      "book": "John",
+      "chapter": 17,
+      "verse": 1,
+      "local": "Jesus said these things, and lifting up his eyes to heaven, he said, “Father, the time has come. Glorify your Son, that your Son may also glorify you;",
+      "bibleGateway": "Jesus said these things, then lifting up his eyes to heaven, he said, “Father, ",
+      "localClean": "jesus said these things, and lifting up his eyes to heaven, he said, father, the time has come. glorify your son, that your son may also glorify you;",
+      "gatewayClean": "jesus said these things, then lifting up his eyes to heaven, he said, father,",
+      "isMatch": false,
+      "similarity": 46
+    }
+  ],
+  "errors": [
+    {
+      "file": "psalms-130.json",
+      "book": "Psalms",
+      "chapter": 130,
+      "verse": 1,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "psalms-130.json",
+      "book": "Psalms",
+      "chapter": 130,
+      "verse": 7,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "psalms-130.json",
+      "book": "Psalms",
+      "chapter": 130,
+      "verse": 8,
+      "error": "Failed to fetch from BibleGateway"
+    }
+  ]
+}

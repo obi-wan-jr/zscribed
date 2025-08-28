@@ -119,10 +119,10 @@ export function createUserGreeting(username) {
 	
 	const greetingText = document.createElement('span');
 	greetingText.className = 'text-gray-300';
-	greetingText.textContent = `Hi ${username}`;
+	greetingText.textContent = `Hi, ${username}!`;
 	
 	const logoutBtn = document.createElement('button');
-	logoutBtn.className = 'text-red-400 hover:text-red-300';
+	logoutBtn.className = 'text-red-400 hover:text-red-300 transition-colors';
 	logoutBtn.textContent = 'Logout';
 	logoutBtn.onclick = logout;
 	
@@ -133,43 +133,25 @@ export function createUserGreeting(username) {
 
 export async function updateNavigation() {
 	const isAuthenticated = await checkAuth();
-	const navContainer = document.querySelector('nav div:last-child');
+	const userSection = document.getElementById('userSection');
 	
-	if (!navContainer) return;
+	if (!userSection) return;
 
 	if (isAuthenticated) {
 		// Add user greeting
 		const user = await getCurrentUser();
 		if (user) {
-			const existingGreeting = navContainer.querySelector('.flex.items-center.space-x-4');
-			if (existingGreeting) existingGreeting.remove();
+			// Clear existing content
+			userSection.innerHTML = '';
 			
-			navContainer.prepend(createUserGreeting(user));
-		}
-		
-		// Update logout link
-		const logoutLink = document.getElementById('logoutLink');
-		if (logoutLink && !logoutLink.hasAttribute('data-handler-attached')) {
-			logoutLink.setAttribute('data-handler-attached', 'true');
-			logoutLink.onclick = (e) => {
-				e.preventDefault();
-				logout();
-			};
+			// Add user greeting
+			userSection.appendChild(createUserGreeting(user));
 		}
 	} else {
-		// Remove user greeting
-		const greeting = navContainer.querySelector('.flex.items-center.space-x-4');
-		if (greeting) greeting.remove();
-		
-		// Ensure login link exists
-		if (!document.getElementById('loginLogoutLink')) {
-			const loginLink = document.createElement('a');
-			loginLink.id = 'loginLogoutLink';
-			loginLink.href = '/login.html';
-			loginLink.className = 'hover:text-white';
-			loginLink.textContent = 'Login';
-			navContainer.appendChild(loginLink);
-		}
+		// Show login link
+		userSection.innerHTML = `
+			<a href="/login.html" id="loginLogoutLink" class="hover:text-white transition-colors">Login</a>
+		`;
 	}
 }
 

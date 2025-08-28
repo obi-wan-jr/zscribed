@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-08-28T04:41:39.682Z",
+  "summary": {
+    "totalSamples": 6,
+    "exactMatches": 0,
+    "mismatches": 5,
+    "errors": 1,
+    "matchPercentage": 0
+  },
+  "results": [
+    {
+      "book": "1 John",
+      "chapter": 1,
+      "verse": 3,
+      "local": "that which we have seen and heard we declare to you, that you also may have fellowship with us. Yes, and our fellowship is with the Father, and with his Son, Jesus Christ.",
+      "bibleGateway": "WEB - that which we have seen and heard we - Bible Gateway",
+      "localClean": "that which we have seen and heard we declare to you, that you also may have fellowship with us. yes, and our fellowship is with the father, and with his son, jesus christ.",
+      "gatewayClean": "web - that which we have seen and heard we - bible gateway",
+      "isMatch": false,
+      "similarity": 36
+    },
+    {
+      "book": "1 John",
+      "chapter": 1,
+      "verse": 10,
+      "local": "If we say that we haven’t sinned, we make him a liar, and his word is not in us.",
+      "bibleGateway": "WEB - If we say that we haven&rsquo;t sinned, we - Bible Gateway",
+      "localClean": "if we say that we havent sinned, we make him a liar, and his word is not in us.",
+      "gatewayClean": "web - if we say that we havenrsquo;t sinned, we - bible gateway",
+      "isMatch": false,
+      "similarity": 37
+    },
+    {
+      "book": "Exodus",
+      "chapter": 10,
+      "verse": 26,
+      "local": "Our livestock also shall go with us. Not a hoof shall be left behind, for of it we must take to serve The LORD our God; and we don’t know with what we must serve The LORD, until we come there.”",
+      "bibleGateway": "WEB - Our livestock also shall go with us. - Bible Gateway",
+      "localClean": "our livestock also shall go with us. not a hoof shall be left behind, for of it we must take to serve the lord our god; and we dont know with what we must serve the lord, until we come there.",
+      "gatewayClean": "web - our livestock also shall go with us. - bible gateway",
+      "isMatch": false,
+      "similarity": 24
+    },
+    {
+      "book": "Exodus",
+      "chapter": 10,
+      "verse": 15,
+      "local": "For they covered the surface of the whole earth, so that the land was darkened, and they ate every herb of the land, and all the fruit of the trees which the hail had left. There remained nothing green, either tree or herb of the field, through all the land of Egypt.",
+      "bibleGateway": "WEB - For they covered the surface of the - Bible Gateway",
+      "localClean": "for they covered the surface of the whole earth, so that the land was darkened, and they ate every herb of the land, and all the fruit of the trees which the hail had left. there remained nothing green, either tree or herb of the field, through all the land of egypt.",
+      "gatewayClean": "web - for they covered the surface of the - bible gateway",
+      "isMatch": false,
+      "similarity": 37
+    },
+    {
+      "book": "Exodus",
+      "chapter": 10,
+      "verse": 25,
+      "local": "Moses said, “You must also give into our hand sacrifices and burnt offerings, that we may sacrifice to The LORD our God.",
+      "bibleGateway": "WEB - Moses said, &ldquo;You must also give into - Bible Gateway",
+      "localClean": "moses said, you must also give into our hand sacrifices and burnt offerings, that we may sacrifice to the lord our god.",
+      "gatewayClean": "web - moses said, ldquo;you must also give into - bible gateway",
+      "isMatch": false,
+      "similarity": 27
+    }
+  ],
+  "errors": [
+    {
+      "file": "1-john-1.json",
+      "book": "1 John",
+      "chapter": 1,
+      "verse": 8,
+      "error": "Failed to fetch from BibleGateway"
+    }
+  ]
+}

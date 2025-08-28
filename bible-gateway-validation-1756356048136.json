@@ -1,0 +1,76 @@
+{
+  "timestamp": "2025-08-28T04:40:48.135Z",
+  "summary": {
+    "totalSamples": 9,
+    "exactMatches": 0,
+    "mismatches": 0,
+    "errors": 9,
+    "matchPercentage": null
+  },
+  "results": [],
+  "errors": [
+    {
+      "file": "1-peter-3.json",
+      "book": "1 peter",
+      "chapter": 3,
+      "verse": 6,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "1-peter-3.json",
+      "book": "1 peter",
+      "chapter": 3,
+      "verse": 13,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "1-peter-3.json",
+      "book": "1 peter",
+      "chapter": 3,
+      "verse": 10,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "isaiah-2.json",
+      "book": "isaiah",
+      "chapter": 2,
+      "verse": 5,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "isaiah-2.json",
+      "book": "isaiah",
+      "chapter": 2,
+      "verse": 7,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "isaiah-2.json",
+      "book": "isaiah",
+      "chapter": 2,
+      "verse": 21,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "hebrews-3.json",
+      "book": "hebrews",
+      "chapter": 3,
+      "verse": 4,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "hebrews-3.json",
+      "book": "hebrews",
+      "chapter": 3,
+      "verse": 6,
+      "error": "Failed to fetch from BibleGateway"
+    },
+    {
+      "file": "hebrews-3.json",
+      "book": "hebrews",
+      "chapter": 3,
+      "verse": 1,
+      "error": "Failed to fetch from BibleGateway"
+    }
+  ]
+}
