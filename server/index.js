@@ -1052,20 +1052,30 @@ function isRecoverableError(error) {
 }
 
 app.get('/api/queue/status', (_req, res) => {
-	const activeJobDetails = Array.from(activeJobs.values()).map(jobInfo => ({
-		id: jobInfo.job.id,
-		type: jobInfo.job.type,
-		user: jobInfo.job.user,
-		startTime: jobInfo.startTime,
-		duration: Math.round((Date.now() - jobInfo.startTime) / 1000),
-		status: jobInfo.status
-	}));
+	const activeJobDetails = Array.from(activeJobs.values()).map(jobInfo => {
+		const jobState = jobStates.get(jobInfo.job.id);
+		return {
+			id: jobInfo.job.id,
+			type: jobInfo.job.type,
+			user: jobInfo.job.user,
+			startTime: jobInfo.startTime,
+			duration: Math.round((Date.now() - jobInfo.startTime) / 1000),
+			status: jobInfo.status,
+			progress: jobState?.checkpoint || null
+		};
+	});
 
 	res.json({ 
 		pending: jobQueue.length, 
 		processing: activeJobs.size,
 		maxConcurrent: MAX_CONCURRENT_JOBS,
-		activeJobs: activeJobDetails
+		activeJobs: activeJobDetails,
+		jobQueue: jobQueue.map(job => ({
+			id: job.id,
+			type: job.type,
+			user: job.user,
+			createdAt: job.createdAt
+		}))
 	});
 });
 

@@ -223,7 +223,15 @@ function listenToProgress(jobId) {
 		eventSource.onmessage = (e) => {
 			const data = JSON.parse(e.data);
 			if (data.status === 'progress') {
-				ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
+				if (data.step === 'tts' && data.chunk && data.total) {
+					ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
+				} else if (data.step === 'video' && data.message) {
+					ttsProgress.textContent = data.message;
+				} else if (data.message) {
+					ttsProgress.textContent = data.message;
+				} else {
+					ttsProgress.textContent = 'Processing...';
+				}
 			} else if (data.status === 'completed') {
 				handleCompletion();
 			} else if (data.status === 'error') {
@@ -276,7 +284,15 @@ function listenToProgress(jobId) {
 				if (data.activeJobs) {
 					const activeJob = data.activeJobs.find(job => job.id === jobId);
 					if (activeJob && activeJob.progress) {
-						ttsProgress.textContent = `Processing chunk ${activeJob.progress.chunk}/${activeJob.progress.total}...`;
+						if (activeJob.progress.step === 'tts' && activeJob.progress.chunk && activeJob.progress.total) {
+							ttsProgress.textContent = `Processing chunk ${activeJob.progress.chunk}/${activeJob.progress.total}...`;
+						} else if (activeJob.progress.step === 'video' && activeJob.progress.message) {
+							ttsProgress.textContent = activeJob.progress.message;
+						} else if (activeJob.progress.message) {
+							ttsProgress.textContent = activeJob.progress.message;
+						} else {
+							ttsProgress.textContent = 'Processing...';
+						}
 					}
 				}
 			}
