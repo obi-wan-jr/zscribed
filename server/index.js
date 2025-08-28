@@ -370,8 +370,10 @@ app.use('/', (req, res, next) => {
                 res.setHeader('Pragma', 'no-cache');
                 res.setHeader('Expires', '0');
             } else if (path.endsWith('.css') || path.endsWith('.js')) {
-                // CSS/JS files - cache with version-based invalidation
-                res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+                // CSS/JS files - no cache to ensure fresh content during development
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
             } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
                 // Images and fonts - long cache
                 res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
