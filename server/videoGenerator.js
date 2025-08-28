@@ -320,6 +320,19 @@ export class VideoGenerator {
 			
 			let stderr = '';
 			let stdout = '';
+			let lastProgress = 0;
+			let startTime = Date.now();
+			let timeoutId = null;
+			
+			// Set a timeout for the entire process (10 minutes)
+			const TIMEOUT_MS = 10 * 60 * 1000;
+			timeoutId = setTimeout(() => {
+				ffmpeg.kill('SIGKILL');
+				const error = new Error(`FFmpeg process timed out after ${TIMEOUT_MS/1000} seconds`);
+				this.debugger.logError(debugSession, error, { args, outputFile });
+				broadcastLog('error', 'video', `FFmpeg timed out`, `Job: ${jobId}`);
+				reject(error);
+			}, TIMEOUT_MS);
 			
 			ffmpeg.stdout.on('data', (data) => {
 				stdout += data.toString();
@@ -327,12 +340,76 @@ export class VideoGenerator {
 			
 			ffmpeg.stderr.on('data', (data) => {
 				stderr += data.toString();
+				
+				// Parse FFmpeg progress from stderr
+				const lines = data.toString().split('\n');
+				for (const line of lines) {
+					// Look for time progress (e.g., "time=00:01:23.45")
+					const timeMatch = line.match(/time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+					if (timeMatch) {
+						const hours = parseInt(timeMatch[1]);
+						const minutes = parseInt(timeMatch[2]);
+						const seconds = parseInt(timeMatch[3]);
+						const centiseconds = parseInt(timeMatch[4]);
+						
+						const currentTimeMs = (hours * 3600 + minutes * 60 + seconds) * 1000 + centiseconds * 10;
+						
+						// Try to get duration from the same line or estimate
+						const durationMatch = line.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+						let totalDurationMs = 0;
+						
+						if (durationMatch) {
+							const dHours = parseInt(durationMatch[1]);
+							const dMinutes = parseInt(durationMatch[2]);
+							const dSeconds = parseInt(durationMatch[3]);
+							const dCentiseconds = parseInt(durationMatch[4]);
+							totalDurationMs = (dHours * 3600 + dMinutes * 60 + dSeconds) * 1000 + dCentiseconds * 10;
+						}
+						
+						// If we have duration, calculate progress
+						if (totalDurationMs > 0) {
+							const progress = Math.min(95, Math.round((currentTimeMs / totalDurationMs) * 100));
+							if (progress > lastProgress) {
+								lastProgress = progress;
+								emitProgress(progress, 100);
+								broadcastLog('progress', 'video', `Video encoding progress: ${progress}%`, `Job: ${jobId}`);
+							}
+						} else {
+							// Fallback: estimate progress based on time elapsed
+							const elapsed = Date.now() - startTime;
+							const estimatedProgress = Math.min(90, Math.round((elapsed / 30000) * 100)); // Assume 30 seconds for completion
+							if (estimatedProgress > lastProgress) {
+								lastProgress = estimatedProgress;
+								emitProgress(estimatedProgress, 100);
+								broadcastLog('progress', 'video', `Video encoding (estimated): ${estimatedProgress}%`, `Job: ${jobId}`);
+							}
+						}
+					}
+					
+					// Also look for frame progress
+					const frameMatch = line.match(/frame=\s*(\d+)/);
+					if (frameMatch) {
+						const frame = parseInt(frameMatch[1]);
+						// Estimate progress based on frames (rough estimate)
+						const estimatedProgress = Math.min(90, Math.round((frame / 1000) * 100)); // Assume ~1000 frames for completion
+						if (estimatedProgress > lastProgress) {
+							lastProgress = estimatedProgress;
+							emitProgress(estimatedProgress, 100);
+							broadcastLog('progress', 'video', `Video encoding (frame-based): ${estimatedProgress}%`, `Job: ${jobId}`);
+						}
+					}
+				}
 			});
 			
 			ffmpeg.on('close', (code) => {
+				clearTimeout(timeoutId);
 				const success = code === 0 || (fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0);
 				
 				if (success) {
+					// Emit 100% completion
+					emitProgress(100, 100);
+					broadcastLog('success', 'video', `Video encoding completed: 100%`, `Job: ${jobId}`);
+					
 					this.debugger.logStep(debugSession, 'ffmpeg_completed_successfully', {
 						exitCode: code,
 						outputFile,
@@ -353,6 +430,7 @@ export class VideoGenerator {
 			});
 			
 			ffmpeg.on('error', (error) => {
+				clearTimeout(timeoutId);
 				this.debugger.logError(debugSession, error, {
 					args,
 					outputFile
@@ -369,6 +447,18 @@ export class VideoGenerator {
 			
 			let stderr = '';
 			let stdout = '';
+			let lastProgress = 0;
+			let startTime = Date.now();
+			let timeoutId = null;
+			
+			// Set a timeout for the entire process (10 minutes)
+			const TIMEOUT_MS = 10 * 60 * 1000;
+			timeoutId = setTimeout(() => {
+				ffmpeg.kill('SIGKILL');
+				const error = new Error(`FFmpeg process timed out after ${TIMEOUT_MS/1000} seconds`);
+				broadcastLog('error', 'video', `FFmpeg timed out`, `Job: ${jobId}`);
+				reject(error);
+			}, TIMEOUT_MS);
 			
 			ffmpeg.stdout.on('data', (data) => {
 				stdout += data.toString();
@@ -376,10 +466,73 @@ export class VideoGenerator {
 			
 			ffmpeg.stderr.on('data', (data) => {
 				stderr += data.toString();
+				
+				// Parse FFmpeg progress from stderr
+				const lines = data.toString().split('\n');
+				for (const line of lines) {
+					// Look for time progress (e.g., "time=00:01:23.45")
+					const timeMatch = line.match(/time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+					if (timeMatch) {
+						const hours = parseInt(timeMatch[1]);
+						const minutes = parseInt(timeMatch[2]);
+						const seconds = parseInt(timeMatch[3]);
+						const centiseconds = parseInt(timeMatch[4]);
+						
+						const currentTimeMs = (hours * 3600 + minutes * 60 + seconds) * 1000 + centiseconds * 10;
+						
+						// Try to get duration from the same line or estimate
+						const durationMatch = line.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+						let totalDurationMs = 0;
+						
+						if (durationMatch) {
+							const dHours = parseInt(durationMatch[1]);
+							const dMinutes = parseInt(durationMatch[2]);
+							const dSeconds = parseInt(durationMatch[3]);
+							const dCentiseconds = parseInt(durationMatch[4]);
+							totalDurationMs = (dHours * 3600 + dMinutes * 60 + dSeconds) * 1000 + dCentiseconds * 10;
+						}
+						
+						// If we have duration, calculate progress
+						if (totalDurationMs > 0) {
+							const progress = Math.min(95, Math.round((currentTimeMs / totalDurationMs) * 100));
+							if (progress > lastProgress) {
+								lastProgress = progress;
+								emitProgress(progress, 100);
+								broadcastLog('progress', 'video', `Video encoding progress: ${progress}%`, `Job: ${jobId}`);
+							}
+						} else {
+							// Fallback: estimate progress based on time elapsed
+							const elapsed = Date.now() - startTime;
+							const estimatedProgress = Math.min(90, Math.round((elapsed / 30000) * 100)); // Assume 30 seconds for completion
+							if (estimatedProgress > lastProgress) {
+								lastProgress = estimatedProgress;
+								emitProgress(estimatedProgress, 100);
+								broadcastLog('progress', 'video', `Video encoding (estimated): ${estimatedProgress}%`, `Job: ${jobId}`);
+							}
+						}
+					}
+					
+					// Also look for frame progress
+					const frameMatch = line.match(/frame=\s*(\d+)/);
+					if (frameMatch) {
+						const frame = parseInt(frameMatch[1]);
+						// Estimate progress based on frames (rough estimate)
+						const estimatedProgress = Math.min(90, Math.round((frame / 1000) * 100)); // Assume ~1000 frames for completion
+						if (estimatedProgress > lastProgress) {
+							lastProgress = estimatedProgress;
+							emitProgress(estimatedProgress, 100);
+							broadcastLog('progress', 'video', `Video encoding (frame-based): ${estimatedProgress}%`, `Job: ${jobId}`);
+						}
+					}
+				}
 			});
 			
 			ffmpeg.on('close', (code) => {
+				clearTimeout(timeoutId);
 				if (code === 0 || (fs.existsSync(outputFile) && fs.statSync(outputFile).size > 0)) {
+					// Emit 100% completion
+					emitProgress(100, 100);
+					broadcastLog('success', 'video', `Video encoding completed: 100%`, `Job: ${jobId}`);
 					broadcastLog('success', 'video', `FFmpeg completed successfully`, `Job: ${jobId}`);
 					resolve(outputFile);
 				} else {
@@ -389,6 +542,7 @@ export class VideoGenerator {
 			});
 			
 			ffmpeg.on('error', (error) => {
+				clearTimeout(timeoutId);
 				broadcastLog('error', 'video', `FFmpeg error`, `Job: ${jobId}, Error: ${error.message}`);
 				reject(error);
 			});
