@@ -494,80 +494,166 @@ function startProgressTracking(jobId) {
 	// Ensure cancel button is visible during processing
 	showCancelButton();
 	
-	// Fallback progress indicator (in case server doesn't provide detailed progress)
-	let fallbackProgress = 0;
-	const fallbackInterval = setInterval(() => {
-		fallbackProgress += Math.random() * 5; // Random progress increment
-		if (fallbackProgress < 90) { // Don't go to 100% until we get completion
-			updateProgressBar(fallbackProgress);
+	let eventSource = null;
+	let pollInterval = null;
+	let fallbackInterval = null;
+	let completed = false;
+	
+	// Function to handle job completion
+	function handleCompletion(outputFile = null) {
+		if (completed) return;
+		completed = true;
+		
+		clearInterval(fallbackInterval);
+		updateProgressStatus('Completed!');
+		updateProgressBar(100);
+		addProgressLog(`✅ Audio creation completed successfully`);
+		if (outputFile) {
+			addProgressLog(`📁 File: ${outputFile}`);
+		}
+		
+		// Hide cancel button
+		hideCancelButton();
+		
+		// Clean up
+		if (eventSource) {
+			eventSource.close();
+		}
+		if (pollInterval) {
+			clearInterval(pollInterval);
+		}
+		
+		// Refresh outputs immediately and hide progress after a delay
+		refreshOutputs();
+		setTimeout(() => {
+			hideProgress();
+			updateStatus(`✅ Audio creation completed!`);
+		}, 3000);
+	}
+	
+	// Function to handle job error
+	function handleError(error) {
+		if (completed) return;
+		completed = true;
+		
+		clearInterval(fallbackInterval);
+		updateProgressStatus('Error occurred');
+		updateProgressBar(0);
+		addProgressLog(`❌ Error: ${error}`);
+		
+		// Hide cancel button
+		hideCancelButton();
+		
+		// Clean up
+		if (eventSource) {
+			eventSource.close();
+		}
+		if (pollInterval) {
+			clearInterval(pollInterval);
+		}
+		
+		// Hide progress after a delay
+		setTimeout(() => {
+			hideProgress();
+			updateStatus(`❌ Error: ${error}`);
+		}, 5000);
+	}
+	
+	// Fallback progress indicator
+	fallbackInterval = setInterval(() => {
+		if (!completed) {
+			const currentProgress = Math.min(90, Math.random() * 5 + (Math.random() * 5));
+			updateProgressBar(currentProgress);
 			updateProgressStatus('Processing audio...');
 		}
 	}, 2000);
 	
-	// Start polling for progress updates
-	const eventSource = new EventSource(`/api/progress/${jobId}`);
+	// Try EventSource first
+	try {
+		eventSource = new EventSource(`/api/progress/${jobId}`);
+		eventSource.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				
+				if (data.status === 'progress') {
+					const percentage = Math.round((data.chunk / data.total) * 100);
+					updateProgressStatus(`Processing chunk ${data.chunk}/${data.total}...`);
+					updateProgressBar(percentage);
+					addProgressLog(`Processing chunk ${data.chunk} of ${data.total}`);
+					
+					// Ensure cancel button stays visible during processing
+					showCancelButton();
+				} else if (data.status === 'completed') {
+					handleCompletion(data.output);
+				} else if (data.status === 'error') {
+					handleError(data.error);
+				}
+			} catch (error) {
+				console.error('Error parsing progress data:', error);
+				addProgressLog(`⚠️ Error parsing progress update`);
+			}
+		};
+		eventSource.onerror = () => {
+			console.log('EventSource failed, falling back to polling');
+		};
+	} catch (error) {
+		console.log('EventSource not supported, using polling');
+	}
 	
-	eventSource.onmessage = (event) => {
+	// Fallback polling mechanism
+	let pollCount = 0;
+	const maxPolls = 300; // 5 minutes at 1-second intervals
+	
+	pollInterval = setInterval(async () => {
+		pollCount++;
+		
 		try {
-			const data = JSON.parse(event.data);
+			const res = await authenticatedFetch(`/api/queue/status?t=${Date.now()}`);
+			if (!res) return; // Redirect happened
 			
-			if (data.status === 'progress') {
-				const percentage = Math.round((data.chunk / data.total) * 100);
-				updateProgressStatus(`Processing chunk ${data.chunk}/${data.total}...`);
-				updateProgressBar(percentage);
-				addProgressLog(`Processing chunk ${data.chunk} of ${data.total}`);
+			if (res.ok) {
+				const data = await res.json();
 				
-				// Ensure cancel button stays visible during processing
-				showCancelButton();
-			} else if (data.status === 'completed') {
-				clearInterval(fallbackInterval);
-				updateProgressStatus('Completed!');
-				updateProgressBar(100);
-				addProgressLog(`✅ Audio creation completed successfully`);
-				addProgressLog(`📁 File: ${data.output}`);
-				eventSource.close();
+				// Check if job is still in queue
+				const jobInQueue = data.jobQueue?.some(job => job.id === jobId);
+				const jobActive = data.activeJobs?.some(job => job.id === jobId);
 				
-				// Hide cancel button
-				hideCancelButton();
+				if (!jobInQueue && !jobActive) {
+					// Job is no longer in queue, check if it completed successfully
+					const outputsRes = await authenticatedFetch(`/api/outputs?t=${Date.now()}`);
+					if (outputsRes && outputsRes.ok) {
+						const outputs = await outputsRes.json();
+						// If we have outputs, assume job completed successfully
+						if (outputs.files && outputs.files.length > 0) {
+							handleCompletion();
+							return;
+						}
+					}
+					
+					// Job completed but no outputs found, assume error
+					handleError('Job completed but no output files found');
+					return;
+				}
 				
-				// Refresh outputs immediately and hide progress after a delay
-				refreshOutputs(); // Refresh the outputs list immediately
-				setTimeout(() => {
-					hideProgress();
-					updateStatus(`✅ Audio creation completed!`);
-				}, 3000);
-			} else if (data.status === 'error') {
-				clearInterval(fallbackInterval);
-				updateProgressStatus('Error occurred');
-				updateProgressBar(0);
-				addProgressLog(`❌ Error: ${data.error}`);
-				eventSource.close();
-				
-				// Hide cancel button
-				hideCancelButton();
-				
-				// Hide progress after a delay
-				setTimeout(() => {
-					hideProgress();
-					updateStatus(`❌ Error: ${data.error}`);
-				}, 5000);
+				// Update progress if available
+				if (data.activeJobs) {
+					const activeJob = data.activeJobs.find(job => job.id === jobId);
+					if (activeJob && activeJob.progress) {
+						const percentage = Math.round((activeJob.progress.chunk / activeJob.progress.total) * 100);
+						updateProgressStatus(`Processing chunk ${activeJob.progress.chunk}/${activeJob.progress.total}...`);
+						updateProgressBar(percentage);
+					}
+				}
 			}
 		} catch (error) {
-			console.error('Error parsing progress data:', error);
-			addProgressLog(`⚠️ Error parsing progress update`);
+			console.log('Polling error:', error);
 		}
-	};
-	
-	eventSource.onerror = (error) => {
-		console.error('Progress tracking error:', error);
-		clearInterval(fallbackInterval);
-		addProgressLog(`⚠️ Progress tracking connection lost`);
-		eventSource.close();
 		
-		// Don't hide progress or cancel button on connection error
-		// Let the user manually cancel if needed
-		addProgressLog(`⚠️ Connection lost but job may still be running. Use cancel button if needed.`);
-	};
+		// Stop polling after max attempts
+		if (pollCount >= maxPolls) {
+			handleError('Job timed out - please check the outputs manually');
+		}
+	}, 1000);
 }
 
 function buildRequestData() {

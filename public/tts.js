@@ -155,43 +155,142 @@ async function pollQueueStatus() {
 
 
 function listenToProgress(jobId) {
-	const ev = new EventSource(`/api/progress/${jobId}`);
-	ev.onmessage = (e) => {
-		const data = JSON.parse(e.data);
-		if (data.status === 'progress') {
-			ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
-		} else if (data.status === 'completed') {
-			ttsProgress.innerHTML = `
-				<div class="text-green-400">✅ Audio creation completed!</div>
-			`;
-			ttsBtn.disabled = false;
-			ttsBtn.textContent = 'Convert to Audio';
-			cancelTtsBtn.classList.add('hidden');
-			// Refresh outputs list to show new file
-			refreshOutputs();
-		} else if (data.status === 'error') {
-			let troubleshootingHtml = '';
-			if (data.troubleshooting && data.troubleshooting.length > 0) {
-				troubleshootingHtml = `
-					<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
-						<strong class="text-yellow-400">Troubleshooting Steps:</strong>
-						<ul class="mt-2 list-disc list-inside text-sm">
-							${data.troubleshooting.map(step => `<li>${step}</li>`).join('')}
-						</ul>
-					</div>
-				`;
-			}
-			
-			ttsProgress.innerHTML = `
-				<div class="text-red-400">❌ Error: ${data.error}</div>
-				${troubleshootingHtml}
-			`;
-			ttsBtn.disabled = false;
-			ttsBtn.textContent = 'Convert to Audio';
-			cancelTtsBtn.classList.add('hidden');
+	let eventSource = null;
+	let pollInterval = null;
+	let completed = false;
+	
+	// Function to handle job completion
+	function handleCompletion() {
+		if (completed) return;
+		completed = true;
+		
+		ttsProgress.innerHTML = `
+			<div class="text-green-400">✅ Audio creation completed!</div>
+		`;
+		ttsBtn.disabled = false;
+		ttsBtn.textContent = 'Convert to Audio';
+		cancelTtsBtn.classList.add('hidden');
+		
+		// Clean up
+		if (eventSource) {
+			eventSource.close();
 		}
-	};
-	return ev;
+		if (pollInterval) {
+			clearInterval(pollInterval);
+		}
+		
+		// Refresh outputs list to show new file
+		refreshOutputs();
+	}
+	
+	// Function to handle job error
+	function handleError(error, troubleshooting = []) {
+		if (completed) return;
+		completed = true;
+		
+		let troubleshootingHtml = '';
+		if (troubleshooting && troubleshooting.length > 0) {
+			troubleshootingHtml = `
+				<div class="mt-3 p-3 bg-yellow-900/20 border border-yellow-700 rounded">
+					<strong class="text-yellow-400">Troubleshooting Steps:</strong>
+					<ul class="mt-2 list-disc list-inside text-sm">
+						${troubleshooting.map(step => `<li>${step}</li>`).join('')}
+					</ul>
+				</div>
+			`;
+		}
+		
+		ttsProgress.innerHTML = `
+			<div class="text-red-400">❌ Error: ${error}</div>
+			${troubleshootingHtml}
+		`;
+		ttsBtn.disabled = false;
+		ttsBtn.textContent = 'Convert to Audio';
+		cancelTtsBtn.classList.add('hidden');
+		
+		// Clean up
+		if (eventSource) {
+			eventSource.close();
+		}
+		if (pollInterval) {
+			clearInterval(pollInterval);
+		}
+	}
+	
+	// Try EventSource first
+	try {
+		eventSource = new EventSource(`/api/progress/${jobId}`);
+		eventSource.onmessage = (e) => {
+			const data = JSON.parse(e.data);
+			if (data.status === 'progress') {
+				ttsProgress.textContent = `Processing chunk ${data.chunk}/${data.total}...`;
+			} else if (data.status === 'completed') {
+				handleCompletion();
+			} else if (data.status === 'error') {
+				handleError(data.error, data.troubleshooting);
+			}
+		};
+		eventSource.onerror = () => {
+			console.log('EventSource failed, falling back to polling');
+		};
+	} catch (error) {
+		console.log('EventSource not supported, using polling');
+	}
+	
+	// Fallback polling mechanism
+	let pollCount = 0;
+	const maxPolls = 300; // 5 minutes at 1-second intervals
+	
+	pollInterval = setInterval(async () => {
+		pollCount++;
+		
+		try {
+			const res = await authenticatedFetch(`/api/queue/status?t=${Date.now()}`);
+			if (!res) return; // Redirect happened
+			
+			if (res.ok) {
+				const data = await res.json();
+				
+				// Check if job is still in queue
+				const jobInQueue = data.jobQueue?.some(job => job.id === jobId);
+				const jobActive = data.activeJobs?.some(job => job.id === jobId);
+				
+				if (!jobInQueue && !jobActive) {
+					// Job is no longer in queue, check if it completed successfully
+					const outputsRes = await authenticatedFetch(`/api/outputs?t=${Date.now()}`);
+					if (outputsRes && outputsRes.ok) {
+						const outputs = await outputsRes.json();
+						// If we have outputs, assume job completed successfully
+						if (outputs.files && outputs.files.length > 0) {
+							handleCompletion();
+							return;
+						}
+					}
+					
+					// Job completed but no outputs found, assume error
+					handleError('Job completed but no output files found');
+					return;
+				}
+				
+				// Update progress if available
+				if (data.activeJobs) {
+					const activeJob = data.activeJobs.find(job => job.id === jobId);
+					if (activeJob && activeJob.progress) {
+						ttsProgress.textContent = `Processing chunk ${activeJob.progress.chunk}/${activeJob.progress.total}...`;
+					}
+				}
+			}
+		} catch (error) {
+			console.log('Polling error:', error);
+		}
+		
+		// Stop polling after max attempts
+		if (pollCount >= maxPolls) {
+			handleError('Job timed out - please check the outputs manually');
+		}
+	}, 1000);
+	
+	return { eventSource, pollInterval };
 }
 
 	// Cancel button functionality
@@ -251,7 +350,7 @@ function listenToProgress(jobId) {
 		}
 		
 		const { id } = await res.json();
-		listenToProgress(id);
+		const progressHandler = listenToProgress(id);
 	} catch (error) {
 		if (handleUnauthorizedError(error)) return; // Redirect happened
 		
