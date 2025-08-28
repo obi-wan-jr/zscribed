@@ -134,6 +134,45 @@
 			// Update navigation with user info
 			await updateNavigation();
 			
+			// Fallback navigation update in case the module function fails
+			setTimeout(async () => {
+				try {
+					// Try to get user directly and update navigation
+					const userRes = await fetch('/api/auth/current-user', {
+						credentials: 'include',
+						headers: { 'Accept': 'application/json' }
+					});
+					if (userRes.ok) {
+						const userData = await userRes.json();
+						const userSection = document.getElementById('userSection');
+						if (userSection && userData.user) {
+							userSection.innerHTML = '';
+							const container = document.createElement('div');
+							container.className = 'flex items-center space-x-4';
+							
+							const greetingText = document.createElement('span');
+							greetingText.className = 'text-gray-300';
+							greetingText.textContent = `Hi, ${userData.user}!`;
+							
+							const logoutBtn = document.createElement('button');
+							logoutBtn.className = 'text-red-400 hover:text-red-300 transition-colors';
+							logoutBtn.textContent = 'Logout';
+							logoutBtn.onclick = () => {
+								fetch('/api/auth/logout', { method: 'POST' })
+									.then(() => window.location.href = '/login.html');
+							};
+							
+							container.appendChild(greetingText);
+							container.appendChild(logoutBtn);
+							userSection.appendChild(container);
+							console.log('Fallback navigation update successful');
+						}
+					}
+				} catch (error) {
+					console.warn('Fallback navigation update failed:', error);
+				}
+			}, 2000);
+			
 			// Load initial data
 			refreshStatus();
 			refreshCacheStatus();
