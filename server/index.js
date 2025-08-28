@@ -326,61 +326,32 @@ function renderHTMLWithUser(htmlContent) {
     return htmlContent;
 }
 
-// Static assets with smart caching and server-side rendering
-app.use('/', (req, res, next) => {
-    // Handle HTML files with server-side rendering
-    if (req.path.endsWith('.html') && req.user) {
-        const filePath = path.join(PUBLIC_DIR, req.path);
+// Static assets with smart caching
+app.use('/', express.static(PUBLIC_DIR, {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+        // Add cache buster to all static assets
+        res.setHeader('X-Cache-Buster', CACHE_BUSTER);
+        res.setHeader('X-App-Version', APP_VERSION);
         
-        if (fs.existsSync(filePath)) {
-            fs.readFile(filePath, 'utf8', (err, data) => {
-                if (err) {
-                    return next();
-                }
-                
-                // Render HTML with user info
-                const renderedHTML = renderHTMLWithUser(data, req.user);
-                
-                res.setHeader('Content-Type', 'text/html');
-                res.setHeader('X-Cache-Buster', CACHE_BUSTER);
-                res.setHeader('X-App-Version', APP_VERSION);
-                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                res.setHeader('Pragma', 'no-cache');
-                res.setHeader('Expires', '0');
-                
-                res.send(renderedHTML);
-            });
-            return;
+        // Smart caching based on file type
+        if (path.endsWith('.html')) {
+            // HTML files - no cache to ensure fresh content
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        } else if (path.endsWith('.css') || path.endsWith('.js')) {
+            // CSS/JS files - no cache to ensure fresh content during development
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
+            // Images and fonts - long cache
+            res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
         }
     }
-    
-    // Handle other static files
-    express.static(PUBLIC_DIR, {
-        etag: true,
-        lastModified: true,
-        setHeaders: (res, path) => {
-            // Add cache buster to all static assets
-            res.setHeader('X-Cache-Buster', CACHE_BUSTER);
-            res.setHeader('X-App-Version', APP_VERSION);
-            
-            // Smart caching based on file type
-            if (path.endsWith('.html')) {
-                // HTML files - no cache to ensure fresh content
-                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                res.setHeader('Pragma', 'no-cache');
-                res.setHeader('Expires', '0');
-            } else if (path.endsWith('.css') || path.endsWith('.js')) {
-                // CSS/JS files - no cache to ensure fresh content during development
-                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                res.setHeader('Pragma', 'no-cache');
-                res.setHeader('Expires', '0');
-            } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
-                // Images and fonts - long cache
-                res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
-            }
-        }
-    })(req, res, next);
-});
+}));
 
 // Auth endpoints (no auth required)
 app.post('/api/auth/login', (req, res) => {
