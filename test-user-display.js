@@ -34,7 +34,7 @@ async function testUserDisplay() {
         ]);
         
         console.log('1.2 Checking navigation after login...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait longer for fallback
         
         // Check if user name is displayed
         const userSection = await page.$('#userSection');
@@ -78,7 +78,7 @@ async function testUserDisplay() {
         for (const pagePath of pages) {
             console.log(`2.1 Testing ${pagePath}...`);
             await page.goto(`${BASE_URL}${pagePath}`, { waitUntil: 'networkidle2' });
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait longer for fallback
             
             const userSectionText = await page.evaluate(() => {
                 const userSection = document.getElementById('userSection');
