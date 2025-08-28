@@ -489,10 +489,10 @@ app.get('/api/models', async (req, res) => {
 			];
 			const voices = configVoices.length > 0 ? configVoices : defaultVoices;
 			
-			return 		res.json({ 
-			voiceModels: voices.map(v => ({ id: v.id, name: v.name, isDefault: v.isDefault || false })),
-			note: configVoices.length > 0 ? 'Using config voice models' : 'Using default voice models (no config found)'
-		});
+			return res.json({ 
+				voiceModels: voices.map(v => ({ id: v.id, name: v.name, isDefault: v.isDefault || false })),
+				note: configVoices.length > 0 ? 'Using config voice models' : 'Using default voice models (no config found)'
+			});
 		}
 		
 		const voices = await ttsService.getAvailableVoices();
