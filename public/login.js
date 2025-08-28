@@ -30,6 +30,8 @@ loginForm?.addEventListener('submit', async (e) => {
 		return;
 	}
 	
+	console.log('Submitting login form with user:', inputName.trim());
+	
 	try {
 		const res = await fetch('/api/auth/login', {
 			method: 'POST',
@@ -37,17 +39,29 @@ loginForm?.addEventListener('submit', async (e) => {
 			body: JSON.stringify({ user: inputName.trim() })
 		});
 		
+		console.log('Login response status:', res.status);
+		console.log('Login response ok:', res.ok);
+		
 		if (!res.ok) {
 			const data = await res.json();
+			console.log('Login error data:', data);
 			if (res.status === 429) {
 				throw new Error('Too many login attempts. Please try again in 15 minutes.');
 			}
 			throw new Error(data.error || 'Login failed');
 		}
 		
+		const data = await res.json();
+		console.log('Login success data:', data);
+		
+		// Check if we got cookies
+		console.log('Cookies after login:', document.cookie);
+		
 		// Redirect to home page
+		console.log('Redirecting to home page...');
 		window.location.href = '/';
 	} catch (e) {
+		console.error('Login error:', e);
 		showError(e.message);
 	}
 });

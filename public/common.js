@@ -269,27 +269,4 @@ export async function getCacheInfo() {
 	}
 }
 
-// Enhanced fetch wrapper that handles unauthorized errors
-export async function authenticatedFetch(url, options = {}) {
-	try {
-		const response = await fetch(url, options);
-		
-		// Check for unauthorized response
-		if (response.status === 401) {
-			console.log('401 Unauthorized response, redirecting to login...');
-			// Clear any stored auth data
-			localStorage.removeItem('activeUser');
-			// Redirect to login
-			window.location.href = '/login.html';
-			return null; // Return null to indicate redirect happened
-		}
-		
-		return response;
-	} catch (error) {
-		// Handle network errors that might be auth-related
-		if (handleUnauthorizedError(error)) {
-			return null; // Return null to indicate redirect happened
-		}
-		throw error; // Re-throw other errors
-	}
-}
+
