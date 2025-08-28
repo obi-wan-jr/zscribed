@@ -98,6 +98,27 @@ export async function checkAuth() {
 	}
 }
 
+// Authenticated fetch function that handles redirects
+export async function authenticatedFetch(url, options = {}) {
+	try {
+		const res = await fetch(url, {
+			...options,
+			credentials: 'include' // Include cookies for authentication
+		});
+		
+		// If we get a redirect to login, redirect the user
+		if (res.redirected && res.url.includes('login.html')) {
+			window.location.href = '/login.html';
+			return null;
+		}
+		
+		return res;
+	} catch (error) {
+		console.error('Fetch error:', error);
+		return null;
+	}
+}
+
 // Get current user info from server
 export async function getCurrentUser() {
 	try {
