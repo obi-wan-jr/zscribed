@@ -177,15 +177,22 @@ function sendRecentLogs(res) {
 
 // Initialize TTS service with error handling
 let ttsService = null;
-try {
-	ttsService = createTTSService(config);
-	console.log('[Server] TTS service initialized successfully');
-	broadcastLog('success', 'system', 'TTS service initialized successfully');
-} catch (error) {
-	console.error('[Server] TTS service initialization failed:', error.message);
-	broadcastLog('error', 'system', 'TTS service initialization failed', error.message);
-	// Continue without TTS service - will show errors in UI
+
+function initializeTTSService(config) {
+	try {
+		ttsService = createTTSService(config);
+		console.log('[Server] TTS service initialized successfully');
+		broadcastLog('success', 'system', 'TTS service initialized successfully');
+		return true;
+	} catch (error) {
+		console.error('[Server] TTS service initialization failed:', error.message);
+		broadcastLog('error', 'system', 'TTS service initialization failed', error.message);
+		// Continue without TTS service - will show errors in UI
+		return false;
+	}
 }
+
+initializeTTSService(config);
 
 logger.prune();
 setInterval(() => logger.prune(), 24 * 60 * 60 * 1000);
@@ -335,6 +342,10 @@ app.use('/', express.static(PUBLIC_DIR, {
         res.setHeader('X-Cache-Buster', CACHE_BUSTER);
         res.setHeader('X-App-Version', APP_VERSION);
         
+        // Cloudflare-specific cache control
+        res.setHeader('CDN-Cache-Control', 'no-cache');
+        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-cache');
+        
         // Smart caching based on file type
         if (path.endsWith('.html')) {
             // HTML files - no cache to ensure fresh content
@@ -346,6 +357,9 @@ app.use('/', express.static(PUBLIC_DIR, {
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
+            // Additional Cloudflare cache control for CSS/JS
+            res.setHeader('Surrogate-Control', 'no-cache');
+            res.setHeader('Surrogate-Key', `css-${Date.now()}`);
         } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
             // Images and fonts - long cache
             res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
@@ -496,6 +510,10 @@ app.post('/api/models', (req, res) => {
 	if (list.some(v => v.id === id)) return res.status(409).json({ error: 'Exists' });
 	list.push({ id, name: name || id });
 	config = saveConfig(ROOT, { ...config, voiceModels: list });
+	
+	// Reload TTS service with updated config
+	initializeTTSService(config);
+	
 	res.json({ ok: true });
 });
 
@@ -503,6 +521,10 @@ app.post('/api/models/delete', (req, res) => {
 	const { id } = req.body || {};
 	const list = Array.isArray(config.voiceModels) ? config.voiceModels.filter(v => v.id !== id) : [];
 	config = saveConfig(ROOT, { ...config, voiceModels: list });
+	
+	// Reload TTS service with updated config
+	initializeTTSService(config);
+	
 	res.json({ ok: true });
 });
 
@@ -522,6 +544,10 @@ app.post('/api/models/set-default', (req, res) => {
 	if (targetModel) {
 		targetModel.isDefault = true;
 		config = saveConfig(ROOT, { ...config, voiceModels: list });
+		
+		// Reload TTS service with updated config
+		initializeTTSService(config);
+		
 		res.json({ ok: true });
 	} else {
 		res.status(404).json({ error: 'Model not found' });
