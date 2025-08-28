@@ -2,7 +2,7 @@
 
 import puppeteer from 'puppeteer';
 
-const BASE_URL = 'http://meatpi:3005';
+const BASE_URL = 'https://audio.juandelacruzjr.com';
 const TEST_USER = 'inggo';
 
 async function testLoginAndCache() {

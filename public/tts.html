@@ -60,7 +60,47 @@
 			</section>
 		</main>
 	</div>
-				<script type="module" src="/common.js?v=2"></script>
-	<script type="module" src="/tts.js?v=2"></script>
+	<script>
+		// Dynamic cache busting with Cloudflare compatibility
+		(async function() {
+			try {
+				const healthRes = await fetch('/api/health', {
+					credentials: 'include',
+					headers: {
+						'Accept': 'application/json'
+					}
+				});
+				const health = await healthRes.json();
+				const cacheBuster = health.cacheBuster || Date.now();
+				
+				// Load scripts with cache buster and proper credentials
+				const commonScript = document.createElement('script');
+				commonScript.type = 'module';
+				commonScript.src = `/common.js?v=${cacheBuster}`;
+				commonScript.crossOrigin = 'anonymous';
+				document.head.appendChild(commonScript);
+				
+				const ttsScript = document.createElement('script');
+				ttsScript.type = 'module';
+				ttsScript.src = `/tts.js?v=${cacheBuster}`;
+				ttsScript.crossOrigin = 'anonymous';
+				document.head.appendChild(ttsScript);
+			} catch (error) {
+				console.warn('Cache busting failed, using fallback:', error);
+				// Fallback to static loading
+				const commonScript = document.createElement('script');
+				commonScript.type = 'module';
+				commonScript.src = '/common.js?v=2';
+				commonScript.crossOrigin = 'anonymous';
+				document.head.appendChild(commonScript);
+				
+				const ttsScript = document.createElement('script');
+				ttsScript.type = 'module';
+				ttsScript.src = '/tts.js?v=2';
+				ttsScript.crossOrigin = 'anonymous';
+				document.head.appendChild(ttsScript);
+			}
+		})();
+	</script>
 </body>
 </html>

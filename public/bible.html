@@ -291,7 +291,47 @@
 		">
 		</div>
 		
-			<script type="module" src="/common.js?v=2"></script>
-	<script type="module" src="/bible.js?v=2"></script>
+	<script>
+		// Dynamic cache busting with Cloudflare compatibility
+		(async function() {
+			try {
+				const healthRes = await fetch('/api/health', {
+					credentials: 'include',
+					headers: {
+						'Accept': 'application/json'
+					}
+				});
+				const health = await healthRes.json();
+				const cacheBuster = health.cacheBuster || Date.now();
+				
+				// Load scripts with cache buster and proper credentials
+				const commonScript = document.createElement('script');
+				commonScript.type = 'module';
+				commonScript.src = `/common.js?v=${cacheBuster}`;
+				commonScript.crossOrigin = 'anonymous';
+				document.head.appendChild(commonScript);
+				
+				const bibleScript = document.createElement('script');
+				bibleScript.type = 'module';
+				bibleScript.src = `/bible.js?v=${cacheBuster}`;
+				bibleScript.crossOrigin = 'anonymous';
+				document.head.appendChild(bibleScript);
+			} catch (error) {
+				console.warn('Cache busting failed, using fallback:', error);
+				// Fallback to static loading
+				const commonScript = document.createElement('script');
+				commonScript.type = 'module';
+				commonScript.src = '/common.js?v=2';
+				commonScript.crossOrigin = 'anonymous';
+				document.head.appendChild(commonScript);
+				
+				const bibleScript = document.createElement('script');
+				bibleScript.type = 'module';
+				bibleScript.src = '/bible.js?v=2';
+				bibleScript.crossOrigin = 'anonymous';
+				document.head.appendChild(bibleScript);
+			}
+		})();
+	</script>
 </body>
 </html>

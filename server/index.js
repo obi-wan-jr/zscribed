@@ -405,24 +405,24 @@ app.use('/', express.static(PUBLIC_DIR, {
             res.setHeader('Surrogate-Control', 'no-cache');
             res.setHeader('Surrogate-Key', `html-${Date.now()}`);
         } else if (path.endsWith('.css')) {
-            // CSS files - aggressive no-cache for development
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            // CSS files - allow caching but with version control
+            res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate'); // 5 minutes
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
             // Cloudflare-specific headers for CSS
-            res.setHeader('CDN-Cache-Control', 'no-cache');
-            res.setHeader('Surrogate-Control', 'no-cache');
+            res.setHeader('CDN-Cache-Control', 'public, max-age=300');
+            res.setHeader('Surrogate-Control', 'public, max-age=300');
             res.setHeader('Surrogate-Key', `css-${Date.now()}`);
             // Additional Cloudflare cache bypass
             res.setHeader('CF-Cache-Status', 'DYNAMIC');
         } else if (path.endsWith('.js')) {
-            // JS files - no cache to ensure fresh content
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            // JS files - allow caching but with version control
+            res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate'); // 5 minutes
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
             // Cloudflare-specific headers for JS
-            res.setHeader('CDN-Cache-Control', 'no-cache');
-            res.setHeader('Surrogate-Control', 'no-cache');
+            res.setHeader('CDN-Cache-Control', 'public, max-age=300');
+            res.setHeader('Surrogate-Control', 'public, max-age=300');
             res.setHeader('Surrogate-Key', `js-${Date.now()}`);
         } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
             // Images and fonts - long cache with Cloudflare optimization

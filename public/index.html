@@ -5,10 +5,8 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<title>dScribe</title>
 	<link rel="stylesheet" href="/styles.build.v2.css?v=1756358000000" />
-	<link rel="preload" href="/common.js" as="script" type="module" />
-	<link rel="preload" href="/home.js" as="script" type="module" />
 	<link rel="dns-prefetch" href="//audio.juandelacruzjr.com" />
-	<link rel="preconnect" href="//audio.juandelacruzjr.com" />
+	<link rel="preconnect" href="//audio.juandelacruzjr.com" crossorigin />
 </head>
 <body class="h-full bg-[#0b1020] text-slate-200">
 	<div class="min-h-full">
@@ -37,33 +35,43 @@
 		</main>
 	</div>
 	<script>
-		// Dynamic cache busting
+		// Dynamic cache busting with Cloudflare compatibility
 		(async function() {
 			try {
-				const healthRes = await fetch('/api/health');
+				const healthRes = await fetch('/api/health', {
+					credentials: 'include',
+					headers: {
+						'Accept': 'application/json'
+					}
+				});
 				const health = await healthRes.json();
 				const cacheBuster = health.cacheBuster || Date.now();
 				
-				// Load scripts with cache buster
+				// Load scripts with cache buster and proper credentials
 				const commonScript = document.createElement('script');
 				commonScript.type = 'module';
 				commonScript.src = `/common.js?v=${cacheBuster}`;
+				commonScript.crossOrigin = 'anonymous';
 				document.head.appendChild(commonScript);
 				
 				const homeScript = document.createElement('script');
 				homeScript.type = 'module';
 				homeScript.src = `/home.js?v=${cacheBuster}`;
+				homeScript.crossOrigin = 'anonymous';
 				document.head.appendChild(homeScript);
 			} catch (error) {
+				console.warn('Cache busting failed, using fallback:', error);
 				// Fallback to static loading
 				const commonScript = document.createElement('script');
 				commonScript.type = 'module';
 				commonScript.src = '/common.js?v=2';
+				commonScript.crossOrigin = 'anonymous';
 				document.head.appendChild(commonScript);
 				
 				const homeScript = document.createElement('script');
 				homeScript.type = 'module';
 				homeScript.src = '/home.js?v=2';
+				homeScript.crossOrigin = 'anonymous';
 				document.head.appendChild(homeScript);
 			}
 		})();
