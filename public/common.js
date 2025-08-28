@@ -86,12 +86,15 @@ export function addLogoutButton() {
 // Check if user is authenticated
 export async function checkAuth() {
 	try {
+		console.log('Checking auth...');
 		const res = await fetch('/api/health', {
 			credentials: 'include',
 			headers: {
 				'Accept': 'application/json'
 			}
 		});
+		console.log('Health check response:', res.status, res.ok);
+		
 		if (res.ok) {
 			// Check if we have a session by trying to access a protected endpoint
 			const protectedRes = await fetch('/api/models?t=' + Date.now(), {
@@ -100,6 +103,7 @@ export async function checkAuth() {
 					'Accept': 'application/json'
 				}
 			});
+			console.log('Protected endpoint response:', protectedRes.status, protectedRes.ok);
 			return protectedRes.ok;
 		}
 		return false;
