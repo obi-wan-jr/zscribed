@@ -324,29 +324,6 @@ app.use((req, res, next) => {
 	next();
 });
 
-// HTML page protection and server-side rendering middleware
-app.use((req, res, next) => {
-    // Allow access to login page and static assets
-    if (req.path === '/login.html' || 
-        req.path.startsWith('/api/') || 
-        req.path.startsWith('/outputs/') ||
-        !req.path.endsWith('.html')) {
-        return next();
-    }
-    
-    // Check authentication for HTML pages and root path
-    const sessionId = req.cookies?.sessionId;
-    const session = getSession(sessionId);
-    
-    if (!session) {
-        return res.redirect('/login.html');
-    }
-    
-    // Add user info to request for server-side rendering
-    req.user = session.user;
-    next();
-});
-
 // Server-side rendering function
 function renderHTMLWithUser(htmlContent) {
     return htmlContent;
