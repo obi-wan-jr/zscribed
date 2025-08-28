@@ -230,7 +230,7 @@ const addModelBtn = document.getElementById('addModelBtn');
 
 async function refreshModels() {
 	try {
-		const res = await fetch('/api/models');
+		const res = await fetch('/api/models?t=' + Date.now());
 		const data = await res.json();
 		modelsList.innerHTML = '';
 		for (const m of data.voiceModels || []) {

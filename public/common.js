@@ -89,7 +89,7 @@ export async function checkAuth() {
 		const res = await fetch('/api/health');
 		if (res.ok) {
 			// Check if we have a session by trying to access a protected endpoint
-			const protectedRes = await fetch('/api/models');
+			const protectedRes = await fetch('/api/models?t=' + Date.now());
 			return protectedRes.ok;
 		}
 		return false;
