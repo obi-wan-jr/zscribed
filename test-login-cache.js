@@ -78,7 +78,7 @@ async function testLoginAndCache() {
             console.log('✅ Admin page accessible');
             
             // Wait for admin page to load
-            await page.waitForTimeout(2000);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             // Check if status elements are loading
             const serverStatus = await page.$('#serverStatus');
