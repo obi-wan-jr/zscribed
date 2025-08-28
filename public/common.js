@@ -174,36 +174,54 @@ export function createUserGreeting(username) {
 }
 
 export async function updateNavigation() {
-	console.log('Updating navigation...');
-	const isAuthenticated = await checkAuth();
-	console.log('Auth check result:', isAuthenticated);
-	const userSection = document.getElementById('userSection');
-	
-	if (!userSection) {
-		console.warn('User section not found');
-		return;
-	}
-
-	if (isAuthenticated) {
-		// Add user greeting
-		const user = await getCurrentUser();
-		console.log('Current user:', user);
-		if (user) {
-			// Clear existing content
-			userSection.innerHTML = '';
-			
-			// Add user greeting
-			userSection.appendChild(createUserGreeting(user));
-			console.log('User greeting added');
-		} else {
-			console.warn('No user data received');
+	try {
+		console.log('Updating navigation...');
+		const isAuthenticated = await checkAuth();
+		console.log('Auth check result:', isAuthenticated);
+		const userSection = document.getElementById('userSection');
+		
+		if (!userSection) {
+			console.warn('User section not found');
+			return;
 		}
-	} else {
-		// Show login link
-		userSection.innerHTML = `
-			<a href="/login.html" id="loginLogoutLink" class="hover:text-white transition-colors">Login</a>
-		`;
-		console.log('Login link shown');
+
+		if (isAuthenticated) {
+			// Add user greeting
+			const user = await getCurrentUser();
+			console.log('Current user:', user);
+			if (user) {
+				// Clear existing content
+				userSection.innerHTML = '';
+				
+				// Add user greeting
+				userSection.appendChild(createUserGreeting(user));
+				console.log('User greeting added');
+			} else {
+				console.warn('No user data received');
+			}
+		} else {
+			// Show login link
+			userSection.innerHTML = `
+				<a href="/login.html" id="loginLogoutLink" class="hover:text-white transition-colors">Login</a>
+			`;
+			console.log('Login link shown');
+		}
+	} catch (error) {
+		console.error('Error in updateNavigation:', error);
+		// Fallback: try to show user if we can get it directly
+		try {
+			const user = await getCurrentUser();
+			if (user) {
+				const userSection = document.getElementById('userSection');
+				if (userSection) {
+					userSection.innerHTML = '';
+					userSection.appendChild(createUserGreeting(user));
+					console.log('Fallback user greeting added');
+				}
+			}
+		} catch (fallbackError) {
+			console.error('Fallback also failed:', fallbackError);
+		}
 	}
 }
 
