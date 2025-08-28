@@ -64,6 +64,10 @@ app.use((req, res, next) => {
 	// Get client IP
 	req.clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress || req.socket.remoteAddress || req.ip || 'unknown';
 	
+	// Add Cloudflare-specific headers for better cookie handling
+	res.setHeader('Access-Control-Allow-Credentials', 'true');
+	res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+	
 	next();
 });
 
@@ -454,7 +458,9 @@ app.post('/api/auth/login', (req, res) => {
 	res.cookie('sessionId', sessionId, { 
 		httpOnly: true, 
 		secure: false, // set to true in production with HTTPS
-		maxAge: 24 * 60 * 60 * 1000 // 24 hours
+		maxAge: 24 * 60 * 60 * 1000, // 24 hours
+		sameSite: 'lax', // Allow cross-site requests from Cloudflare
+		domain: undefined // Let browser set the domain automatically
 	});
 	res.json({ ok: true });
 });
@@ -464,7 +470,12 @@ app.post('/api/auth/logout', (req, res) => {
 	if (sessionId) {
 		deleteSession(sessionId);
 	}
-	res.clearCookie('sessionId');
+	res.clearCookie('sessionId', {
+		httpOnly: true,
+		secure: false,
+		sameSite: 'lax',
+		domain: undefined
+	});
 	res.json({ ok: true });
 });
 
