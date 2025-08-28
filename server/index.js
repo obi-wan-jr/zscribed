@@ -289,6 +289,21 @@ app.get('/api/bible/translations', (_req, res) => {
 // Auth middleware for all routes
 app.use(getAuthMiddleware());
 
+// Cloudflare cache control middleware for API responses
+app.use('/api', (req, res, next) => {
+	// Set default cache control headers for all API responses
+	res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+	res.setHeader('Pragma', 'no-cache');
+	res.setHeader('Expires', '0');
+	res.setHeader('CDN-Cache-Control', 'no-cache');
+	res.setHeader('Surrogate-Control', 'no-cache');
+	
+	// Add Cloudflare-specific headers to prevent caching
+	res.setHeader('CF-Cache-Status', 'DYNAMIC');
+	
+	next();
+});
+
 // Cache buster middleware for HTML files
 app.use((req, res, next) => {
 	if (req.path.endsWith('.html')) {
@@ -393,7 +408,7 @@ app.use('/', (req, res, next) => {
     next();
 });
 
-// Static assets with smart caching
+// Static assets with comprehensive Cloudflare cache control
 app.use('/', express.static(PUBLIC_DIR, {
     etag: true,
     lastModified: true,
@@ -402,27 +417,47 @@ app.use('/', express.static(PUBLIC_DIR, {
         res.setHeader('X-Cache-Buster', CACHE_BUSTER);
         res.setHeader('X-App-Version', APP_VERSION);
         
-        // Cloudflare-specific cache control
-        res.setHeader('CDN-Cache-Control', 'no-cache');
-        res.setHeader('Cloudflare-CDN-Cache-Control', 'no-cache');
-        
-        // Smart caching based on file type
+        // Smart caching based on file type with Cloudflare-specific headers
         if (path.endsWith('.html')) {
             // HTML files - no cache to ensure fresh content
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
-        } else if (path.endsWith('.css') || path.endsWith('.js')) {
-            // CSS/JS files - no cache to ensure fresh content during development
+            // Cloudflare-specific headers for HTML
+            res.setHeader('CDN-Cache-Control', 'no-cache');
+            res.setHeader('Surrogate-Control', 'no-cache');
+            res.setHeader('Surrogate-Key', `html-${Date.now()}`);
+        } else if (path.endsWith('.css')) {
+            // CSS files - aggressive no-cache for development
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             res.setHeader('Pragma', 'no-cache');
             res.setHeader('Expires', '0');
-            // Additional Cloudflare cache control for CSS/JS
+            // Cloudflare-specific headers for CSS
+            res.setHeader('CDN-Cache-Control', 'no-cache');
             res.setHeader('Surrogate-Control', 'no-cache');
             res.setHeader('Surrogate-Key', `css-${Date.now()}`);
+            // Additional Cloudflare cache bypass
+            res.setHeader('CF-Cache-Status', 'DYNAMIC');
+        } else if (path.endsWith('.js')) {
+            // JS files - no cache to ensure fresh content
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            // Cloudflare-specific headers for JS
+            res.setHeader('CDN-Cache-Control', 'no-cache');
+            res.setHeader('Surrogate-Control', 'no-cache');
+            res.setHeader('Surrogate-Key', `js-${Date.now()}`);
         } else if (path.match(/\.(png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
-            // Images and fonts - long cache
-            res.setHeader('Cache-Control', 'public, max-age=604800'); // 1 week
+            // Images and fonts - long cache with Cloudflare optimization
+            res.setHeader('Cache-Control', 'public, max-age=604800, immutable'); // 1 week, immutable
+            res.setHeader('CDN-Cache-Control', 'public, max-age=604800');
+            res.setHeader('Surrogate-Control', 'public, max-age=604800');
+        } else {
+            // Default for other files - no cache
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            res.setHeader('CDN-Cache-Control', 'no-cache');
         }
     }
 }));
@@ -494,6 +529,47 @@ app.get('/api/auth/debug', (req, res) => {
 			cookie: req.headers.cookie,
 			'x-forwarded-for': req.headers['x-forwarded-for'],
 			'x-real-ip': req.headers['x-real-ip']
+		}
+	});
+});
+
+// Cloudflare cache management endpoints
+app.post('/api/cache/purge', (req, res) => {
+	// Set cache control headers to prevent caching of this endpoint
+	res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+	res.setHeader('Pragma', 'no-cache');
+	res.setHeader('Expires', '0');
+	res.setHeader('CDN-Cache-Control', 'no-cache');
+	
+	// Increment cache buster to force cache refresh
+	CACHE_BUSTER = Date.now();
+	APP_VERSION = `v${Math.floor(Date.now() / 1000)}`;
+	
+	broadcastLog('info', 'system', 'Cache purged manually', `New cache buster: ${CACHE_BUSTER}`);
+	
+	res.json({ 
+		ok: true, 
+		message: 'Cache purged successfully',
+		cacheBuster: CACHE_BUSTER,
+		appVersion: APP_VERSION
+	});
+});
+
+app.get('/api/cache/status', (req, res) => {
+	// Set cache control headers to prevent caching of this endpoint
+	res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+	res.setHeader('Pragma', 'no-cache');
+	res.setHeader('Expires', '0');
+	res.setHeader('CDN-Cache-Control', 'no-cache');
+	
+	res.json({
+		cacheBuster: CACHE_BUSTER,
+		appVersion: APP_VERSION,
+		timestamp: Date.now(),
+		cloudflareHeaders: {
+			'CDN-Cache-Control': 'no-cache',
+			'Surrogate-Control': 'no-cache',
+			'CF-Cache-Status': 'DYNAMIC'
 		}
 	});
 });

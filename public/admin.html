@@ -1,700 +1,336 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>dScribe • Admin</title>
-    	<link rel="stylesheet" href="/styles.build.v2.css?v=1756358000000" />
-    <style>
-        .admin-section { transition: all 0.3s ease; }
-        .admin-section:hover { background-color: #1e293b; }
-        .section-header { cursor: pointer; min-height: 60px; }
-        .section-content { transition: all 0.3s ease; }
-        .debug-step { transition: all 0.3s ease; }
-        .debug-step:hover { background-color: #1e293b; }
-        .status-success { color: #10b981; }
-        .status-error { color: #ef4444; }
-        .status-warning { color: #f59e0b; }
-        .status-info { color: #3b82f6; }
-        .chevron { transition: transform 0.3s ease; }
-        .chevron.rotated { transform: rotate(90deg); }
-        .log-entry { border-left: 3px solid transparent; }
-        .log-entry.error { border-left-color: #ef4444; background-color: #1f2937; }
-        .log-entry.warning { border-left-color: #f59e0b; background-color: #1f2937; }
-        .log-entry.success { border-left-color: #10b981; background-color: #1f2937; }
-        .log-entry.info { border-left-color: #3b82f6; background-color: #1f2937; }
-    </style>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>dScribe • Admin</title>
+	<link rel="stylesheet" href="/styles.build.v2.css?v=1756358000000" />
 </head>
 <body class="h-full bg-[#0b1020] text-slate-200">
-    <div class="min-h-full">
-        <nav class="px-4 py-3 border-b border-slate-700 bg-[#0b1020]/90 sticky top-0 z-10">
-            <div class="max-w-6xl mx-auto flex items-center justify-between">
-                <!-- Left: dScribe Logo -->
-                <a href="/" class="text-xl font-semibold text-indigo-300">dScribe</a>
-                
-                <!-- Center: Navigation Menu -->
-                <div class="flex-1 flex justify-center space-x-6 nav-center">
-                    <a href="/tts.html" class="nav-link">Text-to-Speech</a>
-                    <a href="/bible.html" class="nav-link">Bible Transcription</a>
-                    <a href="/admin.html" class="nav-link active">Admin</a>
-                    <a href="/settings.html" class="nav-link">Settings</a>
-                </div>
-                
-                <!-- Right: User Info and Logout -->
-                <div id="userSection" class="flex items-center space-x-4">
-                    <a href="/login.html" id="loginLogoutLink" class="nav-link">Login</a>
-                </div>
-            </div>
-        </nav>
-        
-        <main class="max-w-6xl mx-auto p-6 space-y-6">
-            <section class="bg-[#121733] border border-slate-700 rounded-lg p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-xl font-semibold text-indigo-200">dScribe Admin Panel</h1>
-                    <div class="flex space-x-2">
-                        <button onclick="refreshAllSections()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                            Refresh All
-                        </button>
-                        <button onclick="resetUserCache()" class="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                            Reset Cache
-                        </button>
-                    </div>
-                </div>
+	<!-- Navigation -->
+	<nav class="bg-[#1a1f2e] border-b border-slate-700">
+		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+			<div class="flex justify-between h-16">
+				<!-- Logo -->
+				<div class="flex items-center">
+					<h1 class="text-xl font-bold text-blue-400">dScribe</h1>
+				</div>
+				
+				<!-- Center Menu -->
+				<div class="flex items-center space-x-8">
+					<a href="/index.html" class="text-slate-300 hover:text-white transition-colors">Home</a>
+					<a href="/bible.html" class="text-slate-300 hover:text-white transition-colors">Bible</a>
+					<a href="/tts.html" class="text-slate-300 hover:text-white transition-colors">TTS</a>
+					<a href="/admin.html" class="text-blue-400 font-medium">Admin</a>
+				</div>
+				
+				<!-- User Info -->
+				<div class="flex items-center space-x-4">
+					<span id="userInfo" class="text-slate-300"></span>
+					<button onclick="logout()" class="text-slate-400 hover:text-white transition-colors">Logout</button>
+				</div>
+			</div>
+		</div>
+	</nav>
 
-                <!-- Cascading Sections -->
-                <div class="space-y-4">
-                    <!-- Server Logs Section -->
-                    <div class="admin-section bg-[#0b1020] border border-slate-700 rounded-lg">
-                        <div class="section-header p-4 flex items-center justify-between hover:bg-[#1e293b] transition-colors" onclick="toggleSection('logs')">
-                            <div class="flex items-center space-x-3">
-                                <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                                <h2 class="text-lg font-semibold text-indigo-200">Server Logs</h2>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button onclick="event.stopPropagation(); clearLogs()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
-                                    Clear Logs
-                                </button>
-                                <button onclick="event.stopPropagation(); downloadLogs()" class="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
-                                    Download
-                                </button>
-                            </div>
-                        </div>
-                        <div id="logs-content" class="section-content hidden p-4 border-t border-slate-700">
-                            <div id="logs-container" class="bg-[#0b1020] border border-slate-600 rounded-lg p-4 h-96 overflow-y-auto font-mono text-sm">
-                                <!-- Logs will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
+	<!-- Main Content -->
+	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			<!-- System Status -->
+			<div class="bg-[#1a1f2e] rounded-lg p-6 border border-slate-700">
+				<h2 class="text-xl font-semibold mb-4">System Status</h2>
+				<div id="systemStatus" class="space-y-3">
+					<div class="flex justify-between">
+						<span>Server Status:</span>
+						<span id="serverStatus" class="text-yellow-400">Checking...</span>
+					</div>
+					<div class="flex justify-between">
+						<span>TTS Service:</span>
+						<span id="ttsStatus" class="text-yellow-400">Checking...</span>
+					</div>
+					<div class="flex justify-between">
+						<span>Active Jobs:</span>
+						<span id="activeJobs" class="text-yellow-400">Checking...</span>
+					</div>
+					<div class="flex justify-between">
+						<span>Queue Length:</span>
+						<span id="queueLength" class="text-yellow-400">Checking...</span>
+					</div>
+				</div>
+				<button onclick="refreshStatus()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors">
+					Refresh Status
+				</button>
+			</div>
 
-                    <!-- Video Debug Section -->
-                    <div class="admin-section bg-[#0b1020] border border-slate-700 rounded-lg">
-                        <div class="section-header p-4 flex items-center justify-between hover:bg-[#1e293b] transition-colors" onclick="toggleSection('debug')">
-                            <div class="flex items-center space-x-3">
-                                <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                                <h2 class="text-lg font-semibold text-indigo-200">Video Debug</h2>
-                            </div>
-                            <div class="flex space-x-2">
-                                <button onclick="event.stopPropagation(); cleanupDebugSessions()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
-                                    Cleanup Old Sessions
-                                </button>
-                            </div>
-                        </div>
-                        <div id="debug-content" class="section-content hidden p-4 border-t border-slate-700">
-                            <!-- Session List -->
-                            <div id="debug-session-list" class="mb-6">
-                                <h3 class="text-md font-semibold mb-3 text-indigo-200">Debug Sessions</h3>
-                                <div id="debug-sessions" class="space-y-2">
-                                    <!-- Sessions will be loaded here -->
-                                </div>
-                            </div>
+			<!-- Cache Management -->
+			<div class="bg-[#1a1f2e] rounded-lg p-6 border border-slate-700">
+				<h2 class="text-xl font-semibold mb-4">Cache Management</h2>
+				<div id="cacheStatus" class="space-y-3 mb-4">
+					<div class="flex justify-between">
+						<span>Cache Buster:</span>
+						<span id="cacheBuster" class="text-yellow-400">Checking...</span>
+					</div>
+					<div class="flex justify-between">
+						<span>App Version:</span>
+						<span id="appVersion" class="text-yellow-400">Checking...</span>
+					</div>
+					<div class="flex justify-between">
+						<span>Last Updated:</span>
+						<span id="lastUpdated" class="text-yellow-400">Checking...</span>
+					</div>
+				</div>
+				<div class="space-y-2">
+					<button onclick="purgeCache()" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">
+						Purge Cloudflare Cache
+					</button>
+					<button onclick="refreshCacheStatus()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors">
+						Refresh Cache Status
+					</button>
+				</div>
+			</div>
 
-                            <!-- Session Details -->
-                            <div id="debug-session-details" class="hidden">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-md font-semibold text-indigo-200">Session Details</h3>
-                                    <button onclick="hideDebugSessionDetails()" class="text-gray-400 hover:text-gray-200 transition-colors">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-                                
-                                <div id="debug-session-info" class="bg-[#1e293b] border border-slate-600 p-4 rounded-lg mb-4 text-slate-200">
-                                    <!-- Session info will be loaded here -->
-                                </div>
+			<!-- Voice Models -->
+			<div class="bg-[#1a1f2e] rounded-lg p-6 border border-slate-700">
+				<h2 class="text-xl font-semibold mb-4">Voice Models</h2>
+				<div class="space-y-4">
+					<div class="flex space-x-2">
+						<input type="text" id="newVoiceId" placeholder="Voice ID" class="flex-1 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 text-white">
+						<input type="text" id="newVoiceName" placeholder="Voice Name" class="flex-1 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 text-white">
+						<button onclick="addVoiceModel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition-colors">
+							Add
+						</button>
+					</div>
+					<div id="voiceModelsList" class="space-y-2">
+						<div class="text-slate-400">Loading voice models...</div>
+					</div>
+				</div>
+			</div>
 
-                                <!-- Summary -->
-                                <div id="debug-session-summary" class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
-                                    <!-- Summary cards will be loaded here -->
-                                </div>
+			<!-- System Logs -->
+			<div class="bg-[#1a1f2e] rounded-lg p-6 border border-slate-700">
+				<h2 class="text-xl font-semibold mb-4">Recent Logs</h2>
+				<div id="systemLogs" class="space-y-2 max-h-64 overflow-y-auto text-sm">
+					<div class="text-slate-400">Loading logs...</div>
+				</div>
+				<button onclick="refreshLogs()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors">
+					Refresh Logs
+				</button>
+			</div>
+		</div>
+	</div>
 
-                                <!-- Steps -->
-                                <div class="mb-4">
-                                    <h4 class="text-sm font-semibold mb-2 text-indigo-200">Steps</h4>
-                                    <div id="debug-session-steps" class="space-y-2">
-                                        <!-- Steps will be loaded here -->
-                                    </div>
-                                </div>
+	<script src="/common.js"></script>
+	<script>
+		// Check authentication on page load
+		document.addEventListener('DOMContentLoaded', async () => {
+			if (!await checkAuth()) {
+				window.location.href = '/login.html';
+				return;
+			}
+			
+			// Load initial data
+			refreshStatus();
+			refreshCacheStatus();
+			refreshVoiceModels();
+			refreshLogs();
+			
+			// Set up periodic refresh
+			setInterval(refreshStatus, 30000); // Every 30 seconds
+			setInterval(refreshCacheStatus, 60000); // Every minute
+		});
 
-                                <!-- Errors -->
-                                <div id="debug-session-errors" class="mb-4 hidden">
-                                    <h4 class="text-sm font-semibold mb-2 text-red-400">Errors</h4>
-                                    <div id="debug-errors" class="space-y-2">
-                                        <!-- Errors will be loaded here -->
-                                    </div>
-                                </div>
+		async function refreshStatus() {
+			try {
+				const res = await authenticatedFetch('/api/health');
+				if (!res) return;
+				
+				if (res.ok) {
+					const data = await res.json();
+					document.getElementById('serverStatus').textContent = 'Online';
+					document.getElementById('serverStatus').className = 'text-green-400';
+					document.getElementById('ttsStatus').textContent = data.ttsService ? 'Available' : 'Unavailable';
+					document.getElementById('ttsStatus').className = data.ttsService ? 'text-green-400' : 'text-red-400';
+				} else {
+					document.getElementById('serverStatus').textContent = 'Offline';
+					document.getElementById('serverStatus').className = 'text-red-400';
+				}
+			} catch (error) {
+				document.getElementById('serverStatus').textContent = 'Error';
+				document.getElementById('serverStatus').className = 'text-red-400';
+			}
 
-                                <!-- Warnings -->
-                                <div id="debug-session-warnings" class="mb-4 hidden">
-                                    <h4 class="text-sm font-semibold mb-2 text-yellow-400">Warnings</h4>
-                                    <div id="debug-warnings" class="space-y-2">
-                                        <!-- Warnings will be loaded here -->
-                                    </div>
-                                </div>
+			try {
+				const res = await authenticatedFetch('/api/queue/status');
+				if (!res) return;
+				
+				if (res.ok) {
+					const data = await res.json();
+					document.getElementById('activeJobs').textContent = data.processing;
+					document.getElementById('queueLength').textContent = data.pending;
+				}
+			} catch (error) {
+				document.getElementById('activeJobs').textContent = 'Error';
+				document.getElementById('queueLength').textContent = 'Error';
+			}
+		}
 
-                                <!-- File Checks -->
-                                <div class="mb-4">
-                                    <h4 class="text-sm font-semibold mb-2 text-indigo-200">File Checks</h4>
-                                    <div id="debug-file-checks" class="space-y-2">
-                                        <!-- File checks will be loaded here -->
-                                    </div>
-                                </div>
+		async function refreshCacheStatus() {
+			try {
+				const res = await authenticatedFetch('/api/cache/status');
+				if (!res) return;
+				
+				if (res.ok) {
+					const data = await res.json();
+					document.getElementById('cacheBuster').textContent = data.cacheBuster;
+					document.getElementById('appVersion').textContent = data.appVersion;
+					document.getElementById('lastUpdated').textContent = new Date(data.timestamp).toLocaleString();
+				}
+			} catch (error) {
+				document.getElementById('cacheBuster').textContent = 'Error';
+				document.getElementById('appVersion').textContent = 'Error';
+				document.getElementById('lastUpdated').textContent = 'Error';
+			}
+		}
 
-                                <!-- FFmpeg Commands -->
-                                <div class="mb-4">
-                                    <h4 class="text-sm font-semibold mb-2 text-indigo-200">FFmpeg Commands</h4>
-                                    <div id="debug-ffmpeg-commands" class="space-y-2">
-                                        <!-- FFmpeg commands will be loaded here -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+		async function purgeCache() {
+			if (!confirm('Are you sure you want to purge the Cloudflare cache? This will force all clients to reload assets.')) {
+				return;
+			}
 
-                    <!-- User Management Section -->
-                    <div class="admin-section bg-[#0b1020] border border-slate-700 rounded-lg">
-                        <div class="section-header p-4 flex items-center justify-between hover:bg-[#1e293b] transition-colors" onclick="toggleSection('users')">
-                            <div class="flex items-center space-x-3">
-                                <svg class="chevron w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                                </svg>
-                                <h2 class="text-lg font-semibold text-indigo-200">User Management</h2>
-                            </div>
-                        </div>
-                        <div id="users-content" class="section-content hidden p-4 border-t border-slate-700">
-                            <!-- Add User Form -->
-                            <div class="bg-[#1e293b] border border-slate-600 rounded-lg p-4 mb-6">
-                                <h3 class="text-md font-semibold mb-3 text-indigo-200">Add New User</h3>
-                                <div class="flex gap-4">
-                                    <input type="text" id="newUsername" placeholder="Enter username" 
-                                           class="flex-1 bg-[#0b1020] border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors">
-                                    <button onclick="addUser()" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded transition-colors">
-                                        Add User
-                                    </button>
-                                </div>
-                                <div id="addUserMessage" class="mt-2 text-sm"></div>
-                            </div>
+			try {
+				const res = await authenticatedFetch('/api/cache/purge', {
+					method: 'POST'
+				});
+				
+				if (!res) return;
+				
+				if (res.ok) {
+					const data = await res.json();
+					alert('Cache purged successfully! New cache buster: ' + data.cacheBuster);
+					refreshCacheStatus();
+				} else {
+					alert('Failed to purge cache');
+				}
+			} catch (error) {
+				alert('Error purging cache: ' + error.message);
+			}
+		}
 
-                            <!-- User List -->
-                            <div class="bg-[#1e293b] border border-slate-600 rounded-lg p-4">
-                                <h3 class="text-md font-semibold mb-3 text-indigo-200">Current Users</h3>
-                                <div id="userList" class="space-y-2">
-                                    <!-- Users will be loaded here -->
-                                </div>
-                                <div id="userMessage" class="mt-4 text-sm"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
+		async function refreshVoiceModels() {
+			try {
+				const res = await authenticatedFetch('/api/models');
+				if (!res) return;
+				
+				if (res.ok) {
+					const models = await res.json();
+					const container = document.getElementById('voiceModelsList');
+					
+					if (models.length === 0) {
+						container.innerHTML = '<div class="text-slate-400">No voice models configured</div>';
+						return;
+					}
+					
+					container.innerHTML = models.map(model => `
+						<div class="flex justify-between items-center bg-[#0b1020] p-3 rounded border border-slate-600">
+							<div>
+								<span class="font-medium">${model.name}</span>
+								<span class="text-slate-400 text-sm ml-2">${model.id}</span>
+							</div>
+							<button onclick="deleteVoiceModel('${model.id}')" class="text-red-400 hover:text-red-300 transition-colors">
+								Delete
+							</button>
+						</div>
+					`).join('');
+				}
+			} catch (error) {
+				document.getElementById('voiceModelsList').innerHTML = '<div class="text-red-400">Error loading voice models</div>';
+			}
+		}
 
-    <script type="module">
-        let currentDebugSession = null;
-        let expandedSections = new Set();
+		async function addVoiceModel() {
+			const id = document.getElementById('newVoiceId').value.trim();
+			const name = document.getElementById('newVoiceName').value.trim();
+			
+			if (!id || !name) {
+				alert('Please enter both Voice ID and Name');
+				return;
+			}
+			
+			try {
+				const res = await authenticatedFetch('/api/models', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ id, name })
+				});
+				
+				if (!res) return;
+				
+				if (res.ok) {
+					document.getElementById('newVoiceId').value = '';
+					document.getElementById('newVoiceName').value = '';
+					refreshVoiceModels();
+					alert('Voice model added successfully');
+				} else {
+					const error = await res.json();
+					alert('Failed to add voice model: ' + error.error);
+				}
+			} catch (error) {
+				alert('Error adding voice model: ' + error.message);
+			}
+		}
 
-        // Section management - make globally accessible
-        window.toggleSection = function(sectionName) {
-            const content = document.getElementById(`${sectionName}-content`);
-            const header = content.previousElementSibling;
-            const chevron = header.querySelector('.chevron');
-            
-            if (expandedSections.has(sectionName)) {
-                // Collapse
-                content.classList.add('hidden');
-                chevron.classList.remove('rotated');
-                expandedSections.delete(sectionName);
-            } else {
-                // Expand
-                content.classList.remove('hidden');
-                chevron.classList.add('rotated');
-                expandedSections.add(sectionName);
-                
-                // Load content for the section
-                switch(sectionName) {
-                    case 'logs':
-                        loadLogs();
-                        break;
-                    case 'debug':
-                        loadDebugSessions();
-                        break;
-                    case 'users':
-                        loadUsers();
-                        break;
-                }
-            }
-        }
+		async function deleteVoiceModel(id) {
+			if (!confirm('Are you sure you want to delete this voice model?')) {
+				return;
+			}
+			
+			try {
+				const res = await authenticatedFetch(`/api/models/${id}`, {
+					method: 'DELETE'
+				});
+				
+				if (!res) return;
+				
+				if (res.ok) {
+					refreshVoiceModels();
+					alert('Voice model deleted successfully');
+				} else {
+					const error = await res.json();
+					alert('Failed to delete voice model: ' + error.error);
+				}
+			} catch (error) {
+				alert('Error deleting voice model: ' + error.message);
+			}
+		}
 
-        function refreshAllSections() {
-            expandedSections.forEach(section => {
-                switch(section) {
-                    case 'logs':
-                        loadLogs();
-                        break;
-                    case 'debug':
-                        loadDebugSessions();
-                        break;
-                    case 'users':
-                        loadUsers();
-                        break;
-                }
-            });
-        }
-
-        // Server Logs Functions
-        async function loadLogs() {
-            try {
-                const response = await fetch('/api/logs');
-                if (!response.ok) throw new Error('Failed to load logs');
-                
-                const logs = await response.json();
-                displayLogs(logs);
-            } catch (error) {
-                console.error('Error loading logs:', error);
-                document.getElementById('logs-container').innerHTML = '<p class="text-red-400">Error loading logs: ' + error.message + '</p>';
-            }
-        }
-
-        function displayLogs(logs) {
-            const container = document.getElementById('logs-container');
-            container.innerHTML = logs.map(log => `
-                <div class="log-entry ${log.level.toLowerCase()} mb-2 p-2 rounded">
-                    <span class="text-gray-400">[${log.timestamp}]</span>
-                    <span class="text-${getLogLevelColor(log.level)} font-medium">${log.level.toUpperCase()}</span>
-                    <span class="text-white">${log.message}</span>
-                </div>
-            `).join('');
-            
-            // Auto-scroll to bottom
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function getLogLevelColor(level) {
-            switch(level.toLowerCase()) {
-                case 'error': return 'red-400';
-                case 'warning': return 'yellow-400';
-                case 'success': return 'green-400';
-                case 'info': return 'blue-400';
-                default: return 'gray-400';
-            }
-        }
-
-        async function clearLogs() {
-            if (!confirm('Are you sure you want to clear all logs?')) return;
-            
-            try {
-                const response = await fetch('/api/logs', { method: 'DELETE' });
-                if (response.ok) {
-                    loadLogs();
-                }
-            } catch (error) {
-                console.error('Error clearing logs:', error);
-            }
-        }
-
-        async function downloadLogs() {
-            try {
-                const response = await fetch('/api/logs/download');
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `dScribe-logs-${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            } catch (error) {
-                console.error('Error downloading logs:', error);
-            }
-        }
-
-        // Video Debug Functions
-        async function loadDebugSessions() {
-            try {
-                const response = await fetch('/api/debug/sessions');
-                if (!response.ok) throw new Error('Failed to load debug sessions');
-                
-                const sessions = await response.json();
-                displayDebugSessions(sessions);
-            } catch (error) {
-                console.error('Error loading debug sessions:', error);
-                document.getElementById('debug-sessions').innerHTML = '<p class="text-red-400">Error loading debug sessions: ' + error.message + '</p>';
-            }
-        }
-
-        function displayDebugSessions(sessions) {
-            const container = document.getElementById('debug-sessions');
-            
-            if (sessions.length === 0) {
-                container.innerHTML = '<p class="text-gray-400">No debug sessions found</p>';
-                return;
-            }
-
-            container.innerHTML = sessions.map(session => `
-                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-3 cursor-pointer hover:bg-[#374151] transition-colors" onclick="loadDebugSessionDetails('${session.id}')">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-semibold text-indigo-200">${session.id}</h4>
-                            <p class="text-sm text-gray-400">Job: ${session.jobId}</p>
-                            <p class="text-xs text-gray-500">Started: ${new Date(session.startTime).toLocaleString()}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="px-2 py-1 rounded text-xs ${session.errors.length > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
-                                ${session.errors.length > 0 ? 'Failed' : 'Success'}
-                            </span>
-                            <p class="text-xs text-gray-500 mt-1">${session.steps.length} steps</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function loadDebugSessionDetails(sessionId) {
-            try {
-                const response = await fetch(`/api/debug/session/${sessionId}`);
-                if (!response.ok) throw new Error('Failed to load session details');
-                
-                const session = await response.json();
-                currentDebugSession = session;
-                displayDebugSessionDetails(session);
-            } catch (error) {
-                console.error('Error loading session details:', error);
-            }
-        }
-
-        function displayDebugSessionDetails(session) {
-            // Show session details section
-            document.getElementById('debug-session-details').classList.remove('hidden');
-            document.getElementById('debug-session-list').classList.add('hidden');
-
-            // Session info
-            document.getElementById('debug-session-info').innerHTML = `
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                        <strong class="text-indigo-200">Session ID:</strong><br>
-                        <span class="text-sm text-gray-300">${session.sessionId}</span>
-                    </div>
-                    <div>
-                        <strong class="text-indigo-200">Job ID:</strong><br>
-                        <span class="text-sm text-gray-300">${session.jobId}</span>
-                    </div>
-                    <div>
-                        <strong class="text-indigo-200">Duration:</strong><br>
-                        <span class="text-sm text-gray-300">${(session.totalDuration / 1000).toFixed(2)}s</span>
-                    </div>
-                    <div>
-                        <strong class="text-indigo-200">Status:</strong><br>
-                        <span class="text-sm ${session.summary.success ? 'status-success' : 'status-error'}">
-                            ${session.summary.success ? 'Success' : 'Failed'}
-                        </span>
-                    </div>
-                </div>
-            `;
-
-            // Summary
-            document.getElementById('debug-session-summary').innerHTML = `
-                <div class="bg-green-900 border border-green-700 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-green-300">${session.summary.totalSteps}</div>
-                    <div class="text-xs text-green-400">Total Steps</div>
-                </div>
-                <div class="bg-red-900 border border-red-700 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-red-300">${session.summary.totalErrors}</div>
-                    <div class="text-xs text-red-400">Errors</div>
-                </div>
-                <div class="bg-yellow-900 border border-yellow-700 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-yellow-300">${session.summary.totalWarnings}</div>
-                    <div class="text-xs text-yellow-400">Warnings</div>
-                </div>
-                <div class="bg-blue-900 border border-blue-700 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-blue-300">${session.summary.totalFileChecks}</div>
-                    <div class="text-xs text-blue-400">File Checks</div>
-                </div>
-                <div class="bg-purple-900 border border-purple-700 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-purple-300">${session.summary.totalFFmpegCommands}</div>
-                    <div class="text-xs text-purple-400">FFmpeg Commands</div>
-                </div>
-                <div class="bg-gray-900 border border-gray-700 p-3 rounded-lg">
-                    <div class="text-xl font-bold text-gray-300">${(session.totalDuration / 1000).toFixed(1)}s</div>
-                    <div class="text-xs text-gray-400">Total Time</div>
-                </div>
-            `;
-
-            // Steps
-            document.getElementById('debug-session-steps').innerHTML = session.steps.map(step => `
-                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-2">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <strong class="text-sm text-indigo-200">${step.step}</strong>
-                            <p class="text-xs text-gray-500">${new Date(step.timestamp).toLocaleTimeString()}</p>
-                        </div>
-                        <span class="text-xs text-gray-500">${step.duration}ms</span>
-                    </div>
-                    ${step.details ? `<pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${JSON.stringify(step.details, null, 2)}</pre>` : ''}
-                </div>
-            `).join('');
-
-            // Errors
-            if (session.errors.length > 0) {
-                document.getElementById('debug-session-errors').classList.remove('hidden');
-                document.getElementById('debug-errors').innerHTML = session.errors.map(error => `
-                    <div class="debug-step border border-red-600 rounded-lg p-2 bg-red-900/20">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <strong class="text-red-300 text-sm">${error.error}</strong>
-                                <p class="text-xs text-gray-500">${new Date(error.timestamp).toLocaleTimeString()}</p>
-                            </div>
-                            <span class="text-xs text-gray-500">${error.duration}ms</span>
-                        </div>
-                        ${error.stack ? `<pre class="text-xs bg-[#0b1020] border border-red-600 p-2 mt-1 rounded overflow-x-auto text-red-300">${error.stack}</pre>` : ''}
-                        ${error.context ? `<pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${JSON.stringify(error.context, null, 2)}</pre>` : ''}
-                    </div>
-                `).join('');
-            }
-
-            // Warnings
-            if (session.warnings.length > 0) {
-                document.getElementById('debug-session-warnings').classList.remove('hidden');
-                document.getElementById('debug-warnings').innerHTML = session.warnings.map(warning => `
-                    <div class="debug-step border border-yellow-600 rounded-lg p-2 bg-yellow-900/20">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <strong class="text-yellow-300 text-sm">${warning.warning}</strong>
-                                <p class="text-xs text-gray-500">${new Date(warning.timestamp).toLocaleTimeString()}</p>
-                            </div>
-                            <span class="text-xs text-gray-500">${warning.duration}ms</span>
-                        </div>
-                        ${warning.context ? `<pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${JSON.stringify(warning.context, null, 2)}</pre>` : ''}
-                    </div>
-                `).join('');
-            }
-
-            // File checks
-            document.getElementById('debug-file-checks').innerHTML = session.fileChecks.map(check => `
-                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-2">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <strong class="text-sm text-indigo-200">${check.filePath}</strong>
-                            <p class="text-xs text-gray-500">${new Date(check.timestamp).toLocaleTimeString()}</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="px-2 py-1 rounded text-xs ${check.status === 'PASS' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                ${check.status}
-                            </span>
-                            <p class="text-xs text-gray-500 mt-1">${check.size} bytes</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-
-            // FFmpeg commands
-            document.getElementById('debug-ffmpeg-commands').innerHTML = session.ffmpegCommands.map(cmd => `
-                <div class="debug-step bg-[#1e293b] border border-slate-600 rounded-lg p-2">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <strong class="text-sm text-indigo-200">FFmpeg Command</strong>
-                            <p class="text-xs text-gray-500">${new Date(cmd.timestamp).toLocaleTimeString()}</p>
-                            <pre class="text-xs bg-[#0b1020] border border-slate-600 p-2 mt-1 rounded overflow-x-auto text-gray-300">${cmd.command}</pre>
-                        </div>
-                        <div class="text-right ml-4">
-                            <span class="px-2 py-1 rounded text-xs ${cmd.fileExists ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                ${cmd.fileExists ? 'File Created' : 'File Missing'}
-                            </span>
-                            <p class="text-xs text-gray-500 mt-1">${cmd.fileSize} bytes</p>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function hideDebugSessionDetails() {
-            document.getElementById('debug-session-details').classList.add('hidden');
-            document.getElementById('debug-session-list').classList.remove('hidden');
-            currentDebugSession = null;
-        }
-
-        async function cleanupDebugSessions() {
-            if (!confirm('Are you sure you want to cleanup old debug sessions?')) return;
-            
-            try {
-                const response = await fetch('/api/debug/cleanup', { method: 'POST' });
-                if (response.ok) {
-                    loadDebugSessions();
-                }
-            } catch (error) {
-                console.error('Error cleaning up debug sessions:', error);
-            }
-        }
-
-        // User Management Functions
-        async function loadUsers() {
-            try {
-                const response = await fetch('/api/users');
-                if (!response.ok) throw new Error('Failed to load users');
-                
-                const users = await response.json();
-                displayUsers(users);
-            } catch (error) {
-                console.error('Error loading users:', error);
-                document.getElementById('userList').innerHTML = '<p class="text-red-400">Error loading users: ' + error.message + '</p>';
-            }
-        }
-
-        function displayUsers(users) {
-            const container = document.getElementById('userList');
-            
-            if (users.length === 0) {
-                container.innerHTML = '<p class="text-gray-400">No users found</p>';
-                return;
-            }
-
-            container.innerHTML = users.map(user => `
-                <div class="flex items-center justify-between bg-[#0b1020] border border-slate-600 rounded-lg p-3">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
-                            ${user.charAt(0).toUpperCase()}
-                        </div>
-                        <span class="font-medium text-indigo-200">${user}</span>
-                    </div>
-                    <button onclick="deleteUser('${user}')" 
-                            class="bg-red-600 hover:bg-red-700 text-white font-medium py-1 px-3 rounded text-sm transition-colors">
-                        Delete
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        async function addUser() {
-            const username = document.getElementById('newUsername').value.trim();
-            const messageDiv = document.getElementById('addUserMessage');
-            
-            if (!username) {
-                messageDiv.innerHTML = '<span class="text-red-400">Please enter a username</span>';
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/users', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username })
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    messageDiv.innerHTML = '<span class="text-green-400">User added successfully!</span>';
-                    document.getElementById('newUsername').value = '';
-                    loadUsers();
-                    
-                    setTimeout(() => {
-                        messageDiv.innerHTML = '';
-                    }, 3000);
-                } else {
-                    messageDiv.innerHTML = `<span class="text-red-400">${result.error}</span>`;
-                }
-            } catch (error) {
-                console.error('Error adding user:', error);
-                messageDiv.innerHTML = '<span class="text-red-400">Error adding user</span>';
-            }
-        }
-
-        async function deleteUser(username) {
-            if (!confirm(`Are you sure you want to delete user "${username}"?`)) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/users/${encodeURIComponent(username)}`, {
-                    method: 'DELETE'
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('userMessage').innerHTML = '<span class="text-green-400">User deleted successfully!</span>';
-                    loadUsers();
-                    
-                    setTimeout(() => {
-                        document.getElementById('userMessage').innerHTML = '';
-                    }, 3000);
-                } else {
-                    document.getElementById('userMessage').innerHTML = `<span class="text-red-400">${result.error}</span>`;
-                }
-            } catch (error) {
-                console.error('Error deleting user:', error);
-                document.getElementById('userMessage').innerHTML = '<span class="text-red-400">Error deleting user</span>';
-            }
-        }
-
-        // Handle Enter key in input
-        document.getElementById('newUsername').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addUser();
-            }
-        });
-
-
-
-        // Cache reset function
-        async function resetUserCache() {
-            if (!confirm('This will reset the cache and reload the page. Continue?')) return;
-            
-            try {
-                const response = await fetch('/api/cache/reset', { method: 'POST' });
-                if (response.ok) {
-                    const result = await response.json();
-                    alert('Cache reset successful! Page will reload.');
-                    window.location.reload();
-                } else {
-                    alert('Failed to reset cache');
-                }
-            } catch (error) {
-                console.error('Error resetting cache:', error);
-                alert('Error resetting cache');
-            }
-        }
-
-        // Initialize - expand logs section by default
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize logs section as expanded
-            expandedSections.add('logs');
-            const logsContent = document.getElementById('logs-content');
-            const logsChevron = logsContent.previousElementSibling.querySelector('.chevron');
-            
-            logsContent.classList.remove('hidden');
-            logsChevron.classList.add('rotated');
-            
-            // Load logs data
-            loadLogs();
-        });
-    </script>
+		async function refreshLogs() {
+			try {
+				const res = await authenticatedFetch('/api/logs');
+				if (!res) return;
+				
+				if (res.ok) {
+					const logs = await res.json();
+					const container = document.getElementById('systemLogs');
+					
+					if (logs.length === 0) {
+						container.innerHTML = '<div class="text-slate-400">No recent logs</div>';
+						return;
+					}
+					
+					container.innerHTML = logs.map(log => `
+						<div class="bg-[#0b1020] p-2 rounded border border-slate-600">
+							<div class="flex justify-between text-xs text-slate-400">
+								<span>${new Date(log.timestamp).toLocaleString()}</span>
+								<span>${log.user || 'system'}</span>
+							</div>
+							<div class="text-sm mt-1">${log.message}</div>
+						</div>
+					`).join('');
+				}
+			} catch (error) {
+				document.getElementById('systemLogs').innerHTML = '<div class="text-red-400">Error loading logs</div>';
+			}
+		}
+	</script>
 </body>
 </html>
