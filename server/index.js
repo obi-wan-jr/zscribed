@@ -377,11 +377,13 @@ app.use('/', (req, res, next) => {
         const session = sessionId ? getSession(sessionId) : null;
         
         if (!session) {
+            console.log(`[Auth] Redirecting unauthenticated user from ${req.path} to /login.html`);
             return res.redirect('/login.html');
         }
         
         // Add user info to request for potential server-side rendering
         req.user = session.user;
+        console.log(`[Auth] User ${session.user} accessing ${req.path}`);
     }
     
     next();
@@ -464,6 +466,25 @@ app.post('/api/auth/logout', (req, res) => {
 	}
 	res.clearCookie('sessionId');
 	res.json({ ok: true });
+});
+
+// Debug endpoint to check session status (no auth required)
+app.get('/api/auth/debug', (req, res) => {
+	const sessionId = req.cookies?.sessionId;
+	const session = sessionId ? getSession(sessionId) : null;
+	
+	res.json({
+		hasSessionId: !!sessionId,
+		sessionId: sessionId,
+		hasSession: !!session,
+		user: session?.user || null,
+		cookies: req.cookies,
+		headers: {
+			cookie: req.headers.cookie,
+			'x-forwarded-for': req.headers['x-forwarded-for'],
+			'x-real-ip': req.headers['x-real-ip']
+		}
+	});
 });
 
 // Get current user info
