@@ -86,14 +86,25 @@ export function addLogoutButton() {
 // Check if user is authenticated
 export async function checkAuth() {
 	try {
-		const res = await fetch('/api/health');
+		const res = await fetch('/api/health', {
+			credentials: 'include',
+			headers: {
+				'Accept': 'application/json'
+			}
+		});
 		if (res.ok) {
 			// Check if we have a session by trying to access a protected endpoint
-			const protectedRes = await fetch('/api/models?t=' + Date.now());
+			const protectedRes = await fetch('/api/models?t=' + Date.now(), {
+				credentials: 'include',
+				headers: {
+					'Accept': 'application/json'
+				}
+			});
 			return protectedRes.ok;
 		}
 		return false;
 	} catch (e) {
+		console.warn('Auth check failed:', e);
 		return false;
 	}
 }
@@ -122,13 +133,19 @@ export async function authenticatedFetch(url, options = {}) {
 // Get current user info from server
 export async function getCurrentUser() {
 	try {
-		const res = await fetch('/api/auth/current-user');
+		const res = await fetch('/api/auth/current-user', {
+			credentials: 'include',
+			headers: {
+				'Accept': 'application/json'
+			}
+		});
 		if (res.ok) {
 			const data = await res.json();
 			return data.user;
 		}
 		return null;
 	} catch (e) {
+		console.warn('Failed to get current user:', e);
 		return null;
 	}
 }
@@ -153,26 +170,36 @@ export function createUserGreeting(username) {
 }
 
 export async function updateNavigation() {
+	console.log('Updating navigation...');
 	const isAuthenticated = await checkAuth();
+	console.log('Auth check result:', isAuthenticated);
 	const userSection = document.getElementById('userSection');
 	
-	if (!userSection) return;
+	if (!userSection) {
+		console.warn('User section not found');
+		return;
+	}
 
 	if (isAuthenticated) {
 		// Add user greeting
 		const user = await getCurrentUser();
+		console.log('Current user:', user);
 		if (user) {
 			// Clear existing content
 			userSection.innerHTML = '';
 			
 			// Add user greeting
 			userSection.appendChild(createUserGreeting(user));
+			console.log('User greeting added');
+		} else {
+			console.warn('No user data received');
 		}
 	} else {
 		// Show login link
 		userSection.innerHTML = `
 			<a href="/login.html" id="loginLogoutLink" class="hover:text-white transition-colors">Login</a>
 		`;
+		console.log('Login link shown');
 	}
 }
 
