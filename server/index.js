@@ -36,8 +36,8 @@ const logFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(logFormat));
 
 // Generate cache buster based on deployment time and version
-const CACHE_BUSTER = process.env.CACHE_BUSTER || Date.now().toString();
-const APP_VERSION = process.env.APP_VERSION || '1.0.0';
+let CACHE_BUSTER = process.env.CACHE_BUSTER || Date.now().toString();
+let APP_VERSION = process.env.APP_VERSION || '1.0.0';
 
 // Cache busting middleware
 app.use((req, res, next) => {
