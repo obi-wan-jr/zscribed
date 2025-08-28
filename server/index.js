@@ -333,6 +333,60 @@ function renderHTMLWithUser(htmlContent) {
     return htmlContent;
 }
 
+// Root path handler - redirect to appropriate page based on auth status
+app.get('/', (req, res) => {
+    const sessionId = req.cookies?.sessionId;
+    const session = sessionId ? getSession(sessionId) : null;
+    
+    if (session) {
+        // User is authenticated, redirect to main page
+        res.redirect('/index.html');
+    } else {
+        // User is not authenticated, redirect to login
+        res.redirect('/login.html');
+    }
+});
+
+// Authentication middleware for HTML pages
+app.use('/', (req, res, next) => {
+    // Allow API endpoints to pass through
+    if (req.path.startsWith('/api/')) {
+        return next();
+    }
+    
+    // Allow static assets (CSS, JS, images) to pass through
+    if (req.path.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|ttf|woff|woff2)$/)) {
+        return next();
+    }
+    
+    // Handle login page - redirect authenticated users to main page
+    if (req.path === '/login.html') {
+        const sessionId = req.cookies?.sessionId;
+        const session = sessionId ? getSession(sessionId) : null;
+        
+        if (session) {
+            // User is already authenticated, redirect to main page
+            return res.redirect('/index.html');
+        }
+        return next();
+    }
+    
+    // Check authentication for all other HTML pages
+    if (req.path.endsWith('.html')) {
+        const sessionId = req.cookies?.sessionId;
+        const session = sessionId ? getSession(sessionId) : null;
+        
+        if (!session) {
+            return res.redirect('/login.html');
+        }
+        
+        // Add user info to request for potential server-side rendering
+        req.user = session.user;
+    }
+    
+    next();
+});
+
 // Static assets with smart caching
 app.use('/', express.static(PUBLIC_DIR, {
     etag: true,
