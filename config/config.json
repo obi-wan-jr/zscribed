@@ -1,0 +1,14 @@
+{
+  "fishAudioApiKey": "YOUR_PRODUCTION_FISH_AUDIO_API_KEY",
+  "voiceModels": [
+    {
+      "id": "2939fcf1e9224fe9ac0839f1e2b26c50",
+      "name": "Default Voice"
+    }
+  ],
+  "allowedUsers": ["irish", "gelo", "jm", "inggo"],
+  "environment": "production",
+  "maxConcurrentJobs": 3,
+  "jobTimeout": 300000,
+  "logLevel": "info"
+}
