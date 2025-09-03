@@ -1,321 +1,243 @@
-export async function fetchMeta() {
-	const res = await fetch('/api/config/meta');
-	return res.json();
-}
+// Common utilities for Bible transcription app
 
-export function getActiveUser() {
-	return localStorage.getItem('activeUser') || 'Inggo';
-}
-
-export function setActiveUser(user) {
-	localStorage.setItem('activeUser', user);
-}
-
-export function listenToProgress(jobId, onMessage) {
-	let reconnectAttempts = 0;
-	const maxReconnectAttempts = 3;
-	const reconnectDelay = 2000; // 2 seconds
+export function showNotification(message, type = 'info') {
+	// Simple notification system
+	const notification = document.createElement('div');
+	notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+		type === 'error' ? 'bg-red-600 text-white' :
+		type === 'success' ? 'bg-green-600 text-white' :
+		'bg-blue-600 text-white'
+	}`;
+	notification.textContent = message;
 	
-	function createEventSource() {
-		const ev = new EventSource(`/api/progress/${jobId}`);
-		
-		ev.onmessage = (e) => {
-			const data = JSON.parse(e.data);
-			onMessage?.(data, ev);
-			if (data.status === 'completed' || data.status === 'error') {
-				ev.close();
-			}
+	document.body.appendChild(notification);
+	
+	// Auto-remove after 5 seconds
+	setTimeout(() => {
+		if (notification.parentNode) {
+			notification.parentNode.removeChild(notification);
+		}
+	}, 5000);
+}
+
+export function formatFileSize(bytes) {
+	if (bytes === 0) return '0 Bytes';
+	const k = 1024;
+	const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+export function formatTimestamp(timestamp) {
+	const date = new Date(timestamp);
+	return date.toLocaleString();
+}
+
+export function debounce(func, wait) {
+	let timeout;
+	return function executedFunction(...args) {
+		const later = () => {
+			clearTimeout(timeout);
+			func(...args);
 		};
-		
-		ev.onerror = (error) => {
-			console.warn(`Progress connection lost for job ${jobId}, attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}`);
-			ev.close();
-			
-			// Notify about connection loss
-			onMessage?.({ 
-				status: 'connection_lost', 
-				message: `⚠️ Progress tracking connection lost (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})` 
-			}, ev);
-			
-			// Attempt to reconnect
-			if (reconnectAttempts < maxReconnectAttempts) {
-				reconnectAttempts++;
-				setTimeout(() => {
-					console.log(`Attempting to reconnect progress tracking for job ${jobId}...`);
-					createEventSource();
-				}, reconnectDelay);
-			} else {
-				console.error(`Failed to reconnect progress tracking for job ${jobId} after ${maxReconnectAttempts} attempts`);
-				onMessage?.({ 
-					status: 'connection_failed', 
-					message: '❌ Progress tracking connection failed. Job may still be running - check the Active Jobs section.' 
-				}, ev);
-			}
-		};
-		
-		return ev;
-	}
-	
-	return createEventSource();
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+	};
 }
 
-export async function logout() {
-	try {
-		await fetch('/api/auth/logout', { method: 'POST' });
-	} catch (e) {
-		console.warn('Logout request failed:', e);
-	}
-	window.location.href = '/login.html';
-}
-
-export function addLogoutButton() {
-	const nav = document.querySelector('nav div:last-child');
-	if (nav) {
-		const logoutBtn = document.createElement('a');
-		logoutBtn.href = '#';
-		logoutBtn.textContent = 'Logout';
-		logoutBtn.className = 'hover:text-white text-red-400';
-		logoutBtn.onclick = (e) => {
-			e.preventDefault();
-			logout();
-		};
-		nav.appendChild(logoutBtn);
-	}
-}
-
-// Check if user is authenticated
-export async function checkAuth() {
-	try {
-		console.log('Checking auth...');
-		const res = await fetch('/api/health', {
-			credentials: 'include',
-			headers: {
-				'Accept': 'application/json'
-			}
-		});
-		console.log('Health check response:', res.status, res.ok);
-		
-		if (res.ok) {
-			// Check if we have a session by trying to access a protected endpoint
-			const protectedRes = await fetch('/api/models?t=' + Date.now(), {
-				credentials: 'include',
-				headers: {
-					'Accept': 'application/json'
-				}
-			});
-			console.log('Protected endpoint response:', protectedRes.status, protectedRes.ok);
-			return protectedRes.ok;
+export function throttle(func, limit) {
+	let inThrottle;
+	return function() {
+		const args = arguments;
+		const context = this;
+		if (!inThrottle) {
+			func.apply(context, args);
+			inThrottle = true;
+			setTimeout(() => inThrottle = false, limit);
 		}
-		return false;
-	} catch (e) {
-		console.warn('Auth check failed:', e);
-		return false;
-	}
+	};
 }
 
-// Authenticated fetch function that handles redirects
-export async function authenticatedFetch(url, options = {}) {
-	try {
-		const res = await fetch(url, {
-			...options,
-			credentials: 'include' // Include cookies for authentication
-		});
-		
-		// If we get a redirect to login, redirect the user
-		if (res.redirected && res.url.includes('login.html')) {
-			window.location.href = '/login.html';
-			return null;
-		}
-		
-		return res;
-	} catch (error) {
-		console.error('Fetch error:', error);
-		return null;
-	}
+export function validateEmail(email) {
+	const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	return re.test(email);
 }
 
-// Get current user info from server
-export async function getCurrentUser() {
-	try {
-		const res = await fetch('/api/auth/current-user', {
-			credentials: 'include',
-			headers: {
-				'Accept': 'application/json'
-			}
-		});
-		if (res.ok) {
-			const data = await res.json();
-			return data.user;
-		}
-		return null;
-	} catch (e) {
-		console.warn('Failed to get current user:', e);
-		return null;
-	}
+export function sanitizeHtml(html) {
+	const div = document.createElement('div');
+	div.textContent = html;
+	return div.innerHTML;
 }
 
-// Update navigation based on auth status
-export function createUserGreeting(username) {
-	const container = document.createElement('div');
-	container.className = 'flex items-center space-x-4';
-	
-	const greetingText = document.createElement('span');
-	greetingText.className = 'text-gray-300';
-	greetingText.textContent = `Hi, ${username}!`;
-	
-	const logoutBtn = document.createElement('button');
-	logoutBtn.className = 'text-red-400 hover:text-red-300 transition-colors';
-	logoutBtn.textContent = 'Logout';
-	logoutBtn.onclick = logout;
-	
-	container.appendChild(greetingText);
-	container.appendChild(logoutBtn);
-	return container;
-}
-
-export async function updateNavigation() {
-	try {
-		console.log('Updating navigation...');
-		const isAuthenticated = await checkAuth();
-		console.log('Auth check result:', isAuthenticated);
-		const userSection = document.getElementById('userSection');
-		
-		if (!userSection) {
-			console.warn('User section not found');
-			return;
-		}
-
-		if (isAuthenticated) {
-			// Add user greeting
-			const user = await getCurrentUser();
-			console.log('Current user:', user);
-			if (user) {
-				// Clear existing content
-				userSection.innerHTML = '';
-				
-				// Add user greeting
-				userSection.appendChild(createUserGreeting(user));
-				console.log('User greeting added');
-			} else {
-				console.warn('No user data received');
-			}
-		} else {
-			// Show login link
-			userSection.innerHTML = `
-				<a href="/login.html" id="loginLogoutLink" class="hover:text-white transition-colors">Login</a>
-			`;
-			console.log('Login link shown');
-		}
-	} catch (error) {
-		console.error('Error in updateNavigation:', error);
-		// Fallback: try to show user if we can get it directly
-		try {
-			const user = await getCurrentUser();
-			if (user) {
-				const userSection = document.getElementById('userSection');
-				if (userSection) {
-					userSection.innerHTML = '';
-					userSection.appendChild(createUserGreeting(user));
-					console.log('Fallback user greeting added');
-				}
-			}
-		} catch (fallbackError) {
-			console.error('Fallback also failed:', fallbackError);
-		}
-	}
-}
-
-// Update login/logout link based on auth status (legacy function)
-export async function updateAuthLink() {
-	const link = document.getElementById('loginLogoutLink');
-	if (!link) return;
-	
-	const isAuthenticated = await checkAuth();
-	
-	if (isAuthenticated) {
-		link.textContent = 'Logout';
-		link.href = '#';
-		link.onclick = (e) => {
-			e.preventDefault();
-			logout();
-		};
+export function copyToClipboard(text) {
+	if (navigator.clipboard && window.isSecureContext) {
+		return navigator.clipboard.writeText(text);
 	} else {
-		link.textContent = 'Login';
-		link.href = '/login.html';
-		link.onclick = null;
-	}
-}
-
-// Check auth and redirect if needed
-export async function requireAuth() {
-	const isAuthenticated = await checkAuth();
-	if (!isAuthenticated) {
-		// Server will handle redirect, just return false
-		return false;
-	}
-	return true;
-}
-
-// Handle unauthorized errors and force relogin
-export function handleUnauthorizedError(error) {
-	if (error.message && error.message.includes('Unauthorized')) {
-		console.log('Unauthorized error detected, redirecting to login...');
-		// Clear any stored auth data
-		localStorage.removeItem('activeUser');
-		// Redirect to login
-		window.location.href = '/login.html';
-		return true; // Indicates we handled the unauthorized error
-	}
-	return false; // Not an unauthorized error
-}
-
-// Cancel current user's job
-export async function cancelCurrentJob() {
-	try {
-		const res = await authenticatedFetch('/api/jobs/cancel-current', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' }
-		});
-		
-		if (!res) return false; // Redirect happened
-		
-		const result = await res.json();
-		return result.success;
-	} catch (error) {
-		console.error('Failed to cancel current job:', error);
-		return false;
-	}
-}
-
-// Cache management functions
-export async function resetCache() {
-	try {
-		const response = await fetch('/api/cache/reset', { method: 'POST' });
-		if (response.ok) {
-			const result = await response.json();
-			console.log('Cache reset successful:', result.message);
-			// Force page reload to get fresh resources
-			window.location.reload();
-			return true;
+		// Fallback for older browsers
+		const textArea = document.createElement('textarea');
+		textArea.value = text;
+		textArea.style.position = 'fixed';
+		textArea.style.left = '-999999px';
+		textArea.style.top = '-999999px';
+		document.body.appendChild(textArea);
+		textArea.focus();
+		textArea.select();
+		try {
+			document.execCommand('copy');
+			textArea.remove();
+			return Promise.resolve();
+		} catch (err) {
+			textArea.remove();
+			return Promise.reject(err);
 		}
-		return false;
-	} catch (error) {
-		console.error('Failed to reset cache:', error);
-		return false;
 	}
 }
 
-export async function getCacheInfo() {
-	try {
-		const response = await fetch('/api/health');
-		if (response.ok) {
-			return await response.json();
-		}
-		return null;
-	} catch (error) {
-		console.error('Failed to get cache info:', error);
-		return null;
+export function downloadFile(url, filename) {
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = filename;
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+}
+
+export function confirmAction(message) {
+	return new Promise((resolve) => {
+		const result = window.confirm(message);
+		resolve(result);
+	});
+}
+
+export function showLoading(element, text = 'Loading...') {
+	if (element) {
+		element.disabled = true;
+		const originalText = element.textContent;
+		element.textContent = text;
+		return () => {
+			element.disabled = false;
+			element.textContent = originalText;
+		};
 	}
+	return () => {};
+}
+
+export function hideElement(element) {
+	if (element) {
+		element.classList.add('hidden');
+	}
+}
+
+export function showElement(element) {
+	if (element) {
+		element.classList.remove('hidden');
+	}
+}
+
+export function toggleElement(element) {
+	if (element) {
+		element.classList.toggle('hidden');
+	}
+}
+
+export function setElementText(element, text) {
+	if (element) {
+		element.textContent = text;
+	}
+}
+
+export function setElementHTML(element, html) {
+	if (element) {
+		element.innerHTML = html;
+	}
+}
+
+export function addClass(element, className) {
+	if (element) {
+		element.classList.add(className);
+	}
+}
+
+export function removeClass(element, className) {
+	if (element) {
+		element.classList.remove(className);
+	}
+}
+
+export function toggleClass(element, className) {
+	if (element) {
+		element.classList.toggle(className);
+	}
+}
+
+export function hasClass(element, className) {
+	return element && element.classList.contains(className);
+}
+
+export function getElement(selector) {
+	return document.querySelector(selector);
+}
+
+export function getElements(selector) {
+	return document.querySelectorAll(selector);
+}
+
+export function createElement(tag, className = '', textContent = '') {
+	const element = document.createElement(tag);
+	if (className) element.className = className;
+	if (textContent) element.textContent = textContent;
+	return element;
+}
+
+export function appendChild(parent, child) {
+	if (parent && child) {
+		parent.appendChild(child);
+	}
+}
+
+export function removeChild(parent, child) {
+	if (parent && child) {
+		parent.removeChild(child);
+	}
+}
+
+export function clearElement(element) {
+	if (element) {
+		element.innerHTML = '';
+	}
+}
+
+export function scrollToElement(element, behavior = 'smooth') {
+	if (element) {
+		element.scrollIntoView({ behavior });
+	}
+}
+
+export function scrollToTop(behavior = 'smooth') {
+	window.scrollTo({ top: 0, behavior });
+}
+
+export function scrollToBottom(element, behavior = 'smooth') {
+	if (element) {
+		element.scrollTop = element.scrollHeight;
+	}
+}
+
+export function isElementVisible(element) {
+	if (!element) return false;
+	const rect = element.getBoundingClientRect();
+	return rect.top >= 0 && rect.left >= 0 && rect.bottom <= window.innerHeight && rect.right <= window.innerWidth;
+}
+
+export function isElementInViewport(element) {
+	if (!element) return false;
+	const rect = element.getBoundingClientRect();
+	return (
+		rect.top >= 0 &&
+		rect.left >= 0 &&
+		rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+		rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+	);
 }
 
 

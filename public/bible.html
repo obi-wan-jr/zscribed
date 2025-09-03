@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>dScribe • Bible</title>
+	<title>dScribe • Bible Transcription</title>
 	<link rel="stylesheet" href="/styles.build.v2.css?v=1756358000000" />
 </head>
 <body class="h-full bg-[#0b1020] text-slate-200">
@@ -15,23 +15,20 @@
 				
 				<!-- Center: Navigation Menu -->
 				<div class="flex-1 flex justify-center space-x-6 nav-center">
-					<a href="/tts.html" class="nav-link">Text-to-Speech</a>
 					<a href="/bible.html" class="nav-link active">Bible Transcription</a>
-					<a href="/admin.html" class="nav-link">Admin</a>
-					<a href="/settings.html" class="nav-link">Settings</a>
 				</div>
 				
-				<!-- Right: User Info and Logout -->
-				<div id="userSection" class="flex items-center space-x-4">
-					<a href="/login.html" id="loginLogoutLink" class="nav-link">Login</a>
+				<!-- Right: Simple Info -->
+				<div class="flex items-center space-x-4">
+					<span class="text-sm text-slate-400">Bible Transcription Service</span>
 				</div>
 			</div>
 		</nav>
 		<main class="max-w-4xl mx-auto p-6 space-y-8">
 			<section class="bg-[#121733] border border-slate-700 rounded-lg p-6">
-				<h2 class="text-xl font-semibold text-indigo-200 mb-6">Bible Audio Creation</h2>
+				<h2 class="text-xl font-semibold text-indigo-200 mb-6">Bible Transcription</h2>
 				<div class="mb-6">
-					<div id="userWelcome" class="text-sm text-slate-300">Welcome! Ready to create Bible audio.</div>
+					<div class="text-sm text-slate-300">Create clean Bible text transcriptions for your projects.</div>
 				</div>
 				
 				<!-- Book Selection -->
@@ -113,8 +110,10 @@
 							</select>
 						</div>
 						<div>
-							<label class="block text-sm font-medium mb-2">Voice Model</label>
-							<select id="voiceModel" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2"></select>
+							<label class="block text-sm font-medium mb-2">Translation</label>
+							<select id="translation" class="w-full bg-[#0b1020] border border-slate-600 rounded px-3 py-2">
+								<option value="web" selected>World English Bible (WEB)</option>
+							</select>
 						</div>
 					</div>
 
@@ -167,7 +166,7 @@
 					</div>
 
 					<!-- Settings -->
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border border-slate-600 rounded-lg bg-[#0a0f1a]">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-slate-600 rounded-lg bg-[#0a0f1a]">
 						<div>
 							<label class="flex items-center text-sm">
 								<input type="checkbox" id="excludeNumbers" checked class="mr-2">
@@ -179,57 +178,6 @@
 								<input type="checkbox" id="excludeFootnotes" checked class="mr-2">
 								Exclude footnotes
 							</label>
-						</div>
-						<div>
-							<label class="text-sm">
-								Sentences per chunk
-								<input type="number" id="sentencesPerChunk" min="1" value="3" class="ml-2 w-16 bg-[#0b1020] border border-slate-600 rounded px-2 py-1">
-							</label>
-						</div>
-					</div>
-
-					<!-- Video Creation Options -->
-					<div class="p-4 border border-slate-600 rounded-lg bg-[#0a0f1a]">
-						<h4 class="text-md font-medium text-indigo-300 mb-3">Video Creation Options</h4>
-						<div class="space-y-4">
-							<div>
-								<label class="flex items-center text-sm mb-2">
-									<input type="checkbox" id="createVideo" class="mr-2">
-									Create MP4 video with audio
-								</label>
-							</div>
-							
-							<div id="videoOptions" class="hidden space-y-4">
-								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div>
-										<label class="block text-sm font-medium text-slate-300 mb-2">Background Type</label>
-										<select id="backgroundType" class="w-full px-3 py-2 bg-[#0b1020] border border-slate-600 rounded text-white">
-											<option value="image">Static Image</option>
-											<option value="video">Looping Video</option>
-										</select>
-									</div>
-									<div>
-										<label class="block text-sm font-medium text-slate-300 mb-2">Video Resolution</label>
-										<select id="videoResolution" class="w-full px-3 py-2 bg-[#0b1020] border border-slate-600 rounded text-white">
-											<option value="720p">720p (HD)</option>
-											<option value="1080p" selected>1080p (Full HD)</option>
-											<option value="4k">4K (Ultra HD)</option>
-										</select>
-									</div>
-								</div>
-								
-								<div id="imageUploadSection">
-									<label class="block text-sm font-medium text-slate-300 mb-2">Background Image</label>
-									<input type="file" id="backgroundImage" accept="image/*" class="w-full px-3 py-2 bg-[#0b1020] border border-slate-600 rounded text-white text-sm">
-									<p class="text-xs text-slate-400 mt-1">Upload an image to use as video background (JPG, PNG, GIF)</p>
-								</div>
-								
-								<div id="videoUploadSection" class="hidden">
-									<label class="block text-sm font-medium text-slate-300 mb-2">Background Video</label>
-									<input type="file" id="backgroundVideo" accept="video/*" class="w-full px-3 py-2 bg-[#0b1020] border border-slate-600 rounded text-white text-sm">
-									<p class="text-xs text-slate-400 mt-1">Upload a video to loop as background (MP4, MOV, AVI)</p>
-								</div>
-							</div>
 						</div>
 					</div>
 
@@ -248,16 +196,14 @@
 					<!-- Action Buttons -->
 					<div class="flex items-center gap-4">
 						<button id="previewBtn" class="px-6 py-3 bg-slate-600 hover:bg-slate-500 rounded font-medium">Preview Text</button>
-						<button id="createAudioBtn" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-medium">Create Audio</button>
-						<button id="createVideoBtn" class="px-6 py-3 bg-red-600 hover:bg-red-500 rounded font-medium hidden">Create Video</button>
-						<button id="cancelBibleBtn" class="px-6 py-3 bg-red-600 hover:bg-red-500 rounded font-medium hidden">Cancel</button>
+						<button id="createTranscriptionBtn" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-medium">Create Transcription</button>
 					</div>
 
 					<!-- Status and Progress -->
 					<div id="status" class="text-sm text-slate-300"></div>
 					<div id="progressContainer" class="hidden mt-4 p-4 border border-slate-600 rounded-lg bg-[#0b1020]">
 						<div class="flex items-center justify-between mb-2">
-							<span class="text-sm font-medium text-indigo-300">Processing Audio</span>
+							<span class="text-sm font-medium text-indigo-300">Processing Transcription</span>
 							<span id="progressStatus" class="text-xs text-slate-400">Initializing...</span>
 						</div>
 						<div class="w-full bg-slate-700 rounded-full h-2 mb-2">
@@ -268,53 +214,43 @@
 				</div>
 			</section>
 			
-
-			
 			<!-- Outputs -->
 			<section class="bg-[#121733] border border-slate-700 rounded-lg p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-lg font-medium text-indigo-200">Generated Audio Files</h2>
+					<h2 class="text-lg font-medium text-indigo-200">Generated Transcription Files</h2>
 					<button id="refreshBtn" class="px-4 py-2 bg-slate-600 hover:bg-slate-500 rounded">Refresh</button>
 				</div>
 				<div id="outputsList" class="space-y-2"></div>
-				<div id="queueStatus" class="mt-4 text-sm text-slate-400"></div>
 			</section>
 		</main>
 	</div>
 	
-			<!-- Tailwind safelist to prevent purging critical classes -->
-		<div class="hidden
-			border-indigo-500 bg-indigo-900/20
-			bg-transparent
-			border-slate-400 border-slate-600
-			bg-[#1a1f3a] hover:bg-[#1a1f3a]
-		">
-		</div>
-		
+	<!-- Tailwind safelist to prevent purging critical classes -->
+	<div class="hidden
+		border-indigo-500 bg-indigo-900/20
+		bg-transparent
+		border-slate-400 border-slate-600
+		bg-[#1a1f3a] hover:bg-[#1a1f3a]
+	">
+	</div>
+	
 	<script>
-		// Dynamic cache busting with Cloudflare compatibility
+		// Dynamic cache busting
 		(async function() {
 			try {
-				const healthRes = await fetch('/api/health', {
-					credentials: 'include',
-					headers: {
-						'Accept': 'application/json'
-					}
-				});
+				const healthRes = await fetch('/api/health');
 				const health = await healthRes.json();
 				const cacheBuster = health.cacheBuster || Date.now();
 				
-				// Load scripts with cache buster and proper credentials
+				// Load scripts with cache buster
 				const commonScript = document.createElement('script');
 				commonScript.type = 'module';
 				commonScript.src = `/common.js?v=${cacheBuster}`;
-				commonScript.crossOrigin = 'anonymous';
 				document.head.appendChild(commonScript);
 				
 				const bibleScript = document.createElement('script');
 				bibleScript.type = 'module';
 				bibleScript.src = `/bible.js?v=${cacheBuster}`;
-				bibleScript.crossOrigin = 'anonymous';
 				document.head.appendChild(bibleScript);
 			} catch (error) {
 				console.warn('Cache busting failed, using fallback:', error);
@@ -322,54 +258,13 @@
 				const commonScript = document.createElement('script');
 				commonScript.type = 'module';
 				commonScript.src = '/common.js?v=2';
-				commonScript.crossOrigin = 'anonymous';
 				document.head.appendChild(commonScript);
 				
 				const bibleScript = document.createElement('script');
 				bibleScript.type = 'module';
 				bibleScript.src = '/bible.js?v=2';
-				bibleScript.crossOrigin = 'anonymous';
 				document.head.appendChild(bibleScript);
 			}
-			
-			// Always execute fallback navigation update
-			setTimeout(async () => {
-				try {
-					// Try to get user directly and update navigation
-					const userRes = await fetch('/api/auth/current-user', {
-						credentials: 'include',
-						headers: { 'Accept': 'application/json' }
-					});
-					if (userRes.ok) {
-						const userData = await userRes.json();
-						const userSection = document.getElementById('userSection');
-						if (userSection && userData.user) {
-							userSection.innerHTML = '';
-							const container = document.createElement('div');
-							container.className = 'flex items-center space-x-4';
-							
-							const greetingText = document.createElement('span');
-							greetingText.className = 'text-gray-300';
-							greetingText.textContent = `Hi, ${userData.user}!`;
-							
-							const logoutBtn = document.createElement('button');
-							logoutBtn.className = 'text-red-400 hover:text-red-300 transition-colors';
-							logoutBtn.textContent = 'Logout';
-							logoutBtn.onclick = () => {
-								fetch('/api/auth/logout', { method: 'POST' })
-									.then(() => window.location.href = '/login.html');
-							};
-							
-							container.appendChild(greetingText);
-							container.appendChild(logoutBtn);
-							userSection.appendChild(container);
-							console.log('Fallback navigation update successful');
-						}
-					}
-				} catch (error) {
-					console.warn('Fallback navigation update failed:', error);
-				}
-			}, 2000);
 		})();
 	</script>
 </body>
