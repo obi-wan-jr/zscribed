@@ -31,8 +31,7 @@ A clean, simple REST API server for accessing the complete Bible text. This serv
 ## 🛠️ Installation
 
 ### Prerequisites
-- Node.js 18+ 
-- PM2 (for production deployment)
+- Node.js 18+
 
 ### Setup
 ```bash
@@ -48,21 +47,6 @@ npm run dev
 
 # Start production server
 npm start
-```
-
-### PM2 Deployment
-```bash
-# Install PM2 globally
-npm install -g pm2
-
-# Start with PM2
-pm2 start ecosystem.config.cjs
-
-# Save PM2 configuration
-pm2 save
-
-# View logs
-pm2 logs bible-api
 ```
 
 ## 📖 Usage Examples
@@ -133,10 +117,14 @@ npm run dev
 npm start
 ```
 
-### PM2 (Recommended for Production)
+### Simple Process Management
 ```bash
+# Using PM2 (optional)
+npm install -g pm2
 pm2 start ecosystem.config.cjs
 pm2 save
+
+# Or using systemd, supervisor, or any other process manager
 ```
 
 ## 📈 Performance

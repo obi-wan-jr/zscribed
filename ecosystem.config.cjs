@@ -9,10 +9,6 @@ module.exports = {
       NODE_ENV: 'production',
       PORT: 3005
     },
-    error_file: './storage/logs/err.log',
-    out_file: './storage/logs/out.log',
-    log_file: './storage/logs/combined.log',
-    time: true,
     max_memory_restart: '256M',
     restart_delay: 4000,
     max_restarts: 10,

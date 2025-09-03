@@ -9,7 +9,6 @@ The complex TTS/video generation service has been completely scrapped and replac
 - **Service**: Bible API (port 3005)
 - **Status**: ✅ **LIVE & WORKING**
 - **URL**: http://meatpi.local:3005
-- **PM2 Process**: `bible-api`
 
 ## 📚 **API Endpoints (All Working)**
 
@@ -53,22 +52,35 @@ The complex TTS/video generation service has been completely scrapped and replac
 - ❌ All frontend complexity
 - ❌ Memory bank documentation
 - ❌ Unnecessary dependencies
+- ❌ Storage directories and job queues
 
 ## 🔧 **Simple Management**
 
 **Restart Service:**
 ```bash
+# If using PM2
 ssh meatpi.local "pm2 restart bible-api"
+
+# Or simply restart the process
+ssh meatpi.local "cd /home/inggo/dscribe && npm start"
 ```
 
 **View Logs:**
 ```bash
+# If using PM2
 ssh meatpi.local "pm2 logs bible-api"
+
+# Or check system logs
+ssh meatpi.local "journalctl -u bible-api -f"
 ```
 
 **Check Status:**
 ```bash
+# If using PM2
 ssh meatpi.local "pm2 status bible-api"
+
+# Or check if process is running
+ssh meatpi.local "ps aux | grep bible-api"
 ```
 
 ## 🌐 **Access Your Bible API**
@@ -93,5 +105,6 @@ The service is:
 - ✅ **Documented** completely
 - ✅ **Optimized** for performance
 - ✅ **Simple** to maintain
+- ✅ **Clean** codebase with no remnants
 
 **Your Bible API is now live and ready to serve!** 📖✨

@@ -6,12 +6,7 @@ npm-debug.log*
 .env*
 
 # Logs
-storage/logs/
 *.log
-
-# Runtime data
-storage/outputs/
-storage/temp/
 
 # IDE files
 .vscode/
@@ -26,9 +21,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
-
-# PM2
-.pm2/
 
 # Test files
 test-*.js
