@@ -36,8 +36,8 @@ A clean, simple REST API server for accessing the complete Bible text. This serv
 ### Setup
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd bible-api
+git clone https://github.com/obi-wan-jr/meatpi-bible-api.git
+cd meatpi-bible-api
 
 # Install dependencies
 npm install

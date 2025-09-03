@@ -32,7 +32,7 @@ Your complex TTS/video generation service has been **completely transformed** in
 ## 🏗️ **Final Clean Architecture**
 
 ```
-dScribe/
+meatpi-bible-api/
 ├── 📁 data/bible/web/          # 1,189 Bible chapter JSON files
 ├── 📁 public/                  # API documentation frontend
 │   └── 📄 index.html          # Complete API docs with testing
@@ -66,13 +66,13 @@ dScribe/
 
 ```bash
 # Restart service
-ssh meatpi.local "pm2 restart bible-api"
+ssh meatpi.local "pm2 restart meatpi-bible-api"
 
 # View logs
-ssh meatpi.local "pm2 logs bible-api"
+ssh meatpi.local "pm2 logs meatpi-bible-api"
 
 # Check status
-ssh meatpi.local "pm2 status bible-api"
+ssh meatpi.local "pm2 status meatpi-bible-api"
 ```
 
 ## 📊 **Performance Metrics**

@@ -59,7 +59,7 @@ The complex TTS/video generation service has been completely scrapped and replac
 **Restart Service:**
 ```bash
 # If using PM2
-ssh meatpi.local "pm2 restart bible-api"
+ssh meatpi.local "pm2 restart meatpi-bible-api"
 
 # Or simply restart the process
 ssh meatpi.local "cd /home/inggo/dscribe && npm start"
@@ -68,19 +68,19 @@ ssh meatpi.local "cd /home/inggo/dscribe && npm start"
 **View Logs:**
 ```bash
 # If using PM2
-ssh meatpi.local "pm2 logs bible-api"
+ssh meatpi.local "pm2 logs meatpi-bible-api"
 
 # Or check system logs
-ssh meatpi.local "journalctl -u bible-api -f"
+ssh meatpi.local "journalctl -u meatpi-bible-api -f"
 ```
 
 **Check Status:**
 ```bash
 # If using PM2
-ssh meatpi.local "pm2 status bible-api"
+ssh meatpi.local "pm2 status meatpi-bible-api"
 
 # Or check if process is running
-ssh meatpi.local "ps aux | grep bible-api"
+ssh meatpi.local "ps aux | grep meatpi-bible-api"
 ```
 
 ## 🌐 **Access Your Bible API**

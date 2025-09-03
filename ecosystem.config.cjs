@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'bible-api',
+    name: 'meatpi-bible-api',
     script: './server/index.js',
     cwd: '/home/inggo/dscribe',
     instances: 1,

@@ -21,7 +21,7 @@
 ## 🏗️ **Final Clean Architecture**
 
 ```
-dScribe/
+meatpi-bible-api/
 ├── 📁 data/bible/web/          # 1,189 Bible chapter JSON files
 ├── 📁 public/                  # API documentation frontend
 │   └── 📄 index.html          # Complete API docs with testing
