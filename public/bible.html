@@ -15,7 +15,8 @@
 				
 				<!-- Center: Navigation Menu -->
 				<div class="flex-1 flex justify-center space-x-6 nav-center">
-					<a href="/bible.html" class="nav-link active">Bible Transcription</a>
+					<a href="/bible.html" class="nav-link active">Bible Processing</a>
+					<a href="/tts.html" class="nav-link">Text-to-Speech</a>
 				</div>
 				
 				<!-- Right: Simple Info -->
@@ -191,6 +192,43 @@
 							</div>
 						</div>
 						<div id="previewText" class="text-sm text-slate-300 whitespace-pre-wrap max-h-40 overflow-y-auto"></div>
+					</div>
+
+					<!-- TTS and Video Options -->
+					<div class="mt-6 p-4 border border-slate-600 rounded-lg bg-[#0a0f1a]">
+						<h4 class="text-md font-medium text-indigo-300 mb-4">Audio & Video Generation</h4>
+						
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+							<div>
+								<label class="flex items-center text-sm">
+									<input type="checkbox" id="generateAudio" class="mr-2">
+									Generate audio from text
+								</label>
+								<div id="audioOptions" class="ml-6 mt-2 space-y-2 hidden">
+									<select id="voiceModel" class="w-full bg-[#0b1020] border border-slate-600 rounded px-2 py-1 text-sm">
+										<option value="">Select voice model...</option>
+									</select>
+								</div>
+							</div>
+							
+							<div>
+								<label class="flex items-center text-sm">
+									<input type="checkbox" id="generateVideo" class="mr-2">
+									Generate video with audio
+								</label>
+								<div id="videoOptions" class="ml-6 mt-2 space-y-2 hidden">
+									<select id="videoResolution" class="w-full bg-[#0b1020] border border-slate-600 rounded px-2 py-1 text-sm">
+										<option value="720p">720p</option>
+										<option value="1080p" selected>1080p</option>
+										<option value="4k">4K</option>
+									</select>
+								</div>
+							</div>
+						</div>
+						
+						<div class="text-xs text-slate-400">
+							Audio generation requires Fish.Audio API key. Video generation requires FFmpeg.
+						</div>
 					</div>
 
 					<!-- Action Buttons -->

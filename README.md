@@ -1,43 +1,92 @@
-# dScribe
+# dScribe - Bible TTS & Video Generation Service
 
-Lightweight Bible TTS & Video web app scaffold.
+A production-ready web application for generating high-quality audio and video content from Bible text using Fish.Audio's custom voice models. Designed for deployment on Raspberry Pi hardware.
 
-## Quick Start (Raspberry Pi)
+## Features
 
-1. Install Node.js 18+, PM2, and ffmpeg on the Pi.
-2. Clone repo and install deps:
+- **Bible Text Processing**: Fetch and clean Bible text from local data sources
+- **Text-to-Speech**: Generate audio using Fish.Audio API with custom voice models
+- **Video Generation**: Create MP4 videos with audio and custom backgrounds using FFmpeg
+- **Job Queue Management**: Handle multiple concurrent processing jobs with real-time progress
+- **File Management**: Download, rename, and delete generated content
+- **Raspberry Pi Optimized**: Lightweight and efficient for Pi hardware
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+ 
+- FFmpeg installed on system
+- Fish.Audio API key
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd dScribe
+
+# Install dependencies
 npm install
+
+# Configure Fish.Audio API key
+cp config/config.example.json config/config.json
+# Edit config/config.json with your API key and voice models
+
+# Build CSS
 npm run build:css
+
+# Start the service
+npm start
 ```
 
-3. Run in dev:
+### Production Deployment
 
 ```bash
-npm run dev
+# Install production dependencies only
+npm run install:prod
+
+# Start with PM2
+npm run pm2:start
+
+# Other PM2 commands
+npm run pm2:stop
+npm run pm2:restart
+npm run pm2:reload
 ```
 
-4. Run with PM2 on port 3005:
+## Configuration
 
-```bash
-pm2 start ecosystem.config.cjs
-pm2 save
+Edit `config/config.json`:
+
+```json
+{
+  "fishAudioApiKey": "YOUR_FISH_AUDIO_API_KEY",
+  "voiceModels": [
+    {
+      "id": "your-voice-model-id",
+      "name": "Your Voice Model Name"
+    }
+  ]
+}
 ```
 
-Open `http://<pi-host>:3005`.
+## API Endpoints
 
-## Structure
-- `server/` Node server with SSE and job queue stub
-- `public/` Static frontend (Vanilla JS + Tailwind)
-- `storage/` Outputs and logs (created at runtime)
-- `config/` Configuration (API keys, model IDs)
-- `memory-bank/` Project docs per Memory Bank spec
+- `POST /api/tts/generate` - Generate audio from text
+- `POST /api/video/generate` - Generate video from audio
+- `POST /api/bible/generate` - Process Bible text with optional audio/video
+- `GET /api/jobs` - List all jobs
+- `GET /api/outputs` - List generated files
 
-## Deployment
-See `docs/DEV_DEPLOYMENT.md` for Raspberry Pi deployment and update instructions.
+## Architecture
 
-## Next Steps
-- Implement Bible API adapter and text cleanup
-- Implement Fish.audio integration and segmentation pipeline
-- Implement batch queue and media stitching (ffmpeg)
+- **Server**: Express.js with job queue management
+- **TTS**: Fish.Audio API integration
+- **Video**: FFmpeg-based video generation
+- **Bible**: Local Bible data processing
+- **Jobs**: Concurrent job processing with progress tracking
+
+## License
+
+Private - All rights reserved

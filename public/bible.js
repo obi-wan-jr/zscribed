@@ -75,6 +75,21 @@ function setupEventListeners() {
 	if (refreshBtn) {
 		refreshBtn.addEventListener('click', refreshOutputs);
 	}
+	
+	// TTS and video generation options
+	const generateAudioCheckbox = document.getElementById('generateAudio');
+	const generateVideoCheckbox = document.getElementById('generateVideo');
+	
+	if (generateAudioCheckbox) {
+		generateAudioCheckbox.addEventListener('change', toggleAudioOptions);
+	}
+	
+	if (generateVideoCheckbox) {
+		generateVideoCheckbox.addEventListener('change', toggleVideoOptions);
+	}
+	
+	// Load voice models
+	loadVoiceModels();
 }
 
 function selectMode(mode) {
@@ -201,8 +216,25 @@ function getFormPayload() {
 	const excludeNumbers = document.getElementById('excludeNumbers').checked;
 	const excludeFootnotes = document.getElementById('excludeFootnotes').checked;
 	
+	// TTS and video options
+	const generateAudio = document.getElementById('generateAudio').checked;
+	const generateVideo = document.getElementById('generateVideo').checked;
+	const voiceModelId = generateAudio ? document.getElementById('voiceModel').value : null;
+	const videoResolution = generateVideo ? document.getElementById('videoResolution').value : '1080p';
+	
 	if (!book) {
 		showStatus('Please select a Bible book', 'error');
+		return null;
+	}
+	
+	// Validation
+	if (generateAudio && !voiceModelId) {
+		showStatus('Please select a voice model for audio generation', 'error');
+		return null;
+	}
+	
+	if (generateVideo && !generateAudio) {
+		showStatus('Video generation requires audio generation to be enabled', 'error');
 		return null;
 	}
 	
@@ -211,7 +243,15 @@ function getFormPayload() {
 		translation,
 		excludeNumbers,
 		excludeFootnotes,
-		type: currentMode
+		type: currentMode,
+		generateAudio,
+		voiceModelId,
+		generateVideo,
+		videoSettings: generateVideo ? {
+			resolution: videoResolution,
+			backgroundType: 'color',
+			outputFormat: 'mp4'
+		} : {}
 	};
 	
 	if (currentMode === 'chapters') {
@@ -319,5 +359,56 @@ async function deleteOutput(filename) {
 	} catch (error) {
 		console.error('Delete error:', error);
 		showStatus(`Failed to delete file: ${error.message}`, 'error');
+	}
+}
+
+// TTS and Video Generation Functions
+function toggleAudioOptions() {
+	const generateAudio = document.getElementById('generateAudio').checked;
+	const audioOptions = document.getElementById('audioOptions');
+	
+	if (generateAudio) {
+		audioOptions.classList.remove('hidden');
+	} else {
+		audioOptions.classList.add('hidden');
+		// Uncheck video if audio is disabled
+		document.getElementById('generateVideo').checked = false;
+		toggleVideoOptions();
+	}
+}
+
+function toggleVideoOptions() {
+	const generateVideo = document.getElementById('generateVideo').checked;
+	const videoOptions = document.getElementById('videoOptions');
+	
+	if (generateVideo) {
+		videoOptions.classList.remove('hidden');
+	} else {
+		videoOptions.classList.add('hidden');
+	}
+}
+
+async function loadVoiceModels() {
+	try {
+		// For now, use hardcoded models - in production this would come from config
+		const models = [
+			{ id: '2939fcf1e9224fe9ac0839f1e2b26c50', name: 'Default Voice' },
+			{ id: 'custom-voice-1', name: 'Custom Voice 1' },
+			{ id: 'custom-voice-2', name: 'Custom Voice 2' }
+		];
+
+		const select = document.getElementById('voiceModel');
+		if (select) {
+			select.innerHTML = '<option value="">Select voice model...</option>';
+			
+			models.forEach(model => {
+				const option = document.createElement('option');
+				option.value = model.id;
+				option.textContent = model.name;
+				select.appendChild(option);
+			});
+		}
+	} catch (error) {
+		console.error('Failed to load voice models:', error);
 	}
 }
