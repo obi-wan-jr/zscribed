@@ -1,16 +1,7 @@
 import express from 'express';
-import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import morgan from 'morgan';
-import compression from 'compression';
-import { v4 as uuidv4 } from 'uuid';
-import { loadConfig } from './config.js';
-import { FishAudioService } from './tts/fishAudioService.js';
-import { VideoGenerator } from './videoGenerator.js';
-import { JobQueue } from './jobs/jobQueue.js';
-import { BibleService } from './bible/bibleService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,512 +9,371 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-// Enable compression for all responses
-app.use(compression());
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true }));
+// Bible data directory
+const BIBLE_DATA_DIR = path.resolve(__dirname, '../data/bible/web');
 
-// Logging
-const logFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
-app.use(morgan(logFormat));
+// Bible books mapping
+const BIBLE_BOOKS = {
+  'GEN': { name: 'Genesis', chapters: 50 },
+  'EXO': { name: 'Exodus', chapters: 40 },
+  'LEV': { name: 'Leviticus', chapters: 27 },
+  'NUM': { name: 'Numbers', chapters: 36 },
+  'DEU': { name: 'Deuteronomy', chapters: 34 },
+  'JOS': { name: 'Joshua', chapters: 24 },
+  'JDG': { name: 'Judges', chapters: 21 },
+  'RUT': { name: 'Ruth', chapters: 4 },
+  '1SA': { name: '1 Samuel', chapters: 31 },
+  '2SA': { name: '2 Samuel', chapters: 24 },
+  '1KI': { name: '1 Kings', chapters: 22 },
+  '2KI': { name: '2 Kings', chapters: 25 },
+  '1CH': { name: '1 Chronicles', chapters: 29 },
+  '2CH': { name: '2 Chronicles', chapters: 36 },
+  'EZR': { name: 'Ezra', chapters: 10 },
+  'NEH': { name: 'Nehemiah', chapters: 13 },
+  'EST': { name: 'Esther', chapters: 10 },
+  'JOB': { name: 'Job', chapters: 42 },
+  'PSA': { name: 'Psalms', chapters: 150 },
+  'PRO': { name: 'Proverbs', chapters: 31 },
+  'ECC': { name: 'Ecclesiastes', chapters: 12 },
+  'SNG': { name: 'Song of Solomon', chapters: 8 },
+  'ISA': { name: 'Isaiah', chapters: 66 },
+  'JER': { name: 'Jeremiah', chapters: 52 },
+  'LAM': { name: 'Lamentations', chapters: 5 },
+  'EZK': { name: 'Ezekiel', chapters: 48 },
+  'DAN': { name: 'Daniel', chapters: 12 },
+  'HOS': { name: 'Hosea', chapters: 14 },
+  'JOL': { name: 'Joel', chapters: 3 },
+  'AMO': { name: 'Amos', chapters: 9 },
+  'OBA': { name: 'Obadiah', chapters: 1 },
+  'JON': { name: 'Jonah', chapters: 4 },
+  'MIC': { name: 'Micah', chapters: 7 },
+  'NAH': { name: 'Nahum', chapters: 3 },
+  'HAB': { name: 'Habakkuk', chapters: 3 },
+  'ZEP': { name: 'Zephaniah', chapters: 3 },
+  'HAG': { name: 'Haggai', chapters: 2 },
+  'ZEC': { name: 'Zechariah', chapters: 14 },
+  'MAL': { name: 'Malachi', chapters: 4 },
+  'MAT': { name: 'Matthew', chapters: 28 },
+  'MRK': { name: 'Mark', chapters: 16 },
+  'LUK': { name: 'Luke', chapters: 24 },
+  'JHN': { name: 'John', chapters: 21 },
+  'ACT': { name: 'Acts', chapters: 28 },
+  'ROM': { name: 'Romans', chapters: 16 },
+  '1CO': { name: '1 Corinthians', chapters: 16 },
+  '2CO': { name: '2 Corinthians', chapters: 13 },
+  'GAL': { name: 'Galatians', chapters: 6 },
+  'EPH': { name: 'Ephesians', chapters: 6 },
+  'PHP': { name: 'Philippians', chapters: 4 },
+  'COL': { name: 'Colossians', chapters: 4 },
+  '1TH': { name: '1 Thessalonians', chapters: 5 },
+  '2TH': { name: '2 Thessalonians', chapters: 3 },
+  '1TI': { name: '1 Timothy', chapters: 6 },
+  '2TI': { name: '2 Timothy', chapters: 4 },
+  'TIT': { name: 'Titus', chapters: 3 },
+  'PHM': { name: 'Philemon', chapters: 1 },
+  'HEB': { name: 'Hebrews', chapters: 13 },
+  'JAS': { name: 'James', chapters: 5 },
+  '1PE': { name: '1 Peter', chapters: 5 },
+  '2PE': { name: '2 Peter', chapters: 3 },
+  '1JN': { name: '1 John', chapters: 5 },
+  '2JN': { name: '2 John', chapters: 1 },
+  '3JN': { name: '3 John', chapters: 1 },
+  'JUD': { name: 'Jude', chapters: 1 },
+  'REV': { name: 'Revelation', chapters: 22 }
+};
 
-// Directories
-const ROOT = path.resolve(__dirname, '..');
-const STORAGE_DIR = path.join(ROOT, 'storage');
-const OUTPUTS_DIR = path.join(STORAGE_DIR, 'outputs');
-const TEMP_DIR = path.join(STORAGE_DIR, 'temp');
-const PUBLIC_DIR = path.join(ROOT, 'public');
+// Helper function to get book ID from name
+function getBookId(bookName) {
+  const normalizedName = bookName.toLowerCase().replace(/[^a-z]/g, '');
+  for (const [id, book] of Object.entries(BIBLE_BOOKS)) {
+    const normalizedBookName = book.name.toLowerCase().replace(/[^a-z]/g, '');
+    if (normalizedName === normalizedBookName || normalizedName === id.toLowerCase()) {
+      return id;
+    }
+  }
+  return null;
+}
 
-// Ensure directories exist
-[STORAGE_DIR, OUTPUTS_DIR, TEMP_DIR].forEach(dir => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
-
-// Load configuration
-let config = loadConfig(ROOT);
-let fishAudioService = null;
-let videoGenerator = null;
-let jobQueue = null;
-let bibleService = null;
-
-// Initialize services
-if (config.fishAudioApiKey) {
-    fishAudioService = new FishAudioService(config.fishAudioApiKey, OUTPUTS_DIR);
-    videoGenerator = new VideoGenerator(OUTPUTS_DIR);
-    jobQueue = new JobQueue(OUTPUTS_DIR);
-    bibleService = new BibleService();
-    console.log('[Server] All services initialized successfully');
-} else {
-    console.log('[Server] Fish.Audio API key not configured - running in limited mode');
+// Helper function to load Bible chapter data
+function loadChapter(bookId, chapter) {
+  try {
+    const bookName = BIBLE_BOOKS[bookId].name.toLowerCase().replace(/\s+/g, '-');
+    const filename = `${bookName}-${chapter}.json`;
+    const filepath = path.join(BIBLE_DATA_DIR, filename);
+    
+    if (!fs.existsSync(filepath)) {
+      return null;
+    }
+    
+    const data = fs.readFileSync(filepath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`Error loading chapter ${bookId} ${chapter}:`, error.message);
+    return null;
+  }
 }
 
 // Middleware
-app.use((req, res, next) => {
-    req.clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.connection.remoteAddress || req.socket.remoteAddress || req.ip || 'unknown';
-    next();
-});
-
-// Static files
-app.use('/', express.static(PUBLIC_DIR, {
-    etag: true,
-    lastModified: true,
-    setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) {
-            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        } else if (filePath.match(/\.(css|js)$/)) {
-            res.setHeader('Cache-Control', 'public, max-age=300');
-        }
-    }
-}));
+app.use(express.json());
+app.use(express.static('public'));
 
 // Health check
-app.get('/api/health', (_req, res) => {
-    res.json({ 
-        ok: true, 
-        uptime: process.uptime(),
-        services: {
-            tts: !!fishAudioService,
-            video: !!videoGenerator,
-            jobs: !!jobQueue,
-            bible: !!bibleService
-        }
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'Bible API',
+    version: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Get all books
+app.get('/api/books', (req, res) => {
+  try {
+    const books = Object.entries(BIBLE_BOOKS).map(([id, book]) => ({
+      id,
+      name: book.name,
+      chapters: book.chapters
+    }));
+    
+    res.json({
+      success: true,
+      data: books
     });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch books'
+    });
+  }
 });
 
-// Root redirect
-app.get('/', (_req, res) => {
-    res.redirect('/bible.html');
+// Get specific book
+app.get('/api/books/:bookId', (req, res) => {
+  try {
+    const { bookId } = req.params;
+    const book = BIBLE_BOOKS[bookId];
+    
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        error: 'Book not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        id: bookId,
+        name: book.name,
+        chapters: book.chapters
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch book'
+    });
+  }
 });
 
-// TTS API endpoints
-app.post('/api/tts/generate', async (req, res) => {
-    try {
-        if (!fishAudioService) {
-            return res.status(503).json({ error: 'TTS service not configured' });
-        }
+// Get chapter
+app.get('/api/books/:bookId/chapters/:chapter', (req, res) => {
+  try {
+    const { bookId, chapter } = req.params;
+    const chapterNum = parseInt(chapter);
+    
+    if (!BIBLE_BOOKS[bookId]) {
+      return res.status(404).json({
+        success: false,
+        error: 'Book not found'
+      });
+    }
+    
+    if (chapterNum < 1 || chapterNum > BIBLE_BOOKS[bookId].chapters) {
+      return res.status(400).json({
+        success: false,
+        error: `Chapter must be between 1 and ${BIBLE_BOOKS[bookId].chapters}`
+      });
+    }
+    
+    const chapterData = loadChapter(bookId, chapterNum);
+    
+    if (!chapterData) {
+      return res.status(404).json({
+        success: false,
+        error: 'Chapter data not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: chapterData
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch chapter'
+    });
+  }
+});
 
-        const { text, voiceModelId, format = 'mp3', quality = 'high', speed = 1.0, pitch = 0, sentencesPerChunk = 1 } = req.body;
-        
-        if (!text || !voiceModelId) {
-            return res.status(400).json({ error: 'Text and voiceModelId are required' });
-        }
-
-        // Create job
-        const jobId = uuidv4();
-        const job = {
-            id: jobId,
-            type: 'tts',
-            status: 'processing',
-            progress: 0,
-            data: { text, voiceModelId, format, quality, speed, pitch, sentencesPerChunk },
-            createdAt: new Date().toISOString()
-        };
-
-        jobQueue.addJob(job);
-
-        // Process TTS asynchronously
-        processTTSJob(job).catch(error => {
-            console.error('[TTS] Job failed:', error);
-            jobQueue.updateJob(jobId, { status: 'failed', error: error.message });
+// Get verse range
+app.get('/api/books/:bookId/chapters/:chapter/verses', (req, res) => {
+  try {
+    const { bookId, chapter } = req.params;
+    const { start, end } = req.query;
+    const chapterNum = parseInt(chapter);
+    
+    if (!BIBLE_BOOKS[bookId]) {
+      return res.status(404).json({
+        success: false,
+        error: 'Book not found'
+      });
+    }
+    
+    if (chapterNum < 1 || chapterNum > BIBLE_BOOKS[bookId].chapters) {
+      return res.status(400).json({
+        success: false,
+        error: `Chapter must be between 1 and ${BIBLE_BOOKS[bookId].chapters}`
+      });
+    }
+    
+    const chapterData = loadChapter(bookId, chapterNum);
+    
+    if (!chapterData) {
+      return res.status(404).json({
+        success: false,
+        error: 'Chapter data not found'
+      });
+    }
+    
+    let verses = chapterData.verses;
+    
+    // Filter by verse range if specified
+    if (start || end) {
+      const startVerse = start ? parseInt(start) : 1;
+      const endVerse = end ? parseInt(end) : verses.length;
+      
+      if (startVerse < 1 || endVerse > verses.length || startVerse > endVerse) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid verse range'
         });
-
-        res.json({
-            success: true,
-            jobId,
-            message: 'TTS job started'
-        });
-
-    } catch (error) {
-        console.error('[API] TTS generation error:', error);
-        res.status(500).json({ error: error.message });
+      }
+      
+      verses = verses.filter(verse => verse.verse >= startVerse && verse.verse <= endVerse);
     }
+    
+    res.json({
+      success: true,
+      data: {
+        reference: chapterData.reference,
+        verses: verses
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch verses'
+    });
+  }
 });
 
-app.get('/api/tts/test', async (_req, res) => {
-    try {
-        if (!fishAudioService) {
-            return res.status(503).json({ error: 'TTS service not configured' });
+// Search verses by text
+app.get('/api/search', (req, res) => {
+  try {
+    const { q, book, chapter } = req.query;
+    
+    if (!q || q.length < 3) {
+      return res.status(400).json({
+        success: false,
+        error: 'Search query must be at least 3 characters'
+      });
+    }
+    
+    const searchTerm = q.toLowerCase();
+    const results = [];
+    
+    // If book is specified, search only that book
+    const booksToSearch = book ? [book] : Object.keys(BIBLE_BOOKS);
+    
+    for (const bookId of booksToSearch) {
+      if (!BIBLE_BOOKS[bookId]) continue;
+      
+      const maxChapters = chapter ? Math.min(parseInt(chapter), BIBLE_BOOKS[bookId].chapters) : BIBLE_BOOKS[bookId].chapters;
+      const startChapter = chapter ? parseInt(chapter) : 1;
+      
+      for (let ch = startChapter; ch <= maxChapters; ch++) {
+        const chapterData = loadChapter(bookId, ch);
+        if (!chapterData) continue;
+        
+        const matchingVerses = chapterData.verses.filter(verse => 
+          verse.text.toLowerCase().includes(searchTerm)
+        );
+        
+        if (matchingVerses.length > 0) {
+          results.push({
+            book: bookId,
+            bookName: BIBLE_BOOKS[bookId].name,
+            chapter: ch,
+            verses: matchingVerses
+          });
         }
-
-        const result = await fishAudioService.testConnection();
-        res.json(result);
-    } catch (error) {
-        console.error('[API] TTS test error:', error);
-        res.status(500).json({ error: error.message });
+      }
     }
+    
+    res.json({
+      success: true,
+      data: {
+        query: q,
+        results: results.slice(0, 100) // Limit results
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Search failed'
+    });
+  }
 });
 
-// Video generation API endpoints
-app.post('/api/video/generate', async (req, res) => {
-    try {
-        if (!videoGenerator) {
-            return res.status(503).json({ error: 'Video service not configured' });
-        }
-
-        const { audioFile, videoSettings } = req.body;
-        
-        if (!audioFile) {
-            return res.status(400).json({ error: 'Audio file is required' });
-        }
-
-        // Create job
-        const jobId = uuidv4();
-        const job = {
-            id: jobId,
-            type: 'video',
-            status: 'processing',
-            progress: 0,
-            data: { audioFile, videoSettings },
-            createdAt: new Date().toISOString()
-        };
-
-        jobQueue.addJob(job);
-
-        // Process video generation asynchronously
-        processVideoJob(job).catch(error => {
-            console.error('[Video] Job failed:', error);
-            jobQueue.updateJob(jobId, { status: 'failed', error: error.message });
-        });
-
-        res.json({
-            success: true,
-            jobId,
-            message: 'Video generation job started'
-        });
-
-    } catch (error) {
-        console.error('[API] Video generation error:', error);
-        res.status(500).json({ error: error.message });
+// Get random verse
+app.get('/api/random', (req, res) => {
+  try {
+    const books = Object.keys(BIBLE_BOOKS);
+    const randomBook = books[Math.floor(Math.random() * books.length)];
+    const randomChapter = Math.floor(Math.random() * BIBLE_BOOKS[randomBook].chapters) + 1;
+    
+    const chapterData = loadChapter(randomBook, randomChapter);
+    
+    if (!chapterData) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to load random verse'
+      });
     }
+    
+    const randomVerse = chapterData.verses[Math.floor(Math.random() * chapterData.verses.length)];
+    
+    res.json({
+      success: true,
+      data: {
+        reference: `${BIBLE_BOOKS[randomBook].name} ${randomChapter}:${randomVerse.verse}`,
+        verse: randomVerse
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get random verse'
+    });
+  }
 });
-
-app.get('/api/video/test', async (_req, res) => {
-    try {
-        if (!videoGenerator) {
-            return res.status(503).json({ error: 'Video service not configured' });
-        }
-
-        const result = await videoGenerator.testFFmpeg();
-        res.json(result);
-    } catch (error) {
-        console.error('[API] Video test error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Bible API endpoints
-app.get('/api/bible/books', (_req, res) => {
-    try {
-        const books = bibleService.getBooks();
-        res.json(books);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/bible/translations', (_req, res) => {
-    try {
-        const translations = bibleService.getTranslations();
-        res.json(translations);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/bible/generate', async (req, res) => {
-    try {
-        if (!fishAudioService) {
-            return res.status(503).json({ error: 'TTS service not configured' });
-        }
-
-        const { 
-            translation, 
-            book, 
-            chapter, 
-            verseRanges, 
-            excludeNumbers, 
-            excludeFootnotes, 
-            type, 
-            chapters,
-            generateAudio,
-            voiceModelId,
-            generateVideo,
-            videoSettings
-        } = req.body;
-
-        // Create job
-        const jobId = uuidv4();
-        const job = {
-            id: jobId,
-            type: 'bible',
-            status: 'processing',
-            progress: 0,
-            data: { 
-                translation, 
-                book, 
-                chapter, 
-                verseRanges, 
-                excludeNumbers, 
-                excludeFootnotes, 
-                type, 
-                chapters,
-                generateAudio,
-                voiceModelId,
-                generateVideo,
-                videoSettings
-            },
-            createdAt: new Date().toISOString()
-        };
-
-        jobQueue.addJob(job);
-
-        // Process Bible job asynchronously
-        processBibleJob(job).catch(error => {
-            console.error('[Bible] Job failed:', error);
-            jobQueue.updateJob(jobId, { status: 'failed', error: error.message });
-        });
-
-        res.json({
-            success: true,
-            jobId,
-            message: 'Bible processing job started'
-        });
-
-    } catch (error) {
-        console.error('[API] Bible generation error:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Job management API endpoints
-app.get('/api/jobs', (_req, res) => {
-    try {
-        const jobs = jobQueue.getJobs();
-        res.json({ jobs });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/jobs/:jobId', (req, res) => {
-    try {
-        const { jobId } = req.params;
-        const job = jobQueue.getJob(jobId);
-        if (!job) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
-        res.json({ job });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.delete('/api/jobs/:jobId', (req, res) => {
-    try {
-        const { jobId } = req.params;
-        const success = jobQueue.removeJob(jobId);
-        res.json({ success, message: success ? 'Job removed' : 'Job not found' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Outputs management
-app.get('/api/outputs', (_req, res) => {
-    try {
-        const files = fs.readdirSync(OUTPUTS_DIR)
-            .filter(f => !f.startsWith('.'))
-            .map(name => {
-                const filePath = path.join(OUTPUTS_DIR, name);
-                const stats = fs.statSync(filePath);
-                return {
-                    name,
-                    size: stats.size,
-                    modified: stats.mtime,
-                    url: `/outputs/${name}`
-                };
-            })
-            .sort((a, b) => b.modified - a.modified);
-        
-        res.json({ files });
-    } catch (error) {
-        console.error('[API] Error listing outputs:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/outputs/rename', (req, res) => {
-    try {
-        const { oldName, newName } = req.body;
-        if (!oldName || !newName) {
-            return res.status(400).json({ error: 'Missing names' });
-        }
-        
-        const oldPath = path.join(OUTPUTS_DIR, oldName);
-        const newPath = path.join(OUTPUTS_DIR, newName);
-        
-        if (!fs.existsSync(oldPath)) {
-            return res.status(404).json({ error: 'File not found' });
-        }
-        
-        fs.renameSync(oldPath, newPath);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('[API] Error renaming output:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/outputs/delete', (req, res) => {
-    try {
-        const { name } = req.body;
-        if (!name) {
-            return res.status(400).json({ error: 'Missing name' });
-        }
-        
-        const filePath = path.join(OUTPUTS_DIR, name);
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ error: 'File not found' });
-        }
-        
-        fs.unlinkSync(filePath);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('[API] Error deleting output:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Serve outputs
-app.use('/outputs', express.static(OUTPUTS_DIR, {
-    maxAge: '1h',
-    etag: true,
-    lastModified: true
-}));
-
-// Job processing functions
-async function processTTSJob(job) {
-    try {
-        const { text, voiceModelId, format, quality, speed, pitch, sentencesPerChunk } = job.data;
-        
-        jobQueue.updateJob(job.id, { progress: 10, status: 'processing' });
-        
-        const audioFile = await fishAudioService.generateAudio(text, voiceModelId, {
-            format, quality, speed, pitch, sentencesPerChunk
-        });
-        
-        jobQueue.updateJob(job.id, { 
-            progress: 100, 
-            status: 'completed',
-            result: { audioFile: path.basename(audioFile) }
-        });
-        
-    } catch (error) {
-        jobQueue.updateJob(job.id, { status: 'failed', error: error.message });
-        throw error;
-    }
-}
-
-async function processVideoJob(job) {
-    try {
-        const { audioFile, videoSettings } = job.data;
-        
-        jobQueue.updateJob(job.id, { progress: 10, status: 'processing' });
-        
-        const broadcastLog = (message) => {
-            console.log(`[Video] ${message}`);
-        };
-        
-        const videoFile = await videoGenerator.createVideo(audioFile, videoSettings, job.id, broadcastLog);
-        
-        jobQueue.updateJob(job.id, { 
-            progress: 100, 
-            status: 'completed',
-            result: { videoFile: path.basename(videoFile) }
-        });
-        
-    } catch (error) {
-        jobQueue.updateJob(job.id, { status: 'failed', error: error.message });
-        throw error;
-    }
-}
-
-async function processBibleJob(job) {
-    try {
-        const { 
-            translation, 
-            book, 
-            chapter, 
-            verseRanges, 
-            excludeNumbers, 
-            excludeFootnotes, 
-            type, 
-            chapters,
-            generateAudio,
-            voiceModelId,
-            generateVideo,
-            videoSettings
-        } = job.data;
-        
-        jobQueue.updateJob(job.id, { progress: 20, status: 'processing' });
-        
-        // Fetch and process Bible text
-        const bibleText = await bibleService.getBibleText({
-            translation, book, chapter, verseRanges, excludeNumbers, excludeFootnotes, type, chapters
-        });
-        
-        jobQueue.updateJob(job.id, { progress: 40, status: 'processing' });
-        
-        // Save text file
-        const timestamp = Date.now();
-        const textFilename = `bible-${book}-${type === 'book' ? 'entire' : type === 'chapters' ? chapters : chapter}-${translation}-${timestamp}.txt`;
-        const textFilePath = path.join(OUTPUTS_DIR, textFilename);
-        fs.writeFileSync(textFilePath, bibleText);
-        
-        let audioFile = null;
-        let videoFile = null;
-        
-        // Generate audio if requested
-        if (generateAudio && voiceModelId) {
-            jobQueue.updateJob(job.id, { progress: 60, status: 'processing' });
-            
-            audioFile = await fishAudioService.generateAudio(bibleText, voiceModelId, {
-                format: 'mp3',
-                quality: 'high',
-                sentencesPerChunk: 2
-            });
-            
-            jobQueue.updateJob(job.id, { progress: 80, status: 'processing' });
-        }
-        
-        // Generate video if requested
-        if (generateVideo && audioFile) {
-            const broadcastLog = (message) => {
-                console.log(`[Video] ${message}`);
-            };
-            
-            videoFile = await videoGenerator.createVideo(audioFile, videoSettings, job.id, broadcastLog);
-        }
-        
-        jobQueue.updateJob(job.id, { 
-            progress: 100, 
-            status: 'completed',
-            result: { 
-                textFile: textFilename,
-                audioFile: audioFile ? path.basename(audioFile) : null,
-                videoFile: videoFile ? path.basename(videoFile) : null
-            }
-        });
-        
-    } catch (error) {
-        jobQueue.updateJob(job.id, { status: 'failed', error: error.message });
-        throw error;
-    }
-}
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`[Server] dScribe TTS & Video Generation Service listening on http://localhost:${PORT}`);
-    console.log(`[Server] Services: TTS=${!!fishAudioService}, Video=${!!videoGenerator}, Jobs=${!!jobQueue}, Bible=${!!bibleService}`);
+  console.log(`[Server] Bible API Server listening on http://localhost:${PORT}`);
+  console.log(`[Server] Bible data loaded from: ${BIBLE_DATA_DIR}`);
+  console.log(`[Server] Available books: ${Object.keys(BIBLE_BOOKS).length}`);
 });

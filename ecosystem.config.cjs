@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'dscribe',
+    name: 'bible-api',
     script: './server/index.js',
     cwd: '/home/inggo/dscribe',
     instances: 1,
@@ -13,7 +13,7 @@ module.exports = {
     out_file: './storage/logs/out.log',
     log_file: './storage/logs/combined.log',
     time: true,
-    max_memory_restart: '512M',
+    max_memory_restart: '256M',
     restart_delay: 4000,
     max_restarts: 10,
     min_uptime: '10s'
