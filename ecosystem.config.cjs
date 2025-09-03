@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'dscribe',
     script: 'server/index.js',
-    cwd: '/home/pi/dScribe',
+    cwd: '/home/inggo/dscribe',
     instances: 1,
     exec_mode: 'fork',
     env: {
