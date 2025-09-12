@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 
 // Bible data directory
-const BIBLE_DATA_DIR = path.resolve(__dirname, '../data/bible/web');
+const BIBLE_DATA_DIR = path.resolve(process.cwd(), 'data/bible/web');
 
 // Bible books mapping
 const BIBLE_BOOKS = {
